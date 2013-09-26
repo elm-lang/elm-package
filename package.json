@@ -1,5 +1,6 @@
 { "name" : "Spirals"
 , "version" : 0.1
+, "built-with" : "0.9.0.2"
 , "description" : "Make some spirals"
 , "license" : "BSD3"
 , "author" : "Bill"
