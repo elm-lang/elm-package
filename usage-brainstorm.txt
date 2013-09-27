@@ -8,7 +8,7 @@ elm-get install sally/OceanTheme-0.3
 
 ## Example of resulting directories
 
-libraries/
+elm_libraries/
     sally-OceanTheme/0.3/
         OceanTheme.js
         OceanTheme.elmi
