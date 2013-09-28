@@ -1,0 +1,29 @@
+Name:                elm-get
+Version:             0.1
+Synopsis:            Tool for sharing and using Elm libraries
+Description:         elm-get lets you install, update, and publish Elm libraries
+
+Homepage:            http://elm-lang.org
+
+License:             BSD3
+License-file:        LICENSE
+
+Author:              Evan Czaplicki
+Maintainer:          info@elm-lang.org
+Copyright:           Copyright: (c) 2013 Evan Czaplicki
+
+Category:            Language
+
+Build-type:          Simple
+Cabal-version:       >=1.9
+
+source-repository head
+  type:     git
+  location: git://github.com/evancz/elm-get.git
+
+Executable elm-get
+  Main-is:             Main.hs
+  Hs-Source-Dirs:
+  other-modules:
+  Build-depends:       base,
+                       cmdargs
