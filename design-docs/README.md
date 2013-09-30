@@ -20,7 +20,7 @@ Influences mainly come from `npm` and `opam` (for OCaml)
 
 The versioning issues can be avoided entirely, but that comes at the cost of size of
 generated code. It should be fine to use N different versions of the same library, but
-that costs N extra bits.
+that costs N times as many bits.
 
 I'm not sure if working out dependencies should happen during installation
 (annoying for everyone, especially beginner/starting project), or if there
