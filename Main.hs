@@ -17,16 +17,16 @@ data Commands
 commands =
     [ Install { libs = [] &= args &= typ "LIBRARY" }
       &= help "Install libraries in the local project."
-      &= details [ "  Examples:"
-                 , "    elm-get install            # install everything needed by build.json"
-                 , "    elm-get install Vector2D   # install library from the central repo"
-                 , "    elm-get install sam/Array  # install a specific github repo" ]
+      &= details [ "Examples:"
+                 , "  elm-get install            # install everything needed by build.json"
+                 , "  elm-get install Vector2D   # install library from the central repo"
+                 , "  elm-get install sam/Array  # install a specific github repo" ]
     , Update { libs_ = [] &= args &= typ "LIBRARY" }
       &= help "Check for updates to any local libraries, ask to upgrade."
-      &= details [ "  Examples:"
-                 , "    elm-get update             # check for updates to local libraries"
-                 , "    elm-get update Vector2D    # update library from the central repo"
-                 , "    elm-get update sam/Array   # update a specific github repo" ]
+      &= details [ "Examples:"
+                 , "  elm-get update             # check for updates to local libraries"
+                 , "  elm-get update Vector2D    # update library from the central repo"
+                 , "  elm-get update sam/Array   # update a specific github repo" ]
     , Publish { repo = Nothing &= args &= typ "REPO" }
       &= help "Publish project to the central repository."
       &= details []
