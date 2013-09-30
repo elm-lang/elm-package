@@ -9,7 +9,7 @@ Influences mainly come from `npm` and `opam` (for OCaml)
     perhaps with a tag or SHA. This is for people who know what they are doing.
  2. **centralized & curated**: I'll create a central listing of "good" libraries.
     You can install these without specifying a user: `elm-get install vector2d`
- 3. **private**: This is the mase as (2), but it can be created privately within
+ 3. **private**: This is the same as (2), but it can be created privately within
     some company's intranet or whatever. The user will add the privately curated hub to
     some local list, in order of priority. So when downloading, `elm-get` will choose
     the first match for a given project. Disambiguate with (1).
