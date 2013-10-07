@@ -8,14 +8,18 @@ import Control.Monad (when)
 import qualified Paths_elm_get as This
 import Data.Version
 
+import Install (install)
+
 data Commands
-    = Install { libs :: [String] }
+    = Install { lib :: String, version :: Maybe String }
     | Update { libs_ :: [String] }
     | Publish { repo :: Maybe String }
       deriving (Data, Typeable, Show, Eq)
 
 commands =
-    [ Install { libs = [] &= args &= typ "LIBRARY" }
+    [ Install { lib = def &= argPos 0 &= typ "LIBRARY"
+              , version = Nothing &= args &= typ "VERSION"
+              }
       &= help "Install libraries in the local project."
       &= details [ "Examples:"
                  , "  elm-get install            # install everything needed by build.json"
@@ -47,4 +51,29 @@ main = do
   args <- getArgs
   -- If the user did not specify any arguments, pretend as "--help" was given
   opts <- (if null args then withArgs ["--help"] else id) $ cmdArgsRun myModes
-  print opts
+  case opts of
+    Install { lib=lib, version=version } ->
+        do (user, project) <- getUserAndProject lib
+           version' <- getVersion version
+           install user project version'
+    _ -> print opts
+
+getUserAndProject lib =
+    case length $ filter (=='/') lib of
+      1 -> case break (=='/') lib of
+             (user, project)
+                 | user == "" || project == "/" -> failure
+                 | otherwise                    -> return (user, tail project)
+      _ -> failure
+
+    where
+      failure = error "project name is not well formed"
+
+getVersion version =
+    case version of
+      Nothing ->
+          -- get the latest one
+          return "0.0.0"
+      Just n ->
+          -- check that version N exists
+          return n

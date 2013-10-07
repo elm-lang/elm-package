@@ -26,4 +26,7 @@ Executable elm-get
   Hs-Source-Dirs:
   other-modules:
   Build-depends:       base,
-                       cmdargs
+                       cmdargs,
+                       directory,
+                       filepath,
+                       process
