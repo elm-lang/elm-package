@@ -54,8 +54,7 @@ main = do
   case opts of
     Install { lib=lib, version=version } ->
         do (user, project) <- getUserAndProject lib
-           version' <- getVersion version
-           install user project version'
+           install user project version
     _ -> print opts
 
 getUserAndProject lib =
@@ -68,12 +67,3 @@ getUserAndProject lib =
 
     where
       failure = error "project name is not well formed"
-
-getVersion version =
-    case version of
-      Nothing ->
-          -- get the latest one
-          return "0.0.0"
-      Just n ->
-          -- check that version N exists
-          return n
