@@ -8,6 +8,7 @@ import Control.Monad (when)
 import qualified Paths_elm_get as This
 import Data.Version
 
+import qualified Utils
 import Install (install)
 
 data Commands
@@ -53,17 +54,7 @@ main = do
   opts <- (if null args then withArgs ["--help"] else id) $ cmdArgsRun myModes
   case opts of
     Install { lib=lib, version=version } ->
-        do (user, project) <- getUserAndProject lib
+        do (user, project) <- Utils.getUserAndProject lib
            install user project version
     _ -> print opts
 
-getUserAndProject lib =
-    case length $ filter (=='/') lib of
-      1 -> case break (=='/') lib of
-             (user, project)
-                 | user == "" || project == "/" -> failure
-                 | otherwise                    -> return (user, tail project)
-      _ -> failure
-
-    where
-      failure = error "project name is not well formed"

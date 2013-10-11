@@ -1,25 +1,39 @@
 module Install where
 
 import Control.Applicative ((<$>))
+import Control.Monad (zipWithM_, when)
 import qualified Data.Char as Char
 import qualified Data.List as List
+import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
 import System.Directory
 import System.Exit
 import System.FilePath
 import System.Process
 
+import qualified ReadDependencies as Read
 import Utils
 
 root = "elm_dependencies"
 internals = "_internals"
+depsFile = "elm_dependencies.json"
 
 install :: String -> String -> Maybe String -> IO ()
-install user library version =
-    inDir root $ do
-      (repo,tag) <- inDir internals (get user library version)
-      createDirectoryIfMissing True repo
-      copyDir (internals </> repo) (repo </> tag)
+install user library version = do
+  location <- inDir root $ do
+                (repo,tag) <- inDir internals (get user library version)
+                createDirectoryIfMissing True repo
+                copyDir (internals </> repo) (repo </> tag)
+                return (repo </> tag)
+  installDependencies (root </> location </> depsFile)
+
+installDependencies path = do
+  exists <- doesFileExist path
+  when exists $ do
+    deps <- Map.toList <$> Read.dependencies path
+    userLibs <- mapM (Utils.getUserAndProject . fst) deps
+    zipWithM_ (\(usr,lib) v -> install usr lib (Just v)) userLibs (map snd deps)
+      
 
 git = rawSystem "git"
 

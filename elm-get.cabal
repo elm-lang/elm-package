@@ -25,8 +25,12 @@ Executable elm-get
   Main-is:             Main.hs
   Hs-Source-Dirs:
   other-modules:
-  Build-depends:       base,
+  Build-depends:       aeson,
+                       base,
+                       bytestring,
                        cmdargs,
+                       containers,
                        directory,
                        filepath,
-                       process
+                       process,
+                       text

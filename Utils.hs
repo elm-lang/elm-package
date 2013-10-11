@@ -24,3 +24,14 @@ copyDir src dst = do
     isDirectory <- doesDirectoryExist srcPath
     (if isDirectory then copyDir else copyFile) srcPath dstPath
 
+getUserAndProject :: String -> IO (String, String)
+getUserAndProject lib =
+    case length $ filter (=='/') lib of
+      1 -> case break (=='/') lib of
+             (user, project)
+                 | user == "" || project == "/" -> failure
+                 | otherwise                    -> return (user, tail project)
+      _ -> failure
+
+    where
+      failure = error "project name is not well formed"

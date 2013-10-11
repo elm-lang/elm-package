@@ -48,8 +48,8 @@ instance FromJSON Deps where
 
     parseJSON _ = mzero
 
-extractDeps :: FilePath -> IO (Map.Map String String)
-extractDeps path = do
+dependencies :: FilePath -> IO (Map.Map String String)
+dependencies path = do
   json <- BS.readFile path
   case eitherDecode json of
     Right ds -> return (deps ds)
