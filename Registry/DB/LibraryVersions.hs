@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable, TypeFamilies, TemplateHaskell #-}
-module DB.LibraryVersions (open, register, versions, latestUntagged, LibVer) where
+module Registry.DB.LibraryVersions (open, register, versions, latestUntagged, LibVer) where
 
 import           Control.Applicative
 import           Control.Monad.Error

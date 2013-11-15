@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings, DeriveDataTypeable #-}
-module Main where
+module Registry.Server where
 
 import Happstack.Server hiding (body,port)
 import Happstack.Server.Compression
@@ -15,7 +15,7 @@ import System.Directory
 import GHC.Conc
 
 import Data.Acid (closeAcidState)
-import qualified DB.LibraryVersions as DB
+import qualified Registry.DB.LibraryVersions as DB
 import System.Environment
 
 data Flags = Flags
