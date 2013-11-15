@@ -1,4 +1,4 @@
-module Utils where         
+module Get.Utils where         
          
 import Control.Monad (forM_)
 import System.Directory

@@ -22,9 +22,10 @@ source-repository head
   location: git://github.com/evancz/elm-get.git
 
 Executable elm-get
-  Main-is:             Main.hs
+  Main-is:             Get/Main.hs
   Hs-Source-Dirs:
-  other-modules:
+  other-modules:       Get.Utils,
+                       Get.Install
   Build-depends:       aeson,
                        base,
                        bytestring,

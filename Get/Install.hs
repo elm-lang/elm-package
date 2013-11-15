@@ -1,4 +1,4 @@
-module Install where
+module Get.Install where
 
 import Control.Applicative ((<$>))
 import Control.Monad (zipWithM_, when)
