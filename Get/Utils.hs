@@ -1,20 +1,21 @@
 module Get.Utils where         
          
 import Control.Monad (forM_)
+import Control.Monad.Error
 import System.Directory
 import System.FilePath
 
-inDir :: FilePath -> IO a -> IO a
+inDir :: FilePath -> ErrorT String IO a -> ErrorT String IO a
 inDir dir doStuff = do
-  here <- getCurrentDirectory
-  createDirectoryIfMissing True dir
-  setCurrentDirectory dir
+  here <- liftIO $ getCurrentDirectory
+  liftIO $ createDirectoryIfMissing True dir
+  liftIO $ setCurrentDirectory dir
   result <- doStuff
-  setCurrentDirectory here
+  liftIO $ setCurrentDirectory here
   return result
 
 copyDir ::  FilePath -> FilePath -> IO ()
-copyDir src dst = do
+copyDir src dst = liftIO $ do
   createDirectoryIfMissing True dst
   content <- getDirectoryContents src
   let paths = filter (`notElem` [".", "..",".git",".gitignore"]) content
@@ -24,14 +25,10 @@ copyDir src dst = do
     isDirectory <- doesDirectoryExist srcPath
     (if isDirectory then copyDir else copyFile) srcPath dstPath
 
-getUserAndProject :: String -> IO (String, String)
-getUserAndProject lib =
-    case length $ filter (=='/') lib of
-      1 -> case break (=='/') lib of
-             (user, project)
-                 | user == "" || project == "/" -> failure
-                 | otherwise                    -> return (user, tail project)
-      _ -> failure
-
+getUserAndProject :: String -> ErrorT String IO (String, String)
+getUserAndProject library =
+    case break (=='/') library of
+      (user, '/' : project) | okay user && okay library -> return (user, project)
+      _ -> throwError $ "Project names must be formatted like this: user/project"
     where
-      failure = error "project name is not well formed"
+      okay str = not (null str) && length (filter (=='/') str) /= 1

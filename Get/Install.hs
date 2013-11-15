@@ -2,6 +2,7 @@ module Get.Install where
 
 import Control.Applicative ((<$>))
 import Control.Monad (zipWithM_, when)
+import Control.Monad.Error
 import qualified Data.Char as Char
 import qualified Data.List as List
 import qualified Data.Map as Map
@@ -9,73 +10,71 @@ import qualified Data.Maybe as Maybe
 import System.Directory
 import System.Exit
 import System.FilePath
+import System.IO
 import System.Process
 
 import qualified ReadDependencies as Read
-import Utils
+import qualified Get.Utils as Utils
 
 root = "elm_dependencies"
 internals = "_internals"
 depsFile = "elm_dependencies.json"
 
-install :: String -> String -> Maybe String -> IO ()
+install :: String -> String -> String -> ErrorT String IO ()
 install user library version = do
-  location <- inDir root $ do
-                (repo,tag) <- inDir internals (get user library version)
-                createDirectoryIfMissing True repo
-                copyDir (internals </> repo) (repo </> tag)
+  location <- Utils.inDir root $ do
+                (repo,tag) <- Utils.inDir internals (get user library version)
+                liftIO $ createDirectoryIfMissing True repo
+                liftIO $ Utils.copyDir (internals </> repo) (repo </> tag)
                 return (repo </> tag)
   installDependencies (root </> location </> depsFile)
 
+installDependencies :: FilePath -> ErrorT String IO ()
 installDependencies path = do
-  exists <- doesFileExist path
+  exists <- liftIO $ doesFileExist path
   when exists $ do
-    deps <- Map.toList <$> Read.dependencies path
+    deps <- liftIO $ Map.toList <$> Read.dependencies path
     userLibs <- mapM (Utils.getUserAndProject . fst) deps
-    zipWithM_ (\(usr,lib) v -> install usr lib (Just v)) userLibs (map snd deps)
-      
+    zipWithM_ (\(usr,lib) v -> install usr lib v) userLibs (map snd deps)
 
-git = rawSystem "git"
+git :: [String] -> ErrorT String IO String
+git args =
+  do (exitCode, output) <- liftIO runCommand
+     case exitCode of
+       ExitSuccess -> return output
+       ExitFailure _ -> throwError $ "Error when running: git" ++ concatMap (' ':) args
+  where
+    runCommand = do
+      (_, Just out, Just err, handle) <-
+          createProcess (proc "git" args) { std_out = CreatePipe
+                                          , std_err = CreatePipe }
+      exitCode <- waitForProcess handle
+      str <- hGetContents out
+      hClose out
+      hClose err
+      return (exitCode, str)
 
-get :: String -> String -> Maybe String -> IO (FilePath,FilePath)
+get :: String -> String -> String -> ErrorT String IO (FilePath,FilePath)
 get user library version = do
   let repo = user ++ "-" ++ library
-  exists <- doesDirectoryExist repo
+  exists <- liftIO $ doesDirectoryExist repo
   case exists of
     False -> do
       git [ "clone", "--progress", "https://github.com/" ++ user ++ "/" ++ library ++ ".git" ]
-      renameDirectory library repo
+      liftIO $ renameDirectory library repo
     True -> do
-      inDir repo (git ["pull"])
+      Utils.inDir repo (git ["pull"])
       return ()
 
-  tag <- inDir repo (checkout version)
-  return (repo,tag)
+  Utils.inDir repo (checkout version)
+  return (repo,version)
 
-checkout :: Maybe String -> IO String
-checkout version = do
-  git [ "fetch", "--tags" ]
-  tags <- lines <$> readProcess "git" [ "tag", "--list" ] ""
-  case getTag version tags of
-    Just tag | tag `elem` tags -> do
-      git [ "checkout", "tags/" ++ tag ]
-      return tag
-    _ -> do
-      let msg = Maybe.maybe "a valid version" (\v -> "version " ++ show v) version
-      putStrLn $ "FAILURE: could not find " ++ msg
-      exitFailure
+checkout :: String -> ErrorT String IO ()
+checkout version =
+    do git [ "fetch", "--tags" ]
+       tags <- liftIO $ lines <$> readProcess "git" [ "tag", "--list" ] ""
+       if version `notElem` tags
+         then throwError $ "Did not find version " ++ version ++ " on github."
+         else do git [ "checkout", "tags/" ++ version ]
+                 return ()
 
-getTag version tags =
-    case version of
-      Just _ -> version
-      _ -> case List.sort $ Maybe.mapMaybe validVersion tags of
-             [] -> Nothing
-             vs -> Just . List.intercalate "." . map show $ last vs
-
-validVersion :: String -> Maybe [Int]
-validVersion tag = 
-    case span Char.isDigit tag of
-      ("", _:_) -> Nothing
-      (n, '.' : rest) -> (:) (read n) <$> validVersion rest
-      (n, "") -> Just [read n]
-      _ -> Nothing
