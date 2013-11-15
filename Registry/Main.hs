@@ -39,7 +39,7 @@ main = do
     decodeBody $ defaultBodyPolicy "/tmp/" 0 1000 1000
     msum [ dir "register" (register acid)
          , dir "versions" (versions acid)
-         , dir "install" (install acid)
+         , dir "latest" (latest acid)
          , badRequest $ toResponse $ ("did not work\n" :: String)
          ]
 
@@ -62,8 +62,8 @@ versions acid =
            Left err -> notFound $ toResponse err
            Right vs -> ok $ toResponse $ (show vs :: String)
 
-install :: DB.LibVer -> ServerPart Response
-install acid = do
+latest :: DB.LibVer -> ServerPart Response
+latest acid = do
   method GET
   request acid (look "library") (DB.latestUntagged acid) $ \either ->
     case either of
