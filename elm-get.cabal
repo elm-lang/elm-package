@@ -24,8 +24,12 @@ source-repository head
 Executable elm-get
   Main-is:             Get/Main.hs
   Hs-Source-Dirs:
+
   other-modules:       Get.Utils,
-                       Get.Install
+                       Get.Install,
+                       Get.Registry,
+                       ReadDependencies
+
   Build-depends:       aeson,
                        base,
                        bytestring,
@@ -33,5 +37,7 @@ Executable elm-get
                        containers,
                        directory,
                        filepath,
+                       HTTP,
+                       mtl,
                        process,
                        text
