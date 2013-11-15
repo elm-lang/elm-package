@@ -46,15 +46,11 @@ fromString version = V <$> splitNumbers possibleNumbers <*> tag
               '-':rest -> Just rest
               _ -> Nothing
 
-      parse :: String -> Maybe Int
-      parse number
-          | null number || any (not . isDigit) number = Nothing
-          | otherwise = Just (read number)
-
       splitNumbers :: String -> Maybe [Int]
       splitNumbers ns =
-          case break ((==) '.') ns of
-            (number, []) -> (:[]) <$> parse number
-            (number, '.':rest) -> (:) <$> parse number <*> splitNumbers rest
+          case span isDigit ns of
+            ("", _) -> Nothing
+            (number, []) -> Just [read number]
+            (number, '.':rest) -> (read number :) <$> splitNumbers rest
             _ -> Nothing
 
