@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module ReadDependencies where
+module Model.Dependencies where
 
 import Control.Applicative
 import Control.Monad.Error

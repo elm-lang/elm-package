@@ -28,7 +28,8 @@ Executable elm-get
   other-modules:       Get.Utils,
                        Get.Install,
                        Get.Registry,
-                       ReadDependencies
+                       Model.Dependencies,
+                       Model.Version
 
   Build-depends:       aeson,
                        base,

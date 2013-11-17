@@ -10,10 +10,10 @@ import qualified Data.Maybe as Maybe
 import System.Directory
 import System.FilePath
 
-import qualified ReadDependencies as Read
 import qualified Get.Utils as Utils
-import qualified Model.Version as Version
 import qualified Get.Registry as Registry
+import qualified Model.Dependencies as Deps
+import qualified Model.Version as Version
 
 install :: String -> String -> Maybe String -> ErrorT String IO ()
 install user library version =
@@ -29,7 +29,7 @@ install user library version =
       installDependencies path = do
         exists <- liftIO $ doesFileExist path
         when exists $ do
-          deps <- Map.toList <$> Read.dependencies path
+          deps <- Map.toList <$> Deps.dependencies path
           userLibs <- mapM (Utils.getUserAndProject . fst) deps
           zipWithM_ (\(usr,lib) v -> install usr lib (Just v)) userLibs (map snd deps)
 
