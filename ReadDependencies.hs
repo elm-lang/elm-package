@@ -7,7 +7,7 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as BS
 import qualified Data.Map as Map
 import qualified Data.Text as Text
-import System.Exit
+import qualified Model.Version as V
 
 data Person = Person
     { name' :: String
@@ -17,7 +17,7 @@ data Person = Person
 
 data Deps = Deps
     { name :: String
-    , version :: Int
+    , version :: V.Version
     , description :: String
     , license :: String
     , author :: Person
@@ -35,10 +35,19 @@ instance FromJSON Person where
         return (Person (Text.unpack s) Nothing Nothing)
     parseJSON _ = mzero
 
+versionOf parse = do
+  string <- parse
+  case V.fromString string of
+    Just v -> return v
+    Nothing -> fail $ unlines
+               [ "Dependency file has an invalid version number: " ++ string
+               , "Must have format 0.1.2 or 0.1.2-tag"
+               ]
+
 instance FromJSON Deps where
     parseJSON (Object v) =
         Deps <$> v .: "name"
-             <*> v .: "version"
+             <*> versionOf (v .: "version")
              <*> v .: "description"
              <*> v .: "license"
              <*> v .: "author"
@@ -57,3 +66,6 @@ withDeps handle path = do
 
 dependencies :: FilePath -> ErrorT String IO (Map.Map String String)
 dependencies = withDeps deps
+
+depsAt :: FilePath -> ErrorT String IO Deps
+depsAt = withDeps id
