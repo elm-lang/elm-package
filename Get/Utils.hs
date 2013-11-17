@@ -8,6 +8,10 @@ import System.FilePath
 import System.IO
 import System.Process
 
+root = "elm_dependencies"
+internals = "_internals"
+depsFile = "elm_dependencies.json"
+
 inDir :: FilePath -> ErrorT String IO a -> ErrorT String IO a
 inDir dir doStuff = do
   here <- liftIO $ getCurrentDirectory
@@ -54,4 +58,6 @@ git args =
       return (exitCode, str)
 
 out :: String -> ErrorT String IO ()
-out = liftIO . hPutStrLn stdout
+out string = liftIO . hPutStrLn stdout $ string ++ newline
+    where
+      newline = if null string || last string == '\n' then "" else "\n"

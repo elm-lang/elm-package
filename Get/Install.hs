@@ -1,4 +1,4 @@
-module Get.Install where
+module Get.Install (install) where
 
 import Control.Applicative ((<$>))
 import Control.Monad (zipWithM_, when)
@@ -15,26 +15,23 @@ import qualified Get.Utils as Utils
 import qualified Model.Version as Version
 import qualified Get.Registry as Registry
 
-root = "elm_dependencies"
-internals = "_internals"
-depsFile = "elm_dependencies.json"
-
 install :: String -> String -> Maybe String -> ErrorT String IO ()
-install user library version = do
-  location <- Utils.inDir root $ do
-                (repo,tag) <- Utils.inDir internals (get user library version)
-                liftIO $ createDirectoryIfMissing True repo
-                liftIO $ Utils.copyDir (internals </> repo) (repo </> tag)
-                return (repo </> tag)
-  installDependencies (root </> location </> depsFile)
-
-installDependencies :: FilePath -> ErrorT String IO ()
-installDependencies path = do
-  exists <- liftIO $ doesFileExist path
-  when exists $ do
-    deps <- liftIO $ Map.toList <$> Read.dependencies path
-    userLibs <- mapM (Utils.getUserAndProject . fst) deps
-    zipWithM_ (\(usr,lib) v -> install usr lib (Just v)) userLibs (map snd deps)
+install user library version =
+    do location <-
+           Utils.inDir Utils.root $ do
+             (repo,tag) <- Utils.inDir Utils.internals (get user library version)
+             liftIO $ createDirectoryIfMissing True repo
+             liftIO $ Utils.copyDir (Utils.internals </> repo) (repo </> tag)
+             return (repo </> tag)
+       installDependencies (Utils.root </> location </> Utils.depsFile)
+    where
+      installDependencies :: FilePath -> ErrorT String IO ()
+      installDependencies path = do
+        exists <- liftIO $ doesFileExist path
+        when exists $ do
+          deps <- liftIO $ Map.toList <$> Read.dependencies path
+          userLibs <- mapM (Utils.getUserAndProject . fst) deps
+          zipWithM_ (\(usr,lib) v -> install usr lib (Just v)) userLibs (map snd deps)
 
 get :: String -> String -> Maybe String -> ErrorT String IO (FilePath, FilePath)
 get user library maybeVersion =
