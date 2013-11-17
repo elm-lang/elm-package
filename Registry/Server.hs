@@ -60,7 +60,7 @@ versions acid =
      request acid (look "library") (DB.versions acid) $ \either ->
          case either of
            Left err -> notFound $ toResponse err
-           Right vs -> ok $ toResponse $ (show vs :: String)
+           Right vs -> ok $ toResponse $ vs
 
 latest :: DB.LibVer -> ServerPart Response
 latest acid = do
@@ -68,7 +68,7 @@ latest acid = do
   request acid (look "library") (DB.latestUntagged acid) $ \either ->
     case either of
       Left err -> notFound $ toResponse err
-      Right version -> ok $ toResponse $ version
+      Right version -> ok $ toResponse $ show version
 
 request :: DB.LibVer
         -> RqData a

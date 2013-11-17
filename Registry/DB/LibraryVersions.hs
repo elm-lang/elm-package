@@ -6,6 +6,8 @@ import           Control.Monad.Error
 import qualified Control.Monad.State  as State
 import qualified Control.Monad.Reader as Reader
 import           Data.Acid
+import qualified Data.Binary          as Binary
+import           Data.ByteString.Lazy (ByteString)
 import qualified Data.SafeCopy        as SC
 import           Data.Typeable
 import qualified Data.Map             as Map
@@ -56,24 +58,25 @@ register db library rawVersion =
                  , "Versions must have one of the following formats: 0.1.2 or 0.1.2-tag"
                  ]
 
-rawVersions :: LibVer -> Library -> ErrorT String IO [Version]
+rawVersions :: LibVer -> Library -> ErrorT String IO (Maybe [Version])
 rawVersions db library =
-    do maybe <- liftIO $ query db (AcidVersions library)
-       case maybe of
-         Just versions -> return versions
-         Nothing -> throwError $ unlines
-                    [ "Could not find a library named " ++ library ++ "!" ]
+    liftIO $ query db (AcidVersions library)
 
-versions :: LibVer -> Library -> ErrorT String IO [String]
-versions db lib = map show <$> rawVersions db lib
+versions :: LibVer -> Library -> ErrorT String IO ByteString
+versions db library =
+    do vers <- liftIO $ query db (AcidVersions library)
+       return $ Binary.encode vers
 
-latestUntagged :: LibVer -> Library -> ErrorT String IO String
+latestUntagged :: LibVer -> Library -> ErrorT String IO Version
 latestUntagged db library =
-    do vs <- rawVersions db library
-       case filter tagless vs of
-         v:_ -> return (show v)
-         [] -> throwError $ unlines
-               [ "There is no untagged release of " ++ library
-               , "Try using one of the tagged releases: " ++ 
-                 List.intercalate ", " (map show vs)
-               ]
+    do maybe <- rawVersions db library
+       case maybe of
+         Nothing -> throwError $ "Could not find a library named " ++ library ++ "!"
+         Just vs ->
+             case filter tagless vs of
+               v:_ -> return v
+               []  -> throwError $ unlines
+                      [ "There is no untagged release of " ++ library
+                      , "Try using one of the tagged releases: " ++ 
+                        List.intercalate ", " (map show vs)
+                      ]
