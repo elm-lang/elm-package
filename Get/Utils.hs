@@ -32,7 +32,7 @@ getUserAndProject :: String -> ErrorT String IO (String, String)
 getUserAndProject library =
     case break (=='/') library of
       (user, '/' : project) | okay user && okay project -> return (user, project)
-      _ -> throwError $ "Project names must be formatted like this: user/project"
+      _ -> throwError $ "project names must be formatted like this: user/project"
     where
       okay str = not (null str) && length (filter (=='/') str) /= 1
 
@@ -41,7 +41,7 @@ git args =
   do (exitCode, output) <- liftIO runCommand
      case exitCode of
        ExitSuccess -> return output
-       ExitFailure _ -> throwError $ "Error when running: git" ++ concatMap (' ':) args
+       ExitFailure _ -> throwError $ "failure when running: git" ++ concatMap (' ':) args
   where
     runCommand = do
       (_, Just out, Just err, handle) <-

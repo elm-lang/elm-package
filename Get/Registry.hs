@@ -18,7 +18,7 @@ versions :: String -> ErrorT String IO (Maybe [Version])
 versions library =
     let parse = parseURI $ domain ++ "versions?library=" ++ library in
     case parse of
-      Nothing -> throwError "Could not request versions for that library."
+      Nothing -> throwError $ "could not construct request for versions of library " ++ library
       Just uri -> request (mkRequest GET uri) Binary.decode
 
 register :: String -> String -> String -> ErrorT String IO String
@@ -35,7 +35,7 @@ request request handler = do
   case result of
     Right response
         | rspCode response == (2,0,0) -> return $ handler $ rspBody response
-        | otherwise -> throwError $ "Error"
+        | otherwise -> throwError $ "request to registry was unsuccessful"
 
     Left (ErrorMisc str) -> throwError str
     Left err -> throwError (show err)

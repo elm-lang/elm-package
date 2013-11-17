@@ -84,7 +84,7 @@ getVersion repo maybeVersion' =
           case (version, Version.fromString =<< version) of
             (Just tag, Nothing) ->
                 throwError $ unlines $
-                [ "Tag " ++ tag ++ " is not a valid version number."
+                [ "tag " ++ tag ++ " is not a valid version number."
                 , "It must have the following format: 0.1.2 or 0.1.2-tag"
                 ]
             (_, result) -> return result
@@ -101,12 +101,12 @@ getVersion repo maybeVersion' =
 
       errorNoTags =
           throwError $ unlines 
-          [ "Did not find any properly tagged releases of this library."
+          [ "did not find any properly tagged releases of this library."
           , "Libraries have at least one tag (like 0.1.2 or 1.0) to ensure that your build"
           , "process is stable and repeatable. These tags should follow Semantic Versioning."
           ]
 
       errorNoMatch version =
           throwError $ unlines 
-          [ "Could not find version " ++ show version ++ " on github."
+          [ "could not find version " ++ show version ++ " on github."
           ]
