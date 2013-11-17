@@ -32,6 +32,7 @@ Executable elm-get
 
   Build-depends:       aeson,
                        base,
+                       binary,
                        bytestring,
                        cmdargs,
                        containers,
@@ -39,5 +40,7 @@ Executable elm-get
                        filepath,
                        HTTP,
                        mtl,
+                       network,
                        process,
+                       safecopy,
                        text

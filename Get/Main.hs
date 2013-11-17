@@ -63,8 +63,7 @@ main = do
 handle options =
     case options of
       Install { lib=library, version=maybeVersion } ->
-          do version <- Maybe.maybe (Registry.latest library) return maybeVersion
-             (user, project) <- Utils.getUserAndProject library
-             Install.install user project version
+          do (user, project) <- Utils.getUserAndProject library
+             Install.install user project maybeVersion
       _ -> liftIO $ print options
 

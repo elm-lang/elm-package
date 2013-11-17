@@ -8,19 +8,18 @@ import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
 import System.Directory
-import System.Exit
 import System.FilePath
-import System.IO
-import System.Process
 
 import qualified ReadDependencies as Read
 import qualified Get.Utils as Utils
+import qualified Model.Version as Version
+import qualified Get.Registry as Registry
 
 root = "elm_dependencies"
 internals = "_internals"
 depsFile = "elm_dependencies.json"
 
-install :: String -> String -> String -> ErrorT String IO ()
+install :: String -> String -> Maybe String -> ErrorT String IO ()
 install user library version = do
   location <- Utils.inDir root $ do
                 (repo,tag) <- Utils.inDir internals (get user library version)
@@ -35,46 +34,79 @@ installDependencies path = do
   when exists $ do
     deps <- liftIO $ Map.toList <$> Read.dependencies path
     userLibs <- mapM (Utils.getUserAndProject . fst) deps
-    zipWithM_ (\(usr,lib) v -> install usr lib v) userLibs (map snd deps)
+    zipWithM_ (\(usr,lib) v -> install usr lib (Just v)) userLibs (map snd deps)
 
-git :: [String] -> ErrorT String IO String
-git args =
-  do (exitCode, output) <- liftIO runCommand
-     case exitCode of
-       ExitSuccess -> return output
-       ExitFailure _ -> throwError $ "Error when running: git" ++ concatMap (' ':) args
+get :: String -> String -> Maybe String -> ErrorT String IO (FilePath, FilePath)
+get user library maybeVersion =
+  do exists <- liftIO $ doesDirectoryExist directory
+     if exists then update else clone
+     version <- getVersion repo maybeVersion
+     Utils.inDir directory (checkout version)
+     return (directory, version)
   where
-    runCommand = do
-      (_, Just out, Just err, handle) <-
-          createProcess (proc "git" args) { std_out = CreatePipe
-                                          , std_err = CreatePipe }
-      exitCode <- waitForProcess handle
-      str <- hGetContents out
-      hClose out
-      hClose err
-      return (exitCode, str)
+    directory = user ++ "-" ++ library
+    repo = user ++ "/" ++ library
 
-get :: String -> String -> String -> ErrorT String IO (FilePath,FilePath)
-get user library version = do
-  let repo = user ++ "-" ++ library
-  exists <- liftIO $ doesDirectoryExist repo
-  case exists of
-    False -> do
-      git [ "clone", "--progress", "https://github.com/" ++ user ++ "/" ++ library ++ ".git" ]
-      liftIO $ renameDirectory library repo
-    True -> do
-      Utils.inDir repo (git ["pull"])
+    update = do
+      Utils.out $ "Getting updates for repo " ++ repo
+      Utils.inDir directory (Utils.git ["pull"])
       return ()
 
-  Utils.inDir repo (checkout version)
-  return (repo,version)
+    clone = do
+      Utils.out $ "Cloning repo " ++ repo
+      Utils.git [ "clone", "--progress", "https://github.com/" ++ repo ++ ".git" ]
+      liftIO $ renameDirectory library directory
 
-checkout :: String -> ErrorT String IO ()
-checkout version =
-    do git [ "fetch", "--tags" ]
-       tags <- liftIO $ lines <$> readProcess "git" [ "tag", "--list" ] ""
-       if version `notElem` tags
-         then throwError $ "Did not find version " ++ version ++ " on github."
-         else do git [ "checkout", "tags/" ++ version ]
-                 return ()
+    checkout version =
+        do let tag = show version
+           Utils.out $ "Checking out version " ++ tag
+           Utils.git [ "checkout", "tags/" ++ tag ]
 
+{-| Check to see that the requested version number exists. In the case that no
+version number is requested, use the latest tagless version number in the registry.
+If the repo is not in the registry, warn the user and check on github.
+-}
+getVersion :: String -> Maybe String -> ErrorT String IO String
+getVersion repo maybeVersion' =
+    do maybeVersion <- validateVersion maybeVersion'
+       versions <- getVersions repo
+       case maybeVersion of
+         Nothing ->
+             case filter Version.tagless versions of
+               []  -> errorNoTags
+               v:_ -> return $ show v
+         Just version
+             | version `notElem` versions -> errorNoMatch version
+             | otherwise                  -> return $ show version
+    where
+      validateVersion :: Maybe String -> ErrorT String IO (Maybe Version.Version)
+      validateVersion version =
+          case (version, Version.fromString =<< version) of
+            (Just tag, Nothing) ->
+                throwError $ unlines $
+                [ "Tag " ++ tag ++ " is not a valid version number."
+                , "It must have the following format: 0.1.2 or 0.1.2-tag"
+                ]
+            (_, result) -> return result
+
+      getVersions repo = do
+        registryVersions <- Registry.versions repo
+        case registryVersions of
+          Just vs -> return vs
+          Nothing -> do
+            Utils.out $ "Warning: library " ++ repo ++
+                        " is not registered publicly. Checking github..."
+            tags <- lines <$> Utils.git [ "tag", "--list" ]
+            return $ Maybe.mapMaybe Version.fromString tags
+
+      errorNoTags =
+          throwError $ unlines 
+          [ "Did not find any properly tagged releases of this library."
+          , "Libraries have at least one tag (like 0.1.2 or 1.0) to ensure that your build"
+          , "process is stable and repeatable. These tags should follow Semantic Versioning."
+          ]
+
+      errorNoMatch version =
+          throwError $ unlines 
+          [ "Could not find version " ++ show version ++ " on github."
+          ]
