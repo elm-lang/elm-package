@@ -29,7 +29,7 @@ install user library version =
       installDependencies path = do
         exists <- liftIO $ doesFileExist path
         when exists $ do
-          deps <- liftIO $ Map.toList <$> Read.dependencies path
+          deps <- Map.toList <$> Read.dependencies path
           userLibs <- mapM (Utils.getUserAndProject . fst) deps
           zipWithM_ (\(usr,lib) v -> install usr lib (Just v)) userLibs (map snd deps)
 

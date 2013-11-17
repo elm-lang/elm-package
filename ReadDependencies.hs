@@ -2,7 +2,7 @@
 module ReadDependencies where
 
 import Control.Applicative
-import Control.Monad
+import Control.Monad.Error
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BS
 import qualified Data.Map as Map
@@ -48,11 +48,12 @@ instance FromJSON Deps where
 
     parseJSON _ = mzero
 
-dependencies :: FilePath -> IO (Map.Map String String)
-dependencies path = do
-  json <- BS.readFile path
+withDeps :: (Deps -> a) -> FilePath -> ErrorT String IO a
+withDeps handle path = do
+  json <- liftIO $ BS.readFile path
   case eitherDecode json of
-    Right ds -> return (deps ds)
-    Left err ->
-        do putStrLn $ "Error reading file " ++ path ++ ":\n    " ++ err
-           exitFailure
+    Left err -> throwError $ "Error reading file " ++ path ++ ":\n    " ++ err
+    Right ds -> return (handle ds)
+
+dependencies :: FilePath -> ErrorT String IO (Map.Map String String)
+dependencies = withDeps deps
