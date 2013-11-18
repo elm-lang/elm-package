@@ -12,6 +12,15 @@ root = "elm_dependencies"
 internals = "_internals"
 depsFile = "elm_dependencies.json"
 
+yesOrNo :: IO Bool
+yesOrNo = do
+  input <- getLine
+  case input of
+    "y" -> return True
+    "n" -> return False
+    _   -> do putStr "Must type 'y' for yes or 'n' for no: "
+              yesOrNo
+
 inDir :: FilePath -> ErrorT String IO a -> ErrorT String IO a
 inDir dir doStuff = do
   here <- liftIO $ getCurrentDirectory
@@ -58,6 +67,6 @@ git args =
       return (exitCode, str)
 
 out :: String -> ErrorT String IO ()
-out string = liftIO . hPutStrLn stdout $ string ++ newline
+out string = liftIO $ hPutStrLn stdout string'
     where
-      newline = if null string || last string == '\n' then "" else "\n"
+      string' = if not (null string) && last string == '\n' then init string else string
