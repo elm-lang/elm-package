@@ -3,8 +3,6 @@ module Get.Install (install) where
 import Control.Applicative ((<$>))
 import Control.Monad (zipWithM_, when)
 import Control.Monad.Error
-import qualified Data.Char as Char
-import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
 import System.Directory
@@ -86,6 +84,7 @@ getVersion repo maybeVersion' =
                 ]
             (_, result) -> return result
 
+      getVersions :: String -> ErrorT String IO [Version.Version]
       getVersions repo = do
         registryVersions <- Registry.versions repo
         case registryVersions of
