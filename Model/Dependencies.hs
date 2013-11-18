@@ -3,6 +3,7 @@ module Model.Dependencies where
 
 import Control.Applicative
 import Control.Monad.Error
+import Control.Exception
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BS
 import qualified Data.Map as Map
@@ -58,11 +59,21 @@ instance FromJSON Deps where
     parseJSON _ = mzero
 
 withDeps :: (Deps -> a) -> FilePath -> ErrorT String IO a
-withDeps handle path = do
-  json <- liftIO $ BS.readFile path
-  case eitherDecode json of
-    Left err -> throwError $ "Error reading file " ++ path ++ ":\n    " ++ err
-    Right ds -> return (handle ds)
+withDeps handle path =
+    do json <- readPath
+       case eitherDecode json of
+         Left err -> throwError $ "Error reading file " ++ path ++ ":\n    " ++ err
+         Right ds -> return (handle ds)
+    where
+      readPath :: ErrorT String IO BS.ByteString
+      readPath = do
+        result <- liftIO $ catch (Right <$> BS.readFile path)
+                                 (\err -> return $ Left (err :: IOError))
+        case result of
+          Right bytes -> return bytes
+          Left _ -> throwError $
+                    "could not find file " ++ path ++
+                    "\n    You may need to create a dependency file for your project."
 
 dependencies :: FilePath -> ErrorT String IO (Map.Map String String)
 dependencies = withDeps deps
