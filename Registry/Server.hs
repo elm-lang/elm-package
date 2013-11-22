@@ -17,7 +17,6 @@ import System.Process
 import System.Directory
 import GHC.Conc
 
-import qualified Registry.DB.LibraryVersions as DB
 import System.Environment
 import qualified Registry.Utils as Utils
 import qualified Model.Name as N
@@ -111,10 +110,10 @@ metadata =
         Left _ -> Right $ maximum versions
         Right str ->
             case V.fromString str of
-              Nothing -> Left $ "No registered versions of " ++ show name
+              Nothing -> Left $ "Requested an invalid version number: " ++ str
               Just v | v `elem` versions -> Right v
                      | otherwise ->
-                         Left $ "Library " ++ show name ++ " has no version " ++ show v
+                         Left $ "Library " ++ show name ++ " has no version " ++ str
 
 with :: RqData a -> (a -> Maybe b) -> (b -> SPResponse) -> SPResponse
 with args format handle = do
