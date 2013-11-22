@@ -2,11 +2,13 @@
 module Model.Version where
 
 import           Control.Applicative
+import           Data.Aeson
 import           Data.Binary
 import           Data.Char              (isDigit)
 import qualified Data.List              as List
 import qualified Data.SafeCopy          as SC
 import           Data.Typeable
+import qualified Data.Text              as T
 
 -- Data representation
 
@@ -39,7 +41,7 @@ tagless (V _ tag) = null tag
 fromString :: String -> Maybe Version
 fromString version = V <$> splitNumbers possibleNumbers <*> tag
     where
-      (possibleNumbers, possibleTag) = break ((==) '-') version
+      (possibleNumbers, possibleTag) = break (=='-') version
 
       tag = case possibleTag of
               "" -> Just ""
@@ -54,3 +56,14 @@ fromString version = V <$> splitNumbers possibleNumbers <*> tag
             (number, '.':rest) -> (read number :) <$> splitNumbers rest
             _ -> Nothing
 
+instance FromJSON Version where
+    parseJSON (String text) =
+        let string = T.unpack text in
+        case fromString string of
+          Just v -> return v
+          Nothing -> fail $ unlines
+                     [ "Dependency file has an invalid version number: " ++ string
+                     , "Must have format 0.1.2 or 0.1.2-tag"
+                     ]
+
+    parseJSON _ = fail "Version number must be stored as a string."
