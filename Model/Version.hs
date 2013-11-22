@@ -6,7 +6,6 @@ import           Data.Aeson
 import           Data.Binary
 import           Data.Char              (isDigit)
 import qualified Data.List              as List
-import qualified Data.SafeCopy          as SC
 import           Data.Typeable
 import qualified Data.Text              as T
 
@@ -14,8 +13,6 @@ import qualified Data.Text              as T
 
 data Version = V [Int] String
     deriving (Typeable,Eq)
-
-$(SC.deriveSafeCopy 0 'SC.base ''Version)
 
 instance Ord Version where
   compare (V ns tag) (V ns' tag') =

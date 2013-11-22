@@ -27,8 +27,11 @@ Executable elm-get
 
   other-modules:       Get.Utils,
                        Get.Install,
+                       Get.Publish,
                        Get.Registry,
+                       Paths_elm_get,
                        Model.Dependencies,
+                       Model.Name,
                        Model.Version
 
   Build-depends:       aeson,
@@ -43,5 +46,4 @@ Executable elm-get
                        mtl,
                        network,
                        process,
-                       safecopy,
                        text
