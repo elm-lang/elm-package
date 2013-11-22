@@ -16,7 +16,7 @@ publish =
      let library = D.name deps
          version = D.version deps
      Utils.out $ unwords [ "Verifying that", show library, show version, "is ready for release." ]
-     latest <- Registry.latest library
+     latest <- Registry.metadata library
      case latest of
        Just oldDeps ->
            let oldVersion = D.version oldDeps in
