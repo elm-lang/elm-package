@@ -11,14 +11,15 @@ import qualified Data.Maybe as Maybe
 import Data.Version (showVersion)
 
 import qualified Get.Install  as Install
+import qualified Get.Publish  as Publish
 import qualified Get.Registry as Registry
 import qualified Get.Utils    as Utils
 
 
 data Commands
     = Install { lib :: String, version :: Maybe String }
-    | Update { libs_ :: [String] }
-    | Publish { repo :: Maybe String }
+    | Update { libs :: [String] }
+    | Publish
       deriving (Data, Typeable, Show, Eq)
 
 commands =
@@ -29,12 +30,12 @@ commands =
       &= details [ "Examples:"
                  , "  elm-get install            # install everything needed by build.json"
                  , "  elm-get install tom/Array  # install a specific github repo" ]
-    , Update { libs_ = [] &= args &= typ "LIBRARY" }
+    , Update { libs = [] &= args &= typ "LIBRARY" }
       &= help "Check for updates to any local libraries, ask to upgrade."
       &= details [ "Examples:"
                  , "  elm-get update             # check for updates to local libraries"
                  , "  elm-get update tom/Array   # update from a specific github repo" ]
-    , Publish { repo = Nothing &= args &= typ "REPO" }
+    , Publish
       &= help "Publish project to the central repository."
       &= details []
     ]
@@ -60,10 +61,14 @@ main = do
     Left err -> hPutStr stderr ("Error: " ++ err ++ newline) >> exitFailure
         where newline = if last err == '\n' then "" else "\n"
 
+handle :: Commands -> ErrorT String IO ()
 handle options =
     case options of
       Install { lib=library, version=maybeVersion } ->
           do (user, project) <- Utils.getUserAndProject library
              Install.install user project maybeVersion
-      _ -> liftIO $ print options
 
+      Publish -> Publish.publish
+
+      _ -> do Utils.out "Not implemented yet!"
+              liftIO $ print options
