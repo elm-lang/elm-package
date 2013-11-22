@@ -1,0 +1,14 @@
+module Registry.Utils where
+
+import System.FilePath
+import qualified Model.Name as N
+import qualified Model.Version as V
+
+libDir = "libraries"
+
+json = "docs.json"
+
+library name = libDir </> N.toFilePath name
+
+libraryVersion :: N.Name -> V.Version -> FilePath
+libraryVersion name version = library name </> show version
