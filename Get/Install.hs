@@ -37,7 +37,7 @@ get user library maybeVersion =
      if exists then update else clone
      version <- getVersion repo maybeVersion
      Utils.inDir directory (checkout version)
-     return (directory, version)
+     return (directory, show version)
   where
     directory = user ++ "-" ++ library
     repo = user ++ "/" ++ library
@@ -61,18 +61,18 @@ get user library maybeVersion =
 version number is requested, use the latest tagless version number in the registry.
 If the repo is not in the registry, warn the user and check on github.
 -}
-getVersion :: String -> Maybe String -> ErrorT String IO String
+getVersion :: String -> Maybe String -> ErrorT String IO Version.Version
 getVersion repo maybeVersion' =
     do maybeVersion <- validateVersion maybeVersion'
        versions <- getVersions repo
        case maybeVersion of
          Nothing ->
              case filter Version.tagless versions of
-               []  -> errorNoTags
-               v:_ -> return $ show v
+               [] -> errorNoTags
+               vs -> return $ maximum vs
          Just version
              | version `notElem` versions -> errorNoMatch version
-             | otherwise                  -> return $ show version
+             | otherwise                  -> return version
     where
       validateVersion :: Maybe String -> ErrorT String IO (Maybe Version.Version)
       validateVersion version =
