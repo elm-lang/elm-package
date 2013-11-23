@@ -11,13 +11,14 @@ import System.FilePath
 import qualified Get.Utils as Utils
 import qualified Get.Registry as Registry
 import qualified Model.Dependencies as Deps
-import qualified Model.Version as Version
+import qualified Model.Name as N
+import qualified Model.Version as V
 
-install :: String -> String -> Maybe String -> ErrorT String IO ()
-install user library version =
+install :: N.Name -> Maybe String -> ErrorT String IO ()
+install name version =
     do location <-
            Utils.inDir Utils.root $ do
-             (repo,tag) <- Utils.inDir Utils.internals (get user library version)
+             (repo,tag) <- Utils.inDir Utils.internals (get name version)
              liftIO $ createDirectoryIfMissing True repo
              liftIO $ Utils.copyDir (Utils.internals </> repo) (repo </> tag)
              return (repo </> tag)
@@ -28,29 +29,28 @@ install user library version =
         exists <- liftIO $ doesFileExist path
         when exists $ do
           deps <- Map.toList <$> Deps.dependencies path
-          userLibs <- mapM (Utils.getUserAndProject . fst) deps
-          zipWithM_ (\(usr,lib) v -> install usr lib (Just v)) userLibs (map snd deps)
+          names <- mapM (N.fromString' . fst) deps
+          zipWithM_ install names (map (Just . snd) deps)
 
-get :: String -> String -> Maybe String -> ErrorT String IO (FilePath, FilePath)
-get user library maybeVersion =
+get :: N.Name -> Maybe String -> ErrorT String IO (FilePath, FilePath)
+get name maybeVersion =
   do exists <- liftIO $ doesDirectoryExist directory
      if exists then update else clone
-     version <- getVersion repo maybeVersion
+     version <- getVersion name maybeVersion
      Utils.inDir directory (checkout version)
      return (directory, show version)
   where
-    directory = user ++ "-" ++ library
-    repo = user ++ "/" ++ library
+    directory = N.toFilePath name
 
     update = do
-      Utils.out $ "Getting updates for repo " ++ repo
+      Utils.out $ "Getting updates for repo " ++ show name
       Utils.inDir directory (Utils.git ["pull"])
       return ()
 
     clone = do
-      Utils.out $ "Cloning repo " ++ repo
-      Utils.git [ "clone", "--progress", "https://github.com/" ++ repo ++ ".git" ]
-      liftIO $ renameDirectory library directory
+      Utils.out $ "Cloning repo " ++ show name
+      Utils.git [ "clone", "--progress", "https://github.com/" ++ show name ++ ".git" ]
+      liftIO $ renameDirectory (N.project name) directory
 
     checkout version =
         do let tag = show version
@@ -61,22 +61,22 @@ get user library maybeVersion =
 version number is requested, use the latest tagless version number in the registry.
 If the repo is not in the registry, warn the user and check on github.
 -}
-getVersion :: String -> Maybe String -> ErrorT String IO Version.Version
-getVersion repo maybeVersion' =
+getVersion :: N.Name -> Maybe String -> ErrorT String IO V.Version
+getVersion name maybeVersion' =
     do maybeVersion <- validateVersion maybeVersion'
-       versions <- getVersions repo
+       versions <- getVersions name
        case maybeVersion of
          Nothing ->
-             case filter Version.tagless versions of
+             case filter V.tagless versions of
                [] -> errorNoTags
                vs -> return $ maximum vs
          Just version
              | version `notElem` versions -> errorNoMatch version
              | otherwise                  -> return version
     where
-      validateVersion :: Maybe String -> ErrorT String IO (Maybe Version.Version)
+      validateVersion :: Maybe String -> ErrorT String IO (Maybe V.Version)
       validateVersion version =
-          case (version, Version.fromString =<< version) of
+          case (version, V.fromString =<< version) of
             (Just tag, Nothing) ->
                 throwError $ unlines $
                 [ "tag " ++ tag ++ " is not a valid version number."
@@ -84,16 +84,16 @@ getVersion repo maybeVersion' =
                 ]
             (_, result) -> return result
 
-      getVersions :: String -> ErrorT String IO [Version.Version]
-      getVersions repo = do
-        registryVersions <- Registry.versions repo
+      getVersions :: N.Name -> ErrorT String IO [V.Version]
+      getVersions name = do
+        registryVersions <- Registry.versions name
         case registryVersions of
           Just vs -> return vs
           Nothing -> do
-            Utils.out $ "Warning: library " ++ repo ++
+            Utils.out $ "Warning: library " ++ show name ++
                         " is not registered publicly. Checking github..."
             tags <- lines <$> Utils.git [ "tag", "--list" ]
-            return $ Maybe.mapMaybe Version.fromString tags
+            return $ Maybe.mapMaybe V.fromString tags
 
       errorNoTags =
           throwError $ unlines 

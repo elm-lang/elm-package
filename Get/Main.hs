@@ -15,6 +15,7 @@ import qualified Get.Publish  as Publish
 import qualified Get.Registry as Registry
 import qualified Get.Utils    as Utils
 
+import qualified Model.Name   as N
 
 data Commands
     = Install { lib :: String, version :: Maybe String }
@@ -65,8 +66,8 @@ handle :: Commands -> ErrorT String IO ()
 handle options =
     case options of
       Install { lib=library, version=maybeVersion } ->
-          do (user, project) <- Utils.getUserAndProject library
-             Install.install user project maybeVersion
+          do name <- N.fromString' library
+             Install.install name maybeVersion
 
       Publish -> Publish.publish
 

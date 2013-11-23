@@ -1,11 +1,13 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 module Model.Name where
 
-import           Control.Applicative
-import           Data.Aeson
-import           Data.Binary
-import qualified Data.Text            as T
-import           Data.Typeable
+import Control.Applicative
+import Control.Monad.Error
+import Data.Aeson
+import Data.Binary
+import qualified Data.Text as T
+import qualified Data.Maybe as Maybe
+import Data.Typeable
 
 data Name = Name { user :: String, project :: String }
     deriving (Typeable,Eq)
@@ -28,14 +30,19 @@ fromString string =
           | all (/='/') project -> Just (Name user project)
       _ -> Nothing
 
+fromString' :: String -> ErrorT String IO Name
+fromString' string =
+    Maybe.maybe (throwError $ errorMsg string) return (fromString string)
+
 instance FromJSON Name where
     parseJSON (String text) =
         let string = T.unpack text in
-        case fromString string of
-          Just v -> return v
-          Nothing -> fail $ unlines
-                     [ "Dependency file has an invalid name: " ++ string
-                     , "Must have format user/project and match a public github project."
-                     ]
+        Maybe.maybe (fail $ errorMsg string) return (fromString string)
 
     parseJSON _ = fail "Project name must be a string."
+
+errorMsg string =
+    unlines
+    [ "Dependency file has an invalid name: " ++ string
+    , "Must have format user/project and match a public github project."
+    ]
