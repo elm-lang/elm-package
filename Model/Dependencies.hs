@@ -25,6 +25,7 @@ data Deps = Deps
     , author :: Person
     , contributors :: [Person]
     , repo :: String
+    , exposed :: [String]
     , deps :: Map.Map String String
     } deriving Show
 
@@ -46,6 +47,7 @@ instance FromJSON Deps where
              <*> v .: "author"
              <*> v .: "contributors"
              <*> v .: "repository"
+             <*> v .: "exposed-modules"
              <*> v .: "dependencies"
 
     parseJSON _ = mzero

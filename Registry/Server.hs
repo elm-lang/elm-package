@@ -5,6 +5,7 @@ import Happstack.Server hiding (body,port)
 import Happstack.Server.Compression
 import qualified Happstack.Server as Happs
 import qualified Data.Binary as Binary
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as C
 import qualified Data.Maybe as Maybe
 
@@ -40,7 +41,7 @@ main = do
   putStrLn $ "Serving at <localhost:" ++ show (port cargs) ++ ">"
   simpleHTTP nullConf { Happs.port = port cargs } $ do
     compressedResponseFilter
-    decodeBody $ defaultBodyPolicy "/tmp/" 0 1000 1000
+    decodeBody $ defaultBodyPolicy "/tmp/" 10000 1000 1000
     msum [ dir "register" register
          , dir "versions" versions
          , dir "metadata" metadata
@@ -53,27 +54,30 @@ register :: SPResponse
 register =
   do method POST
      with args format $ \(directory, tempDocs) -> do
-       liftIO $ createDirectoryIfMissing True directory
-       let permanentDocs = directory </> Utils.json
-       exists <- liftIO $ doesFileExist permanentDocs
-       if exists
-       then badRequest $ toResponse ("That version has already been registered." :: String)
-       else do liftIO $ copyFile tempDocs permanentDocs
-               liftIO $ buildDocs permanentDocs
-               ok $ toResponse ("Registered successfully!" :: String)
+       exists <- liftIO $ doesDirectoryExist directory
+       case exists of
+         True ->
+             badRequest $ toResponse ("That version has already been registered." :: String)
+         False -> do
+           let permanentDocs = directory </> Utils.json
+           liftIO $ do createDirectory directory
+                       BS.writeFile permanentDocs =<< BS.readFile tempDocs
+                       buildDocs permanentDocs
+           ok $ toResponse ("Registered successfully!" :: String)
   where
     args = (,,) <$> look "library" <*> look "version" <*> lookFile "docs"
+
     format (name', version', (docsPath,_,_)) = do
       name <- N.fromString name'
       version <- V.fromString version'
       return (Utils.libraryVersion name version, docsPath)
 
 buildDocs :: FilePath -> IO ()
-buildDocs docs = return ()
+buildDocs path = return ()
 
 versions :: ServerPart Response
 versions =
-  do method GET
+  do method POST
      with (look "library") N.fromString $ \name -> do
        let path = Utils.library name
        exists <- liftIO $ doesDirectoryExist path
@@ -85,7 +89,7 @@ versions =
 
 metadata :: ServerPart Response
 metadata =
-  do method GET
+  do method POST
      with (look "library") N.fromString $ \name -> do
        let path = Utils.library name
        exists <- liftIO $ doesDirectoryExist path
@@ -102,8 +106,9 @@ metadata =
           case either of
             Left err -> notFound $ toResponse err
             Right version ->
-                serveFile (asContentType "application/json")
-                          (Utils.libraryVersion name version </> Utils.json)
+                do contents <- liftIO $ getDirectoryContents (Utils.libraryVersion name version)
+                   serveFile (asContentType "application/json")
+                             (Utils.libraryVersion name version </> Utils.json)
 
     getVersion name versions either =
       case either of

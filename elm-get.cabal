@@ -42,8 +42,9 @@ Executable elm-get
                        containers,
                        directory,
                        filepath,
-                       HTTP,
+                       http-conduit,
                        mtl,
                        network,
                        process,
+                       resourcet,
                        text

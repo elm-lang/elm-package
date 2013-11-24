@@ -9,8 +9,8 @@ import System.Directory
 import System.FilePath
 
 import qualified Get.Utils as Utils
-import qualified Get.Registry as Registry
-import qualified Model.Dependencies as Deps
+import qualified Get.Registry as R
+import qualified Model.Dependencies as D
 import qualified Model.Name as N
 import qualified Model.Version as V
 
@@ -28,7 +28,7 @@ install name version =
       installDependencies path = do
         exists <- liftIO $ doesFileExist path
         when exists $ do
-          deps <- Map.toList <$> Deps.dependencies path
+          deps <- Map.toList <$> D.dependencies path
           names <- mapM (N.fromString' . fst) deps
           zipWithM_ install names (map (Just . snd) deps)
 
@@ -86,7 +86,7 @@ getVersion name maybeVersion' =
 
       getVersions :: N.Name -> ErrorT String IO [V.Version]
       getVersions name = do
-        registryVersions <- Registry.versions name
+        registryVersions <- liftIO $ R.send (R.versions name)
         case registryVersions of
           Just vs -> return vs
           Nothing -> do

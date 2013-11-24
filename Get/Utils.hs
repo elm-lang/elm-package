@@ -42,23 +42,45 @@ copyDir src dst = liftIO $ do
     (if isDirectory then copyDir else copyFile) srcPath dstPath
 
 git :: [String] -> ErrorT String IO String
-git args =
-  do (exitCode, output) <- liftIO runCommand
-     case exitCode of
-       ExitSuccess -> return output
-       ExitFailure _ -> throwError $ "failure when running: git" ++ concatMap (' ':) args
+git = run "git"
+
+run :: String -> [String] -> ErrorT String IO String
+run command args =
+  do result <- liftIO runCommand
+     case result of
+       Right out -> return out
+       Left err -> throwError $
+                   "failure when running:" ++ concatMap (' ':) (command:args) ++ "\n" ++ err
   where
     runCommand = do
       (_, Just out, Just err, handle) <-
-          createProcess (proc "git" args) { std_out = CreatePipe
-                                          , std_err = CreatePipe }
+          createProcess (proc command args) { std_out = CreatePipe
+                                            , std_err = CreatePipe }
       exitCode <- waitForProcess handle
-      str <- hGetContents out
+      result <- case exitCode of
+                  ExitSuccess   -> readFrom out Right
+                  ExitFailure _ -> readFrom err Left
       hClose out
       hClose err
-      return (exitCode, str)
+      return result
+
+    readFrom handle label = do
+      msg <- hGetContents handle
+      length msg `seq` return (label msg)
 
 out :: String -> ErrorT String IO ()
 out string = liftIO $ hPutStrLn stdout string'
     where
       string' = if not (null string) && last string == '\n' then init string else string
+
+moduleToElmFile :: String -> FilePath
+moduleToElmFile moduleName = swapDots moduleName ++ ".elm"
+
+moduleToJsonFile :: String -> FilePath
+moduleToJsonFile moduleName = "docs" </> swapDots moduleName ++ ".json"
+
+swapDots :: String -> String
+swapDots = map (\c -> if c == '.' then '/' else c)
+
+combinedJson :: FilePath
+combinedJson = "docs" </> "docs.json"
