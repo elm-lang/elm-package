@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Get.Registry where
 
-import Network (withSocketsDo)
+import Network
 import Network.HTTP.Conduit
 import Network.HTTP.Conduit.MultipartFormData
 
@@ -13,17 +13,15 @@ import qualified Data.Aeson as Json
 import qualified Data.Binary as Binary
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
+import qualified Data.List as List
 
 import qualified Model.Dependencies as D
 import qualified Model.Name         as N
 import qualified Model.Version      as V
-{--
-import qualified Control.Exception as E
-import Control.Exception
-import Network.HTTP
-import Network.Stream
-import qualified Network.URI as URI
 
+import qualified Control.Exception as E
+import Network.HTTP.Types
+{--
 import Data.Version (showVersion)
 import qualified Paths_elm_get as This
 --}
@@ -63,41 +61,16 @@ register name version path manager =
              , partFileSource "docs" path
              ]
 
-send :: (Manager -> ResourceT IO a) -> IO a
-send request = withSocketsDo $ withManager request
-
-{--
-domain = "http://localhost:8000/"
-
-metadata :: N.Name -> ErrorT String IO (Maybe Deps)
-metadata name = do
-    request GET "metadata" [("library", show name)] $ \body ->
-        either throwError return $ Json.eitherDecode body
-
-versions :: N.Name -> ErrorT String IO (Maybe [V.Version])
-versions name =
-    request GET "versions" [("library", show name)] (return . Binary.decode)
-
-register :: N.Name -> V.Version -> [FilePath] -> ErrorT String IO ()
-register library version docs =
-    request POST "register" vars $ \x -> let _ = x :: String
-                                         in return ()
+send :: (Manager -> ResourceT IO a) -> ErrorT String IO a
+send request =
+    do result <- liftIO $ E.catch (Right `fmap` mkRequest) handler
+       either throwError return result
     where
-      vars = [("library", show library), ("version", show version)]
+      mkRequest = withSocketsDo $ withManager request
 
-request :: HStream ty => RequestMethod -> String -> [(String,String)] -> (ty -> ErrorT String IO a) -> ErrorT String IO a
-request method path vars handler =
-    let request = domain ++ path ++ "?" ++ urlEncodeVars vars in
-    case URI.parseURI request of
-      Nothing  -> throwError $ "could not construct request: " ++ request
-      Just uri -> do 
-        result <- liftIO $ simpleHTTP (mkRequest method uri) `catch`
-                      \err -> let _ = err :: IOException
-                              in return $ failMisc $ "Unable to connect to " ++ domain
-        case result of
-          Left (ErrorMisc str) -> throwError str
-          Left err -> throwError (show err)
-          Right response
-              | rspCode response == (2,0,0) -> handler $ rspBody response
-              | otherwise -> throwError $ "request to registry was unsuccessful"
---}
+      handler (StatusCodeException (Status code err) headers _) =
+          return . Left $ BSC.unpack err ++ details
+          where
+            details = case List.lookup "X-Response-Body-Start" headers of
+                        Nothing -> ""
+                        Just msg -> ": " ++ BSC.unpack msg

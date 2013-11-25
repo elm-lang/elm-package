@@ -43,6 +43,7 @@ Executable elm-get
                        directory,
                        filepath,
                        http-conduit,
+                       http-types,
                        mtl,
                        network,
                        process,

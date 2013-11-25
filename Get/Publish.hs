@@ -26,7 +26,7 @@ publish =
      verifyExposedModules exposedModules
      verifyVersion name version
      generateDocs exposedModules
-     liftIO $ R.send $ R.register name version Utils.combinedJson
+     R.send $ R.register name version Utils.combinedJson
      Utils.out "Success!"
 
 verifyExposedModules :: [String] -> ErrorT String IO ()
@@ -44,8 +44,8 @@ verifyExposedModules modules =
 
 verifyVersion :: N.Name -> V.Version -> ErrorT String IO ()
 verifyVersion name version =
-    do maybeDeps <- liftIO $ R.send (R.metadata name)
-       case maybeDeps of
+    do response <- liftIO $ runErrorT $ R.send (R.metadata name)
+       case either (const Nothing) id response of
          Nothing -> return ()
          Just oldDeps ->
              let oldVersion = D.version oldDeps in
