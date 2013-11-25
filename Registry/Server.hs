@@ -22,6 +22,7 @@ import System.Environment
 import qualified Registry.Utils as Utils
 import qualified Model.Name as N
 import qualified Model.Version as V
+import qualified Registry.Generate.Docs as Docs
 
 data Flags = Flags
   { port :: Int
@@ -60,10 +61,13 @@ register =
              badRequest $ toResponse ("That version has already been registered." :: String)
          False -> do
            let permanentDocs = directory </> Utils.json
-           liftIO $ do createDirectory directory
+           result <- liftIO $ do
+                       createDirectoryIfMissing True directory
                        BS.writeFile permanentDocs =<< BS.readFile tempDocs
-                       buildDocs permanentDocs
-           ok $ toResponse ("Registered successfully!" :: String)
+                       runErrorT $ Docs.generate directory
+           case result of
+             Left err -> internalServerError $ toResponse err
+             Right _ -> ok $ toResponse ("Registered successfully!" :: String)
   where
     args = (,,) <$> look "library" <*> look "version" <*> lookFile "docs"
 
@@ -71,9 +75,6 @@ register =
       name <- N.fromString name'
       version <- V.fromString version'
       return (Utils.libraryVersion name version, docsPath)
-
-buildDocs :: FilePath -> IO ()
-buildDocs path = return ()
 
 versions :: ServerPart Response
 versions =
