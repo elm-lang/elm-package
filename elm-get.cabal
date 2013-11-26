@@ -42,6 +42,7 @@ Executable elm-get
                        containers,
                        directory,
                        filepath,
+                       HTTP,
                        http-conduit,
                        http-types,
                        mtl,

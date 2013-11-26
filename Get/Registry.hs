@@ -2,6 +2,7 @@
 module Get.Registry where
 
 import Network
+import Network.HTTP
 import Network.HTTP.Conduit
 import Network.HTTP.Conduit.MultipartFormData
 
@@ -28,38 +29,26 @@ import qualified Paths_elm_get as This
 
 domain = "http://localhost:8000/"
 
-toBS :: Show t => t -> BSC.ByteString
-toBS = BSC.pack . show
-
 metadata :: N.Name -> Manager -> ResourceT IO (Maybe D.Deps)
 metadata name manager =
-    do request  <- parseUrl $ domain ++ "metadata"
-       request' <- formDataBody vars request
-       response <- httpLbs request' manager
+    do request  <- parseUrl $ domain ++ "metadata?" ++ urlEncodeVars [("library", show name)]
+       response <- httpLbs request manager
        return $ Json.decode $ responseBody response
-    where
-      vars = [ partBS "library" (toBS name) ]
 
 versions :: N.Name -> Manager -> ResourceT IO (Maybe [V.Version])
 versions name manager =
-    do request  <- parseUrl $ domain ++ "versions"
-       request' <- formDataBody vars request
-       response <- httpLbs request' manager
+    do request  <- parseUrl $ domain ++ "versions?" ++ urlEncodeVars [("library", show name)]
+       response <- httpLbs request manager
        return $ Binary.decode $ responseBody response
-    where
-      vars = [ partBS "library" (toBS name) ]
 
 register :: N.Name -> V.Version -> FilePath -> Manager -> ResourceT IO ()
 register name version path manager =
-    do request <- parseUrl $ domain ++ "register"
-       request' <- formDataBody vars request
+    do request <- parseUrl $ domain ++ "register?" ++ urlEncodeVars vars
+       request' <- formDataBody [partFileSource "docs" path] request
        httpLbs request' manager
        return ()
     where
-      vars = [ partBS "library" (toBS name)
-             , partBS "version" (toBS version)
-             , partFileSource "docs" path
-             ]
+      vars = [ ("library", show name), ("version", show version) ]
 
 send :: (Manager -> ResourceT IO a) -> ErrorT String IO a
 send request =
@@ -68,7 +57,8 @@ send request =
     where
       mkRequest = withSocketsDo $ withManager request
 
-      handler (StatusCodeException (Status code err) headers _) =
+      handler sce@(StatusCodeException (Status code err) headers _) =
+       do liftIO $ print sce
           return . Left $ BSC.unpack err ++ details
           where
             details = case List.lookup "X-Response-Body-Start" headers of
