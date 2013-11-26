@@ -1,28 +1,29 @@
 {-# LANGUAGE OverloadedStrings, DeriveDataTypeable #-}
 module Registry.Server where
 
-import Happstack.Server hiding (body,port)
-import Happstack.Server.Compression
-import qualified Happstack.Server as Happs
 import qualified Data.Binary as Binary
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Char8 as C
+import qualified Data.ByteString.Char8 as BSC
+import qualified Data.HashMap.Strict as Map
 import qualified Data.Maybe as Maybe
+import qualified Data.List as List
 
-import Control.Applicative
 import Control.Monad.Error
-import Control.Exception
 import System.Console.CmdArgs
-import System.FilePath as FP
-import System.Process
+import System.FilePath
 import System.Directory
 import GHC.Conc
 
-import System.Environment
 import qualified Registry.Utils as Utils
 import qualified Model.Name as N
 import qualified Model.Version as V
 import qualified Registry.Generate.Docs as Docs
+
+import Snap
+import Snap.Util.FileServe
+import Snap.Util.FileUploads
+
+import qualified Language.Elm as Elm
 
 data Flags = Flags
   { port :: Int
@@ -37,97 +38,169 @@ flags = Flags
 main :: IO ()
 main = do
   setNumCapabilities =<< getNumProcessors
-  cargs <- cmdArgs flags
+  getRuntimeAndDocs
   createDirectoryIfMissing True Utils.libDir
-  putStrLn $ "Serving at <localhost:" ++ show (port cargs) ++ ">"
-  simpleHTTP nullConf { Happs.port = port cargs } $ do
-    compressedResponseFilter
-    decodeBody $ defaultBodyPolicy "/tmp/" 10000 1000 1000
-    msum [ dir "register" register
-         , dir "versions" versions
-         , dir "metadata" metadata
-         , badRequest $ toResponse $ ("did not work\n" :: String)
-         ]
+  cargs <- cmdArgs flags
+  httpServe (setPort (port cargs) defaultConfig) $
+      route [ ("libraries/:name/:version", libraries)
+            , ("versions"                , versions)
+            , ("register"                , register)
+            , ("metadata"                , metadata)
+            ]
+      <|> serveDirectoryWith directoryConfig "public"
+      <|> serveDirectoryWith directoryConfig "resources"
+      <|> error404 "Could not find that."
 
-type SPResponse = ServerPart Response
+getRuntimeAndDocs :: IO ()
+getRuntimeAndDocs = do
+  BS.writeFile "resources/elm-runtime.js" =<< BS.readFile =<< Elm.runtime
+  BS.writeFile "resources/docs.json" =<< BS.readFile =<< Elm.docs
 
-register :: SPResponse
-register =
-  do method POST
-     with args format $ \(directory, tempDocs) -> do
+libraries :: Snap ()
+libraries =
+    do request <- getRequest
+       let directory = "public" ++ BSC.unpack (rqContextPath request)
+       when (List.isInfixOf ".." directory) pass
        exists <- liftIO $ doesDirectoryExist directory
-       case exists of
-         True ->
-             badRequest $ toResponse ("That version has already been registered." :: String)
-         False -> do
-           let permanentDocs = directory </> Utils.json
-           result <- liftIO $ do
-                       createDirectoryIfMissing True directory
-                       BS.writeFile permanentDocs =<< BS.readFile tempDocs
-                       runErrorT $ Docs.generate directory
-           case result of
-             Left err -> internalServerError $ toResponse err
-             Right _ -> ok $ toResponse ("Registered successfully!" :: String)
+       when (not exists) pass
+       ifTop serveIndex <|> serveModule request
+    where
+      serveIndex = do
+        writeBS "there should be an index file here at some point"
+
+      serveModule request = do
+        let path = BSC.unpack $ BS.concat
+                   [ "public", rqContextPath request, rqPathInfo request, ".html" ]
+        when (not $ isRelative path) pass
+        when (List.isInfixOf ".." path) pass
+        exists <- liftIO $ doesFileExist path
+        when (not exists) pass
+        serveFile path
+              
+  
+directoryConfig :: MonadSnap m => DirectoryConfig m
+directoryConfig =
+    fancyDirectoryConfig
+    { indexGenerator = defaultIndexGenerator defaultMimeTypes indexStyle
+    , mimeTypes = Map.insert ".elm" "text/plain" defaultMimeTypes
+    }
+
+indexStyle :: BS.ByteString
+indexStyle =
+    "body { margin:0; font-family:sans-serif; background:rgb(245,245,245);\
+    \       font-family: calibri, verdana, helvetica, arial; }\
+    \div.header { padding: 40px 50px; font-size: 24px; }\
+    \div.content { padding: 0 40px }\
+    \div.footer { display:none; }\
+    \table { width:100%; border-collapse:collapse; }\
+    \td { padding: 6px 10px; }\
+    \tr:nth-child(odd) { background:rgb(216,221,225); }\
+    \td { font-family:monospace }\
+    \th { background:rgb(90,99,120); color:white; text-align:left;\
+    \     padding:10px; font-weight:normal; }"
+
+
+register :: Snap ()
+register =
+  do lib <- getParam "library"
+     ver <- getParam "version"
+     let directory' = Utils.libraryVersion <$> (N.fromString . BSC.unpack =<< lib)
+                                           <*> (V.fromString . BSC.unpack =<< ver)
+     case directory' of
+       Nothing -> error404 "Invalid library name or version number."
+       Just directory -> do
+         exists <- liftIO $ doesDirectoryExist directory
+         if exists
+         then error404 "That version has already been registered."
+         else handleFileUploads "/tmp" defaultUploadPolicy perPartPolicy (handler directory)
   where
-    args = (,,) <$> look "library" <*> look "version" <*> lookFile "docs"
+    perPartPolicy partInfo
+        | okayPart partInfo = allowWithMaximumSize $ 2^(19::Int)
+        | otherwise = disallow
 
-    format (name', version', (docsPath,_,_)) = do
-      name <- N.fromString name'
-      version <- V.fromString version'
-      return (Utils.libraryVersion name version, docsPath)
+    okayPart part =
+        partFieldName part == "docs"
+        && partContentType part == "application/json"
 
-versions :: ServerPart Response
-versions =
-  do method POST
-     with (look "library") N.fromString $ \name -> do
-       let path = Utils.library name
-       exists <- liftIO $ doesDirectoryExist path
-       versions <- case exists of
-                     False -> return Nothing
-                     True  -> do contents <- liftIO $ getDirectoryContents path
-                                 return $ Just $ Maybe.mapMaybe V.fromString contents
-       ok $ toResponseBS (C.pack "text/plain") (Binary.encode versions)
+    handler directory parts =
+        case parts of
+          [(info, Right tempDocs)] | okayPart info ->
+              do let permanentDocs = directory </> Utils.json
+                 result <- liftIO $ do
+                             createDirectoryIfMissing True directory
+                             BS.writeFile permanentDocs =<< BS.readFile tempDocs
+                             runErrorT $ Docs.generate directory
+                 case result of
+                   Right _ -> writeBS "Registered successfully!"
+                   Left err ->
+                       do writeBS $ BSC.pack err
+                          httpError 500 "Internal Server Error"
+              
+          [(info, Left err)] ->
+              do writeText $ policyViolationExceptionReason err
+                 error404 ""
 
-metadata :: ServerPart Response
-metadata =
-  do method POST
-     with (look "library") N.fromString $ \name -> do
-       let path = Utils.library name
-       exists <- liftIO $ doesDirectoryExist path
-       case exists of
-         False -> notFound $ toResponse ("There is no library " ++ show name)
-         True  -> serveJson path name
+versions :: Snap ()
+versions = do
+  library <- getParam "library"
+  case N.fromString . BSC.unpack =<< library of
+    Nothing -> error404 "The request arguments are not well-formed."
+    Just name ->
+        do let path = Utils.library name
+           exists <- liftIO $ doesDirectoryExist path
+           versions <- case exists of
+                         False -> return Nothing
+                         True  -> do contents <- liftIO $ getDirectoryContents path
+                                     return $ Just $ Maybe.mapMaybe V.fromString contents
+           writeLBS (Binary.encode versions)
+
+error404' :: String -> Snap ()
+error404' msg =
+    writeBS (BSC.pack msg) >> httpError 404 "Not Found"
+
+error404 :: BSC.ByteString -> Snap ()
+error404 msg =
+    writeBS msg >> httpError 404 "Not Found"
+
+httpError :: Int -> BSC.ByteString -> Snap ()
+httpError code msg = do
+  modifyResponse $ setResponseStatus code msg
+  finishWith =<< getResponse
+
+metadata :: Snap ()
+metadata = do
+  library <- getParam "library"
+  case N.fromString . BSC.unpack =<< library of
+    Nothing -> 
+        do request <- getRequest
+           liftIO $ print request
+           error404 "The request arguments are not well-formed."
+    Just name ->
+        do let path = Utils.library name
+           exists <- liftIO $ doesDirectoryExist path
+           case exists of
+             False -> error404' $ "There is no library " ++ show name
+             True  -> serveJson path name
   where
     serveJson path name = do
       contents <- liftIO $ getDirectoryContents path
       case Maybe.mapMaybe V.fromString contents of
-        [] -> notFound $ toResponse ("No registered versions of " ++ show name)
+        [] -> error404' $ "No registered versions of " ++ show name
         versions -> do
-          either <- getVersion name versions `fmap` getDataFn (look "version")
+          either <- getVersion name versions `fmap` getParam "version"
           case either of
-            Left err -> notFound $ toResponse err
+            Left err -> error404' err
             Right version ->
                 do contents <- liftIO $ getDirectoryContents (Utils.libraryVersion name version)
-                   serveFile (asContentType "application/json")
-                             (Utils.libraryVersion name version </> Utils.json)
+                   serveFile (Utils.libraryVersion name version </> Utils.json)
 
-    getVersion name versions either =
-      case either of
-        Left _ -> Right $ maximum versions
-        Right str ->
+    getVersion name versions maybe =
+      case maybe of
+        Nothing -> Right $ maximum versions
+        Just byteStr ->
+            let str = BSC.unpack byteStr in
             case V.fromString str of
               Nothing -> Left $ "Requested an invalid version number: " ++ str
               Just v | v `elem` versions -> Right v
                      | otherwise ->
                          Left $ "Library " ++ show name ++ " has no version " ++ str
-
-with :: RqData a -> (a -> Maybe b) -> (b -> SPResponse) -> SPResponse
-with args format handle = do
-  either <- getDataFn args
-  case either of
-    Left err -> notFound $ toResponse $ unlines err
-    Right info ->
-        case format info of
-          Just value -> handle value
-          Nothing -> let msg = "The request arguments are not well-formed."
-                     in  notFound $ toResponse (msg :: String)
