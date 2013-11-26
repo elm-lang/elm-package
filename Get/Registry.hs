@@ -58,8 +58,8 @@ send request =
       mkRequest = withSocketsDo $ withManager request
 
       handler sce@(StatusCodeException (Status code err) headers _) =
-            return . Left $ BSC.unpack err ++ details
+            return . Left $ BSC.unpack details
           where
             details = case List.lookup "X-Response-Body-Start" headers of
-                        Nothing -> ""
-                        Just msg -> ": " ++ BSC.unpack msg
+                        Just msg | not (BSC.null msg) -> msg
+                        _ -> err
