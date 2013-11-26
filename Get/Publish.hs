@@ -47,11 +47,21 @@ verifyVersion name version =
     do response <- liftIO $ runErrorT $ R.send (R.metadata name)
        case either (const Nothing) id response of
          Nothing -> return ()
-         Just oldDeps ->
-             let oldVersion = D.version oldDeps in
-             when (oldVersion >= version) $ throwError $ unlines
-                 [ "a later version has already been released."
-                 , "Use a version number higher than " ++ show oldVersion ]
+         Just oldDeps -> do
+           let oldVersion = D.version oldDeps
+           when (oldVersion >= version) $ throwError $ unlines
+               [ "a later version has already been released."
+               , "Use a version number higher than " ++ show oldVersion ]
+
+       tags <- lines <$> Utils.git [ "tag", "--list" ]
+       when (show version `notElem` tags) $ throwError $ unlines
+           [ "before you can publish, you must tag this library so others can find it."
+           , "Run the following commands to tag the current code and push it to github:"
+           , ""
+           , "    git tag --annotate " ++ show version ++ " --message 'add new features'"
+           , "    git push origin --tags"
+           , ""
+           ]
 
 generateDocs :: [String] -> ErrorT String IO ()
 generateDocs modules = 
