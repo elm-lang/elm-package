@@ -44,33 +44,43 @@ verifyExposedModules modules =
 
 verifyVersion :: N.Name -> V.Version -> ErrorT String IO ()
 verifyVersion name version =
-    do response <- liftIO $ runErrorT $ R.send (R.metadata name)
-       case either (const Nothing) id response of
+    do response <- R.send (R.versions name)
+       case response of
          Nothing -> return ()
-         Just oldDeps -> do
-           let oldVersion = D.version oldDeps
-           when (oldVersion >= version) $ throwError $ unlines
-               [ "a later version has already been released."
-               , "Use a version number higher than " ++ show oldVersion ]
+         Just versions ->
+             do let maxVersion = maximum (version:versions)
+                when (version < maxVersion) $ throwError $ unlines
+                     [ "a later version has already been released."
+                     , "Use a version number higher than " ++ show maxVersion ]
+                checkSemanticVersioning maxVersion
 
-       tags <- lines <$> Utils.git [ "tag", "--list" ]
-       let v = show version
-       when (show version `notElem` tags) $ do
-         liftIO $ mapM putStrLn
-           [ "Libraries must be tagged before they are published. This makes it possible to"
-           , "find this specific version on github. You can run the following commands to tag"
-           , "the current code and push it to github:"
-           , ""
-           , "    git tag --annotate " ++ v ++ " --message 'release version " ++ v ++ "'"
-           , "    git push origin " ++ v
-           , "" ]
-         liftIO $ putStr "Would you like me to run these commands for you? (y/n): "
-         yes <- liftIO $ Utils.yesOrNo
-         case yes of
-           False -> throwError "you must publicly tag your repo before publishing."
-           True -> do Utils.git ["tag", "-a " ++ v, "-m 'release version " ++ v ++ "'"]
-                      Utils.git ["push", "origin", v]
-                      return ()
+       checkTag version
+
+    where
+      checkSemanticVersioning _ = return ()
+
+      checkTag version = do
+        tags <- lines <$> Utils.git [ "tag", "--list" ]
+        let v = show version
+        when (show version `notElem` tags) $ do
+          yes <- liftIO $ do
+                   mapM putStrLn (tagMessage v)
+                   putStr "Would you like me to run these commands for you? (y/n): "
+                   Utils.yesOrNo
+          case yes of
+            False -> throwError "you must publicly tag your repo before publishing."
+            True -> do Utils.git ["tag", "-a " ++ v, "-m 'release version " ++ v ++ "'"]
+                       Utils.git ["push", "origin", v]
+                       return ()
+
+      tagMessage v =
+          [ "Libraries must be tagged before they are published. This makes it possible to"
+          , "find this specific version on github. You can run the following commands to tag"
+          , "the current code and push it to github:"
+          , ""
+          , "    git tag --annotate " ++ v ++ " --message 'release version " ++ v ++ "'"
+          , "    git push origin " ++ v
+          , "" ]
 
 generateDocs :: [String] -> ErrorT String IO ()
 generateDocs modules = 
