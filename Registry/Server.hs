@@ -18,6 +18,7 @@ import qualified Registry.Utils as Utils
 import qualified Model.Name as N
 import qualified Model.Version as V
 import qualified Registry.Generate.Docs as Docs
+import qualified Registry.Generate.Html as Html
 
 import Snap
 import Snap.Util.FileServe
@@ -39,14 +40,16 @@ main :: IO ()
 main = do
   setNumCapabilities =<< getNumProcessors
   getRuntimeAndDocs
+  setupRootFiles
   createDirectoryIfMissing True Utils.libDir
   cargs <- cmdArgs flags
   httpServe (setPort (port cargs) defaultConfig) $
-      route [ ("libraries/:name/:version", libraries)
-            , ("versions"                , versions)
-            , ("register"                , register)
-            , ("metadata"                , metadata)
-            ]
+      ifTop (serveFile "public/Main.html")
+      <|> route [ ("libraries/:name/:version", libraries)
+                , ("versions"                , versions)
+                , ("register"                , register)
+                , ("metadata"                , metadata)
+                ]
       <|> serveDirectoryWith directoryConfig "public"
       <|> serveDirectoryWith directoryConfig "resources"
       <|> error404 "Could not find that."
@@ -55,6 +58,12 @@ getRuntimeAndDocs :: IO ()
 getRuntimeAndDocs = do
   BS.writeFile "resources/elm-runtime.js" =<< BS.readFile =<< Elm.runtime
   BS.writeFile "resources/docs.json" =<< BS.readFile =<< Elm.docs
+
+setupRootFiles :: IO ()
+setupRootFiles = do
+  runErrorT $ do Html.generateSrc "src/Main.elm"
+                 Html.generateSrc "src/InfixOps.elm"
+  return ()
 
 libraries :: Snap ()
 libraries =
