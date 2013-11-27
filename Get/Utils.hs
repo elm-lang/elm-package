@@ -14,6 +14,7 @@ depsFile = "elm_dependencies.json"
 
 yesOrNo :: IO Bool
 yesOrNo = do
+  hFlush stdout
   input <- getLine
   case input of
     "y" -> return True
