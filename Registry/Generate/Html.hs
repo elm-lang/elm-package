@@ -15,7 +15,7 @@ import qualified Get.Utils as Utils
 generate :: FilePath -> ErrorT String IO ()
 generate path =
   do Utils.run "elm" ["--make","--runtime=/elm-runtime.js"
-                     , "--build-dir=.", "--src-dir=public", path]
+                     , "--build-dir=.", "--src-dir=src", path]
      liftIO $ removeFile path
      liftIO $ adjustHtmlFile $ FP.replaceExtension path "html"
 

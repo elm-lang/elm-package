@@ -1,0 +1,3 @@
+module RawInfixes where
+
+table = [[[("Basics","|>")],[],[("Basics","<|")]],[[],[],[]],[[],[],[("Basics","||")]],[[],[],[("Basics","&&")]],[[("Signal","<~"),("Signal","~")],[("Basics","/="),("Basics","<"),("Basics","<="),("Basics","=="),("Basics",">"),("Basics",">=")],[]],[[],[],[("List","++"),("List","::")]],[[("Basics","+"),("Basics","-")],[],[]],[[("Basics","*"),("Basics","/"),("Basics","div"),("Basics","mod"),("Basics","rem")],[],[]],[[("Basics","^")],[],[]],[[("Automaton","<<<"),("Automaton",">>>")],[],[("Basics",".")]]]
