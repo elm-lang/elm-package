@@ -102,10 +102,7 @@ indexStyle =
 
 register :: Snap ()
 register =
-  do lib <- getParam "library"
-     ver <- getParam "version"
-     let directory' = Utils.libraryVersion <$> (N.fromString . BSC.unpack =<< lib)
-                                           <*> (V.fromString . BSC.unpack =<< ver)
+  do directory' <- getLibraryAndVersion
      case directory' of
        Nothing -> error404 "Invalid library name or version number."
        Just directory -> do
@@ -154,6 +151,23 @@ versions = do
                                      return $ Just $ Maybe.mapMaybe V.fromString contents
            writeLBS (Binary.encode versions)
 
+metadata :: Snap ()
+metadata =
+  do directory' <- getLibraryAndVersion
+     case directory' of
+       Nothing -> error404 "Invalid library name or version number."
+       Just directory -> do
+         exists <- liftIO $ doesDirectoryExist directory
+         if exists then serveFile (directory </> Utils.json)
+                   else error404 "That library and version is not registered."
+
+getLibraryAndVersion :: Snap (Maybe FilePath)
+getLibraryAndVersion =
+  do lib <- getParam "library"
+     ver <- getParam "version"
+     return $ Utils.libraryVersion <$> (N.fromString . BSC.unpack =<< lib)
+                                   <*> (V.fromString . BSC.unpack =<< ver)
+
 error404' :: String -> Snap ()
 error404' msg =
     writeBS (BSC.pack msg) >> httpError 404 "Not Found"
@@ -166,41 +180,3 @@ httpError :: Int -> BSC.ByteString -> Snap ()
 httpError code msg = do
   modifyResponse $ setResponseStatus code msg
   finishWith =<< getResponse
-
-metadata :: Snap ()
-metadata = do
-  library <- getParam "library"
-  case N.fromString . BSC.unpack =<< library of
-    Nothing -> 
-        do request <- getRequest
-           liftIO $ print request
-           error404 "The request arguments are not well-formed."
-    Just name ->
-        do let path = Utils.library name
-           exists <- liftIO $ doesDirectoryExist path
-           case exists of
-             False -> error404' $ "There is no library " ++ show name
-             True  -> serveJson path name
-  where
-    serveJson path name = do
-      contents <- liftIO $ getDirectoryContents path
-      case Maybe.mapMaybe V.fromString contents of
-        [] -> error404' $ "No registered versions of " ++ show name
-        versions -> do
-          either <- getVersion name versions `fmap` getParam "version"
-          case either of
-            Left err -> error404' err
-            Right version ->
-                do contents <- liftIO $ getDirectoryContents (Utils.libraryVersion name version)
-                   serveFile (Utils.libraryVersion name version </> Utils.json)
-
-    getVersion name versions maybe =
-      case maybe of
-        Nothing -> Right $ maximum versions
-        Just byteStr ->
-            let str = BSC.unpack byteStr in
-            case V.fromString str of
-              Nothing -> Left $ "Requested an invalid version number: " ++ str
-              Just v | v `elem` versions -> Right v
-                     | otherwise ->
-                         Left $ "Library " ++ show name ++ " has no version " ++ str
