@@ -19,6 +19,7 @@ import qualified Data.List as List
 import qualified Model.Dependencies as D
 import qualified Model.Name         as N
 import qualified Model.Version      as V
+import qualified Get.Utils          as Utils
 
 import qualified Control.Exception as E
 import Network.HTTP.Types
@@ -44,11 +45,14 @@ versions name manager =
 register :: N.Name -> V.Version -> FilePath -> Manager -> ResourceT IO ()
 register name version path manager =
     do request <- parseUrl $ domain ++ "register?" ++ urlEncodeVars vars
-       request' <- formDataBody [partFileSource "docs" path] request
+       request' <- formDataBody files request
        httpLbs request' manager
        return ()
     where
       vars = [ ("library", show name), ("version", show version) ]
+      files = [ partFileSource "docs" path
+              , partFileSource "deps" Utils.depsFile
+              ]
 
 send :: (Manager -> ResourceT IO a) -> ErrorT String IO a
 send request =

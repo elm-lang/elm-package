@@ -14,6 +14,7 @@ import System.FilePath
 import System.Directory
 import GHC.Conc
 
+import qualified Get.Utils as GUtils
 import qualified Registry.Utils as Utils
 import qualified Model.Name as N
 import qualified Model.Version as V
@@ -72,11 +73,8 @@ libraries =
        when (List.isInfixOf ".." directory) pass
        exists <- liftIO $ doesDirectoryExist directory
        when (not exists) pass
-       ifTop serveIndex <|> serveModule request
+       ifTop (serveFile (directory </> "index.html")) <|> serveModule request
     where
-      serveIndex = do
-        writeBS "there should be an index file here at some point"
-
       serveModule request = do
         let path = BSC.unpack $ BS.concat
                    [ "public", rqContextPath request, rqPathInfo request, ".html" ]
@@ -108,7 +106,6 @@ indexStyle =
     \th { background:rgb(90,99,120); color:white; text-align:left;\
     \     padding:10px; font-weight:normal; }"
 
-
 register :: Snap ()
 register =
   do directory' <- getLibraryAndVersion
@@ -118,33 +115,43 @@ register =
          exists <- liftIO $ doesDirectoryExist directory
          if exists
          then error404 "That version has already been registered."
-         else handleFileUploads "/tmp" defaultUploadPolicy perPartPolicy (handler directory)
+         else do
+           handleFileUploads "/tmp" defaultUploadPolicy perPartPolicy (handler directory)
+           result <- liftIO $ runErrorT $ Docs.generate directory
+           case result of
+             Right _ -> writeBS "Registered successfully!"
+             Left err -> do writeBS $ BSC.pack err
+                            httpError 500 "Internal Server Error"
   where
-    perPartPolicy partInfo
-        | okayPart partInfo = allowWithMaximumSize $ 2^(19::Int)
+    perPartPolicy info
+        | okayPart "docs" info || okayPart "deps" info = allowWithMaximumSize $ 2^(19::Int)
         | otherwise = disallow
 
-    okayPart part =
-        partFieldName part == "docs"
+    okayPart field part =
+        partFieldName part == field
         && partContentType part == "application/json"
 
-    handler directory parts =
-        case parts of
-          [(info, Right tempDocs)] | okayPart info ->
-              do let permanentDocs = directory </> Utils.json
-                 result <- liftIO $ do
-                             createDirectoryIfMissing True directory
-                             BS.writeFile permanentDocs =<< BS.readFile tempDocs
-                             runErrorT $ Docs.generate directory
-                 case result of
-                   Right _ -> writeBS "Registered successfully!"
-                   Left err ->
-                       do writeBS $ BSC.pack err
-                          httpError 500 "Internal Server Error"
-              
-          [(info, Left err)] ->
-              do writeText $ policyViolationExceptionReason err
-                 error404 ""
+    handler dir parts =
+     do case parts of
+          [(info1, Right temp1), (info2, Right temp2)]
+              | okayPart "docs" info1 && okayPart "deps" info2 ->
+                   do copy dir temp1 Utils.json
+                      copy dir temp2 GUtils.depsFile
+              | okayPart "docs" info2 && okayPart "deps" info1 ->
+                   do copy dir temp2 Utils.json
+                      copy dir temp1 GUtils.depsFile
+
+          _ -> do
+            mapM (writeError . snd) parts
+            error404' msg
+
+    writeError = either (writeText . policyViolationExceptionReason) (const (return ()))
+    msg = "Files " ++ Utils.json ++ " and " ++ GUtils.depsFile ++ " were not uploaded."
+
+    copy directory temp path =
+        do let permanent = directory </> path
+           liftIO $ createDirectoryIfMissing True directory
+           liftIO $ BS.writeFile permanent =<< BS.readFile temp
 
 versions :: Snap ()
 versions = do

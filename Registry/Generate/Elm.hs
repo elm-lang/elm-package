@@ -15,15 +15,49 @@ import qualified System.Directory as Dir
 import System.FilePath ((</>), (<.>))
 import Text.Parsec
 
-import Model.Documentation
+import Model.Dependencies as Deps
+import Model.Documentation as Docs
+import qualified Model.Name as N
 import qualified Registry.Utils as Utils
+import qualified Get.Utils as GUtils
 
 generate :: FilePath -> ErrorT String IO [FilePath]
-generate directory =
-    do json <- liftIO $ BS.readFile $ directory </> Utils.json
-       case mapM docToElm =<< Json.eitherDecode json of
-         Left err -> throwError err
-         Right docs -> liftIO $ mapM (writeDocs directory) docs
+generate directory = (++) <$> makeDocs <*> makeDeps
+    where
+      makeDocs = do
+        docs <- liftIO $ BS.readFile $ directory </> Utils.json
+        case mapM docToElm =<< Json.eitherDecode docs of
+          Left err -> throwError err
+          Right elmDocs -> liftIO $ mapM (writeDocs directory) elmDocs
+
+      makeDeps = do
+        deps <- liftIO $ BS.readFile $ directory </> GUtils.depsFile
+        case depsToElm <$> Json.eitherDecode deps of
+          Left err -> throwError err
+          Right elmDeps ->
+              do liftIO $ writeFile (directory </> Utils.index) elmDeps
+                 return [directory </> Utils.index]
+
+depsToElm :: Deps -> String
+depsToElm deps = 
+    unlines [ "import open Docs"
+            , "import Search"
+            , "import Window"
+            , ""
+            , "main = documentation \"" ++ N.project (Deps.name deps) ++
+              "\" entries <~ Window.dimensions ~ Search.box ~ Search.results"
+            , ""
+            , "entries ="
+            , "  [ flip width [markdown|" ++ Deps.description deps ++ "|]"
+            , "  , flip width [markdown|" ++ concatMap toLink (Deps.exposed deps) ++ "|]"
+            , "  , flip width [markdown|The [source code is on GitHub](" ++ Deps.repo deps ++ ").\n"
+            , " * Star the project on GitHub to recommend it to others."
+            , " * Use GitHub issues to report and track problems."
+            , " * If you find someone with great library design skills, see what other projects they are working on.|]"
+            , "  ]"
+            ]
+    where
+      toLink m = "[" ++ m ++ "](" ++ map (\c -> if c == '.' then '-' else c) m ++ ")<br/>"
 
 writeDocs :: FilePath -> (String,String) -> IO FilePath
 writeDocs directory (name, code) =
@@ -75,7 +109,7 @@ docToElm doc =
 
 getEntries :: Document -> Map.Map String Entry
 getEntries doc =
-    Map.fromList $ map (\entry -> (name entry, entry)) (entries doc)
+    Map.fromList $ map (\entry -> (Docs.name entry, entry)) (entries doc)
 
 contentToElm :: Map.Map String Entry -> Content -> Either String String
 contentToElm entries content =

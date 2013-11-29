@@ -7,6 +7,7 @@ import qualified Model.Version as V
 libDir = "public" </> "libraries"
 
 json = "docs.json"
+index = "index.elm"
 
 library name = libDir </> N.toFilePath name
 
