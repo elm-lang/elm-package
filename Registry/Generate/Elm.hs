@@ -50,10 +50,8 @@ depsToElm deps =
             , "entries ="
             , "  [ flip width [markdown|" ++ Deps.description deps ++ "|]"
             , "  , flip width [markdown|" ++ concatMap toLink (Deps.exposed deps) ++ "|]"
-            , "  , flip width [markdown|The [source code is on GitHub](" ++ Deps.repo deps ++ ").\n"
-            , " * Star the project on GitHub to recommend it to others."
-            , " * Use GitHub issues to report and track problems."
-            , " * If you find someone with great library design skills, see what other projects they are working on.|]"
+            , "  , flip width [markdown|The [source code is on GitHub](" ++ Deps.repo deps ++ "),"
+            , "so you can star projects, report issues, and follow great library designers.|]"
             , "  ]"
             ]
     where
