@@ -21,6 +21,7 @@ data Deps = Deps
     { name :: N.Name
     , version :: V.Version
     , description :: String
+    , tags :: [String]
     , license :: String
     , author :: Person
     , contributors :: [Person]
@@ -43,6 +44,7 @@ instance FromJSON Deps where
         Deps <$> v .: "name"
              <*> v .: "version"
              <*> v .: "description"
+             <*> v .: "tags"
              <*> v .: "license"
              <*> v .: "author"
              <*> v .: "contributors"
