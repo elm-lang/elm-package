@@ -1,5 +1,5 @@
 import open Docs
-import open ColorScheme
+import open Website.ColorScheme
 import Search
 import String
 import Window

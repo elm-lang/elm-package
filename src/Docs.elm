@@ -3,7 +3,7 @@ module Docs where
 import Dict
 import Window
 import String
-import open ColorScheme
+import open Website.ColorScheme
 
 documentation name es (w,h) search results =
     let title wid = container wid 100 middle . text . Text.height 60 <| toText name
