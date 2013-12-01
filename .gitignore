@@ -1,4 +1,7 @@
 dist
 elm_dependencies
 cache/
-libraries/
+resources/elm-runtime.js
+resources/docs.json
+*.html
+RawInfixes.elm
