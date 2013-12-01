@@ -1,5 +1,5 @@
 
-module ColorScheme where 
+module Website.ColorScheme where 
 
 accent0 = rgb 90 99 120
 
