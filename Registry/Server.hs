@@ -18,6 +18,7 @@ import qualified Get.Utils as GUtils
 import qualified Registry.Utils as Utils
 import qualified Model.Name as N
 import qualified Model.Version as V
+import qualified Registry.Generate.Infixes as Infixes
 import qualified Registry.Generate.Docs as Docs
 import qualified Registry.Generate.Html as Html
 
@@ -41,6 +42,7 @@ main :: IO ()
 main = do
   setNumCapabilities =<< getNumProcessors
   getRuntimeAndDocs
+  Infixes.generate
   setupRootFiles
   createDirectoryIfMissing True Utils.libDir
   cargs <- cmdArgs flags
@@ -53,7 +55,9 @@ main = do
                 ]
       <|> serveDirectoryWith directoryConfig "public"
       <|> serveDirectoryWith directoryConfig "resources"
-      <|> error404 "Could not find that."
+      <|> do modifyResponse $ setResponseStatus 404 "Not found"
+             serveFile "public/Error404.html"
+
 
 getRuntimeAndDocs :: IO ()
 getRuntimeAndDocs = do
@@ -62,8 +66,7 @@ getRuntimeAndDocs = do
 
 setupRootFiles :: IO ()
 setupRootFiles = do
-  runErrorT $ do Html.generateSrc "src/Main.elm"
-                 Html.generateSrc "src/InfixOps.elm"
+  runErrorT $ mapM Html.generateSrc ["src/Main.elm","src/InfixOps.elm","src/Error404.elm"]
   return ()
 
 libraries :: Snap ()
@@ -108,10 +111,11 @@ indexStyle =
 
 register :: Snap ()
 register =
-  do directory' <- getLibraryAndVersion
-     case directory' of
+  do nameAndVersion <- getNameAndVersion
+     case nameAndVersion of
        Nothing -> error404 "Invalid library name or version number."
-       Just directory -> do
+       Just (name,version) -> do
+         let directory = Utils.libraryVersion name version
          exists <- liftIO $ doesDirectoryExist directory
          if exists
          then error404 "That version has already been registered."
@@ -119,9 +123,11 @@ register =
            handleFileUploads "/tmp" defaultUploadPolicy perPartPolicy (handler directory)
            result <- liftIO $ runErrorT $ Docs.generate directory
            case result of
-             Right _ -> writeBS "Registered successfully!"
-             Left err -> do writeBS $ BSC.pack err
-                            httpError 500 "Internal Server Error"
+             Left err ->
+                 do writeBS $ BSC.pack err
+                    httpError 500 "Internal Server Error"
+             Right () ->
+                 do writeBS "Registered successfully!"
   where
     perPartPolicy info
         | okayPart "docs" info || okayPart "deps" info = allowWithMaximumSize $ 2^(19::Int)
@@ -169,20 +175,20 @@ versions = do
 
 metadata :: Snap ()
 metadata =
-  do directory' <- getLibraryAndVersion
-     case directory' of
+  do nameAndVersion <- getNameAndVersion
+     case uncurry Utils.libraryVersion <$> nameAndVersion of
        Nothing -> error404 "Invalid library name or version number."
        Just directory -> do
          exists <- liftIO $ doesDirectoryExist directory
          if exists then serveFile (directory </> Utils.json)
                    else error404 "That library and version is not registered."
 
-getLibraryAndVersion :: Snap (Maybe FilePath)
-getLibraryAndVersion =
+getNameAndVersion :: Snap (Maybe (N.Name, V.Version))
+getNameAndVersion =
   do lib <- getParam "library"
      ver <- getParam "version"
-     return $ Utils.libraryVersion <$> (N.fromString . BSC.unpack =<< lib)
-                                   <*> (V.fromString . BSC.unpack =<< ver)
+     return $ (,) <$> (N.fromString . BSC.unpack =<< lib)
+                  <*> (V.fromString . BSC.unpack =<< ver)
 
 error404' :: String -> Snap ()
 error404' msg =
