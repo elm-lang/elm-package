@@ -4,7 +4,7 @@ import System.FilePath
 import qualified Model.Name as N
 import qualified Model.Version as V
 
-libDir = "public" </> "libraries"
+libDir = "public" </> "catalog"
 
 json = "docs.json"
 index = "index.elm"

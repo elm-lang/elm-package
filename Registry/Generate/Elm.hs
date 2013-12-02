@@ -25,7 +25,7 @@ generate :: [Document] -> Deps -> FilePath -> ErrorT String IO [FilePath]
 generate docs deps directory = (++) <$> makeDocs <*> makeDeps
     where
       makeDocs =
-          either throwError (liftIO . mapM (writeDocs directory)) (mapM docToElm docs)
+          either throwError (liftIO . mapM (writeDocs directory)) (mapM (docToElm deps) docs)
 
       makeDeps =
         do liftIO $ writeFile (directory </> Utils.index) (depsToElm deps)
@@ -33,22 +33,32 @@ generate docs deps directory = (++) <$> makeDocs <*> makeDeps
 
 depsToElm :: Deps -> String
 depsToElm deps = 
-    unlines [ "import open Docs"
-            , "import Search"
-            , "import Window"
+    unlines [ "import Website.Skeleton (skeleton)"
+            , "import Website.ColorScheme as C"
             , ""
-            , "main = documentation \"" ++ N.project (Deps.name deps) ++
-              "\" entries <~ Window.dimensions ~ Search.box ~ Search.results"
+            , "links = [ (\"" ++ toLink deps "" ++ "\", toText \"" ++ N.project (Deps.name deps) ++ "\") ]"
             , ""
-            , "entries ="
-            , "  [ flip width [markdown|" ++ Deps.description deps ++ "|]"
-            , "  , flip width [markdown|" ++ concatMap toLink (Deps.exposed deps) ++ "|]"
-            , "  , flip width [markdown|The [source code is on GitHub](" ++ Deps.repo deps ++ "),"
+            , "main = skeleton links scene (constant ())"
+            , ""
+            , "scene term () w ="
+            , "  flow down"
+            , "  [ color C.mediumGrey <| spacer w 1"
+            , "  , width w [markdown|" ++ Deps.description deps ++ "|]"
+            , "  , width w [markdown|" ++ concatMap markdownLink (Deps.exposed deps) ++ "|]"
+            , "  , width w [markdown|The [source code is on GitHub](" ++ Deps.repo deps ++ "),"
             , "so you can star projects, report issues, and follow great library designers.|]"
             , "  ]"
             ]
     where
-      toLink m = "[" ++ m ++ "](" ++ map (\c -> if c == '.' then '-' else c) m ++ ")<br/>"
+      markdownLink m = "[" ++ m ++ "](" ++ toLink deps m ++ ")<br/>"
+
+
+toLink deps m =
+    concat [ "/catalog/"
+           , N.toFilePath (Deps.name deps)
+           , "/", show (Deps.version deps), "/"
+           , map (\c -> if c == '.' then '-' else c) m
+           ]
 
 writeDocs :: FilePath -> (String,String) -> IO FilePath
 writeDocs directory (name, code) =
@@ -57,20 +67,27 @@ writeDocs directory (name, code) =
   where
     fileName = directory </> map (\c -> if c == '.' then '-' else c) name <.> "elm"
 
-docToElm :: Document -> Either String (String,String)
-docToElm doc =
+docToElm :: Deps -> Document -> Either String (String,String)
+docToElm deps doc =
   do contents <- either (Left . show) Right $ parse (parseDoc []) name (structure doc)
      case Either.partitionEithers $ map (contentToElm (getEntries doc)) contents of
        ([], code) ->
            Right . (,) name $
-           unlines [ "import open Docs"
-                   , "import Search"
-                   , "import Window"
+           unlines [ "import Website.Skeleton (skeleton)"
+                   , "import Website.ColorScheme as C"
+                   , "import Docs (entry)"
+                   , "import String"
                    , ""
-                   , "main = documentation " ++ show name ++ " entries <~ Window.dimensions ~ Search.box ~ Search.results"
+                   , "links = [ (\"" ++ toLink deps "" ++ "\", toText \"" ++ N.project (Deps.name deps) ++ "\")"
+                   , "        , (\"" ++ toLink deps name ++ "\", toText " ++ show name ++ ") ]"
                    , ""
-                   , "entries ="
-                   , "  [ " ++ List.intercalate "\n  , " code ++ "\n  ]"
+                   , "main = skeleton links scene (constant ())"
+                   , ""
+                   , "scene term () w ="
+                   , "    flow down . map snd . filter (String.contains (String.toLower term) . fst) <|"
+                   , "    [ (\"\", color C.mediumGrey <| spacer w 1)"
+                   , "    , " ++ List.intercalate "\n    , " code
+                   , "    ]"
                    ]
        (missing, _) ->
            Left $ "In module " ++ name ++ ", could not find documentation for: " ++ List.intercalate ", " missing
@@ -105,12 +122,15 @@ getEntries doc =
 contentToElm :: Map.Map String Entry -> Content -> Either String String
 contentToElm entries content =
     case content of
-      Markdown md -> Right $ "flip width [markdown|<style>h1,h2,h3,h4 {font-weight:normal;} h1 {font-size:24px;} h2 {font-size:20px;}</style>" ++ md ++ "|]"
+      Markdown md -> Right $ "(,) \"\" <| width w [markdown|<style>h1,h2,h3,h4 {font-weight:normal;} h1 {font-size:20px;} h2 {font-size:18px;}</style>" ++ md ++ "|]"
       Value name ->
           case Map.lookup name entries of
             Nothing -> Left name
             Just entry ->
-                Right $ unwords [ "entry"
+                Right $ unwords [ "(,)"
+                                , "(String.toLower " ++ show name ++ ")"
+                                , "<|"
+                                , "entry w"
                                 , show name
                                 , show (raw entry)
                                 , case assocPrec entry of

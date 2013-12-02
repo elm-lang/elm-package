@@ -14,14 +14,14 @@ import qualified Get.Utils as Utils
 
 generatePublic :: FilePath -> ErrorT String IO ()
 generatePublic path =
-  do Utils.run "elm" ["--make","--runtime=/elm-runtime.js"
+  do Utils.run "elm" ["--make","--runtime=/resources/elm-runtime.js"
                      , "--build-dir=.", "--src-dir=src", path]
      liftIO $ removeFile path
      liftIO $ adjustHtmlFile $ FP.replaceExtension path "html"
 
 generateSrc :: FilePath -> ErrorT String IO ()
 generateSrc path =
-  do Utils.run "elm" ["--make","--runtime=/elm-runtime.js"
+  do Utils.run "elm" ["--make","--runtime=/resources/elm-runtime.js"
                      , "--build-dir=.", "--src-dir=src", path]
      let old = FP.replaceExtension path "html"
          new = FP.replaceDirectory old "public"

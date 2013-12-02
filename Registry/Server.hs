@@ -10,8 +10,10 @@ import qualified Data.List as List
 
 import Control.Monad.Error
 import System.Console.CmdArgs
-import System.FilePath
 import System.Directory
+import System.Exit
+import System.FilePath
+import System.IO
 import GHC.Conc
 
 import qualified Get.Utils as GUtils
@@ -19,7 +21,6 @@ import qualified Registry.Utils as Utils
 import qualified Model.Name as N
 import qualified Model.Version as V
 import qualified Registry.Generate.Listing as Listing
-import qualified Registry.Generate.Infixes as Infixes
 import qualified Registry.Generate.Docs as Docs
 import qualified Registry.Generate.Html as Html
 
@@ -43,19 +44,18 @@ main :: IO ()
 main = do
   setNumCapabilities =<< getNumProcessors
   getRuntimeAndDocs
-  Infixes.generate
   setupRootFiles
   createDirectoryIfMissing True Utils.libDir
   cargs <- cmdArgs flags
   httpServe (setPort (port cargs) defaultConfig) $
-      ifTop (serveFile "public/Main.html")
-      <|> route [ ("libraries", libraries)
+      ifTop (serveFile "public/Home.html")
+      <|> route [ ("catalog"  , catalog)
                 , ("versions" , versions)
                 , ("register" , register)
                 , ("metadata" , metadata)
+                , ("resources", serveDirectoryWith directoryConfig "resources")
                 ]
       <|> serveDirectoryWith directoryConfig "public"
-      <|> serveDirectoryWith directoryConfig "resources"
       <|> do modifyResponse $ setResponseStatus 404 "Not found"
              serveFile "public/Error404.html"
 
@@ -67,29 +67,33 @@ getRuntimeAndDocs = do
 
 setupRootFiles :: IO ()
 setupRootFiles =
-    do runErrorT $ mapM Html.generateSrc $ map (\name -> "src/" ++ name ++ ".elm") elms
-       return ()
+    do result <- runErrorT generate
+       case result of
+         Right _ -> return ()
+         Left err -> do hPutStrLn stderr err
+                        exitFailure
     where
-      elms = ["Main","InfixOps","Error404","Listing"]
+      generate = mapM Html.generateSrc $ map (\name -> "src/" ++ name ++ ".elm") elms
+      elms = ["Error404","Catalog","Home"]
 
-libraries :: Snap ()
-libraries = ifTop (serveFile "public/Listing.html")
-            <|> routeLocal [(":name/:version", serveLibrary)]
+catalog :: Snap ()
+catalog = 
+    ifTop (serveFile "public/Catalog.html")
+    <|> routeLocal [ (":name/:version", serveLibrary) ]
   where
     serveLibrary :: Snap ()
-    serveLibrary =
-        do request <- getRequest
-           let directory = "public" ++ BSC.unpack (rqContextPath request)
-           when (List.isInfixOf ".." directory) pass
-           exists <- liftIO $ doesDirectoryExist directory
-           when (not exists) pass
-           ifTop (serveFile (directory </> "index.html")) <|> serveModule request
+    serveLibrary = do
+      request <- getRequest
+      let directory = "public" ++ BSC.unpack (rqContextPath request)
+      when (List.isInfixOf ".." directory) pass
+      exists <- liftIO $ doesDirectoryExist directory
+      when (not exists) pass
+      ifTop (serveFile (directory </> "index.html")) <|> serveModule request
 
     serveModule :: Request -> Snap ()
     serveModule request = do
       let path = BSC.unpack $ BS.concat
                  [ "public", rqContextPath request, rqPathInfo request, ".html" ]
-      when (not $ isRelative path) pass
       when (List.isInfixOf ".." path) pass
       exists <- liftIO $ doesFileExist path
       when (not exists) pass
