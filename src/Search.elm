@@ -8,7 +8,7 @@ import JavaScript.Experimental as JSE
 import Graphics.Input as Input
 import Dict
 
-(box, searchTerm) = Input.field "  search"
+(box, searchTerm) = Input.field "  search standard libraries"
 
 jsonResponse = Http.sendGet (constant "/docs.json")
 
