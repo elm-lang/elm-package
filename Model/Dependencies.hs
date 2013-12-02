@@ -20,6 +20,7 @@ data Person = Person
 data Deps = Deps
     { name :: N.Name
     , version :: V.Version
+    , summary :: String
     , description :: String
     , tags :: [String]
     , license :: String
@@ -43,6 +44,9 @@ instance FromJSON Deps where
     parseJSON (Object v) =
         Deps <$> v .: "name"
              <*> v .: "version"
+             <*> do summary <- v .: "summary"
+                    if length summary < 80 then return summary else
+                        fail "'summary' must be less than 80 characters"
              <*> v .: "description"
              <*> v .: "tags"
              <*> v .: "license"

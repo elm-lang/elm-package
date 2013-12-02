@@ -18,6 +18,7 @@ import qualified Get.Utils as GUtils
 import qualified Registry.Utils as Utils
 import qualified Model.Name as N
 import qualified Model.Version as V
+import qualified Registry.Generate.Listing as Listing
 import qualified Registry.Generate.Infixes as Infixes
 import qualified Registry.Generate.Docs as Docs
 import qualified Registry.Generate.Html as Html
@@ -48,10 +49,10 @@ main = do
   cargs <- cmdArgs flags
   httpServe (setPort (port cargs) defaultConfig) $
       ifTop (serveFile "public/Main.html")
-      <|> route [ ("libraries/:name/:version", libraries)
-                , ("versions"                , versions)
-                , ("register"                , register)
-                , ("metadata"                , metadata)
+      <|> route [ ("libraries", libraries)
+                , ("versions" , versions)
+                , ("register" , register)
+                , ("metadata" , metadata)
                 ]
       <|> serveDirectoryWith directoryConfig "public"
       <|> serveDirectoryWith directoryConfig "resources"
@@ -65,27 +66,34 @@ getRuntimeAndDocs = do
   BS.writeFile "resources/docs.json" =<< BS.readFile =<< Elm.docs
 
 setupRootFiles :: IO ()
-setupRootFiles = do
-  runErrorT $ mapM Html.generateSrc ["src/Main.elm","src/InfixOps.elm","src/Error404.elm"]
-  return ()
+setupRootFiles =
+    do runErrorT $ mapM Html.generateSrc $ map (\name -> "src/" ++ name ++ ".elm") elms
+       return ()
+    where
+      elms = ["Main","InfixOps","Error404","Listing"]
 
 libraries :: Snap ()
-libraries =
-    do request <- getRequest
-       let directory = "public" ++ BSC.unpack (rqContextPath request)
-       when (List.isInfixOf ".." directory) pass
-       exists <- liftIO $ doesDirectoryExist directory
-       when (not exists) pass
-       ifTop (serveFile (directory </> "index.html")) <|> serveModule request
-    where
-      serveModule request = do
-        let path = BSC.unpack $ BS.concat
-                   [ "public", rqContextPath request, rqPathInfo request, ".html" ]
-        when (not $ isRelative path) pass
-        when (List.isInfixOf ".." path) pass
-        exists <- liftIO $ doesFileExist path
-        when (not exists) pass
-        serveFile path
+libraries = ifTop (serveFile "public/Listing.html")
+            <|> routeLocal [(":name/:version", serveLibrary)]
+  where
+    serveLibrary :: Snap ()
+    serveLibrary =
+        do request <- getRequest
+           let directory = "public" ++ BSC.unpack (rqContextPath request)
+           when (List.isInfixOf ".." directory) pass
+           exists <- liftIO $ doesDirectoryExist directory
+           when (not exists) pass
+           ifTop (serveFile (directory </> "index.html")) <|> serveModule request
+
+    serveModule :: Request -> Snap ()
+    serveModule request = do
+      let path = BSC.unpack $ BS.concat
+                 [ "public", rqContextPath request, rqPathInfo request, ".html" ]
+      when (not $ isRelative path) pass
+      when (List.isInfixOf ".." path) pass
+      exists <- liftIO $ doesFileExist path
+      when (not exists) pass
+      serveFile path
               
   
 directoryConfig :: MonadSnap m => DirectoryConfig m
@@ -127,7 +135,7 @@ register =
                  do writeBS $ BSC.pack err
                     httpError 500 "Internal Server Error"
              Right () ->
-                 do writeBS "Registered successfully!"
+                 writeBS "Registered successfully!"
   where
     perPartPolicy info
         | okayPart "docs" info || okayPart "deps" info = allowWithMaximumSize $ 2^(19::Int)

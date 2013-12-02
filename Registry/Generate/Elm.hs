@@ -21,22 +21,15 @@ import qualified Model.Name as N
 import qualified Registry.Utils as Utils
 import qualified Get.Utils as GUtils
 
-generate :: FilePath -> ErrorT String IO [FilePath]
-generate directory = (++) <$> makeDocs <*> makeDeps
+generate :: [Document] -> Deps -> FilePath -> ErrorT String IO [FilePath]
+generate docs deps directory = (++) <$> makeDocs <*> makeDeps
     where
-      makeDocs = do
-        docs <- liftIO $ BS.readFile $ directory </> Utils.json
-        case mapM docToElm =<< Json.eitherDecode docs of
-          Left err -> throwError err
-          Right elmDocs -> liftIO $ mapM (writeDocs directory) elmDocs
+      makeDocs =
+          either throwError (liftIO . mapM (writeDocs directory)) (mapM docToElm docs)
 
-      makeDeps = do
-        deps <- liftIO $ BS.readFile $ directory </> GUtils.depsFile
-        case depsToElm <$> Json.eitherDecode deps of
-          Left err -> throwError err
-          Right elmDeps ->
-              do liftIO $ writeFile (directory </> Utils.index) elmDeps
-                 return [directory </> Utils.index]
+      makeDeps =
+        do liftIO $ writeFile (directory </> Utils.index) (depsToElm deps)
+           return [directory </> Utils.index]
 
 depsToElm :: Deps -> String
 depsToElm deps = 
