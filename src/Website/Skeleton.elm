@@ -25,7 +25,7 @@ internalSkeleton links bodyFunc box term info (outer,h) =
     , flow right
       [ spacer margin headerHeight
       , container (inner - widthOf box - 10) headerHeight midLeft <|
-        text <| Text.height 22 <| concat <| intersperse (toText " / ") <|
+        text <| Text.height 22 <| concat <| intersperse (toText " / ") <| (Text.link "/" <| toText "Library") ::
         zipWith (<|) (repeat (length links) (uncurry Text.link) ++ [snd]) (("/catalog", toText "Catalog") :: links)
       , container (widthOf box + 10) headerHeight midRight <|
         color C.mediumGrey <|
