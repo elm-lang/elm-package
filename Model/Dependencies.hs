@@ -5,58 +5,63 @@ import Control.Applicative
 import Control.Monad.Error
 import Control.Exception
 import Data.Aeson
+import Data.List (isPrefixOf, isSuffixOf)
 import qualified Data.ByteString.Lazy as BS
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import qualified Model.Name as N
 import qualified Model.Version as V
 
-data Person = Person
-    { name' :: String
-    , email :: Maybe String
-    , website :: Maybe String
-    } deriving Show
-
 data Deps = Deps
     { name :: N.Name
     , version :: V.Version
     , summary :: String
     , description :: String
-    , tags :: [String]
     , license :: String
-    , author :: Person
-    , contributors :: [Person]
     , repo :: String
     , exposed :: [String]
-    , deps :: Map.Map String String
     } deriving Show
 
-instance FromJSON Person where
-    parseJSON (Object v) =
-        Person <$> v .: "name"
-               <*> v .: "email"
-               <*> v .: "website"
-    parseJSON (String s) =
-        return (Person (Text.unpack s) Nothing Nothing)
-    parseJSON _ = mzero
-
 instance FromJSON Deps where
-    parseJSON (Object v) =
-        Deps <$> v .: "name"
-             <*> v .: "version"
-             <*> do summary <- v .: "summary"
-                    if length summary < 80 then return summary else
-                        fail "'summary' must be less than 80 characters"
-             <*> v .: "description"
-             <*> v .: "tags"
-             <*> v .: "license"
-             <*> v .: "author"
-             <*> v .: "contributors"
-             <*> v .: "repository"
-             <*> v .: "exposed-modules"
-             <*> v .: "dependencies"
+    parseJSON (Object obj) =
+        do version <- obj .: "version"
+
+           summary <- obj .: "summary"
+           when (length summary >= 80) $
+               fail "'summary' must be less than 80 characters"
+
+           desc    <- obj .: "description"
+           license <- obj .: "license"
+
+           repo <- obj .: "repository"
+           name <- case repoToName repo of
+                     Left err -> fail err
+                     Right nm -> return nm
+
+           exposed <- obj .: "exposed-modules"
+           when (null exposed) $
+                fail "there are no 'exposed-modules'.\n\
+                     \At least one module must be exposed for anyone to use this library!"
+
+           return $ Deps name version summary desc license repo exposed
 
     parseJSON _ = mzero
+
+repoToName :: String -> Either String N.Name
+repoToName repo
+    | not (isPrefixOf start repo) = Left msg
+    | not (isSuffixOf end   repo) = Left msg
+    | otherwise =
+        let raw = drop (length start) $ take (length repo - length end) repo
+        in  case N.fromString raw of
+              Nothing   -> Left msg
+              Just name -> Right name
+    where
+      start = "http://github.com/"
+      end = ".git"
+      msg = "the 'repository' field must point to a GitHub project for now, something\n\
+            \like <http://github.com/USER/PROJECT.git> where USER is your GitHub name\n\
+            \and PROJECT is the repo you want to upload."
 
 withDeps :: (Deps -> a) -> FilePath -> ErrorT String IO a
 withDeps handle path =
@@ -76,7 +81,7 @@ withDeps handle path =
                     "\n    You may need to create a dependency file for your project."
 
 dependencies :: FilePath -> ErrorT String IO (Map.Map String String)
-dependencies = withDeps deps
+dependencies _ = return Map.empty -- withDeps deps
 
 depsAt :: FilePath -> ErrorT String IO Deps
 depsAt = withDeps id
