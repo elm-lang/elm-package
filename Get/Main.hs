@@ -59,8 +59,11 @@ main = do
   result <- runErrorT (handle opts)
   case result of
     Right _ -> return ()
-    Left err -> hPutStr stderr ("Error: " ++ err ++ newline) >> exitFailure
-        where newline = if last err == '\n' then "" else "\n"
+    Left err ->
+        do hPutStr stderr ("\nError: " ++ err ++ newline)
+           exitFailure
+        where
+          newline = if last err == '\n' then "" else "\n"
 
 handle :: Commands -> ErrorT String IO ()
 handle options =
