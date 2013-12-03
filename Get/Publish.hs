@@ -25,9 +25,19 @@ publish =
      Utils.out $ unwords [ "Verifying", show name, show version, "..." ]
      verifyExposedModules exposedModules
      verifyVersion name version
-     generateDocs exposedModules
-     R.send $ R.register name version Utils.combinedJson
+     withCleanup $ do
+       generateDocs exposedModules
+       R.send $ R.register name version Utils.combinedJson
      Utils.out "Success!"
+
+withCleanup :: ErrorT String IO () -> ErrorT String IO ()
+withCleanup action =
+    do existed <- liftIO $ doesDirectoryExist "docs"
+       either <- liftIO $ runErrorT action
+       when (not existed) $ liftIO $ removeDirectoryRecursive "docs"
+       case either of
+         Left err -> throwError err
+         Right () -> return ()
 
 verifyExposedModules :: [String] -> ErrorT String IO ()
 verifyExposedModules modules =
@@ -62,25 +72,18 @@ verifyVersion name version =
       checkTag version = do
         tags <- lines <$> Utils.git [ "tag", "--list" ]
         let v = show version
-        when (show version `notElem` tags) $ do
-          yes <- liftIO $ do
-                   mapM putStrLn (tagMessage v)
-                   putStr "Would you like me to run these commands for you? (y/n): "
-                   Utils.yesOrNo
-          case yes of
-            False -> throwError "you must publicly tag your repo before publishing."
-            True -> do Utils.git ["tag", "-a " ++ v, "-m 'release version " ++ v ++ "'"]
-                       Utils.git ["push", "origin", v]
-                       return ()
+        when (show version `notElem` tags) $
+             throwError (unlines (tagMessage v))
 
       tagMessage v =
-          [ "Libraries must be tagged before they are published. This makes it possible to"
-          , "find this specific version on github. You can run the following commands to tag"
-          , "the current code and push it to github:"
+          [ "Libraries must be tagged in git, but tag " ++ v ++ " was not found."
+          , "These tags make it possible to find this specific version on github."
+          , "To tag the most recent commit and push it to github, run this:"
           , ""
-          , "    git tag --annotate " ++ v ++ " --message 'release version " ++ v ++ "'"
+          , "    git tag -a " ++ v ++ " -m \"release version " ++ v ++ "\""
           , "    git push origin " ++ v
-          , "" ]
+          , ""
+          ]
 
 generateDocs :: [String] -> ErrorT String IO ()
 generateDocs modules = 
