@@ -46,6 +46,18 @@ elm-get install user/project
 installing on a per-project basis. It is also backed by [GitHub](https://github.com/),
 so you can use it to install any public repo.
 
+# Warning
+
+<span style="color:#cc0000;">
+**Do not post publicly about this site!**
+</span> Everything is pre-release. The goal is
+to find and [report](https://github.com/evancz/elm-get)
+bugs in the library servers and `elm-get` before a broader
+public announcement.
+
+The catalog will be cleared before the official release,
+so please experiment with publishing and try to find corner cases!
+
 |]
 
 rightCol w = width w [markdown|
@@ -73,7 +85,7 @@ it is important to look through these basic guidelines:
 After reviewing your library, publish it with:
 
 ```
-elm-get publish user/project
+elm-get publish
 ```
 
 |]
