@@ -66,7 +66,7 @@ it is important to look through these basic guidelines:
 
  * Design libraries for a concrete use case
  * Always give functions human readable names
- * Avoid abbreviation, avoid infix operators
+ * Avoid abbreviations and infix operators
  * Avoid abstraction for the sake of abstraction
  * Always use [semantic versioning](http://semver.org)
 
