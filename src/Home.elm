@@ -4,15 +4,77 @@ import String
 import Website.ColorScheme as C
 import Website.Skeleton (home)
 import Window
+import JavaScript as JS
 
-scene w = width w [markdown|
-<style>h1,h2,h3,h4 {font-weight:normal;}</style>
+title = constant (JS.fromString "Elm Public Library")
+foreign export jsevent "title"
+  title : Signal JS.JSString
 
-# Elm Public Library
+padCol w col =
+    let col' = col (w-60) in
+    container w (heightOf col') middle col'
 
-This is a central home for discovering, browsing, and learning Elm libraries.
+scene w =
+    flow down 
+    [ spacer w 20
+    , flow right [ padCol (div w 2) leftCol
+                 , padCol (div w 2) rightCol ]
+    ]
 
-## <a href="/catalog">catalog</a>
+--The Public Library is the central catalog of libraries created by the Elm community.
+--It makes it easy to [discover libraries, browse documentation, and share ideas](/catalog).
+
+leftCol w = width w [markdown|
+<style>
+h1,h2,h3,h4 {font-weight:normal;}
+pre { background-color: white;
+      padding: 10px;
+      border: 1px solid rgb(216, 221, 225);
+      border-radius: 4px;
+}
+</style>
+
+# Install Libraries
+
+Use [`elm-get`](https://github.com/evancz/elm-get) to install libraries:
+
+```
+elm-get install user/project
+```
+
+[`elm-get`](https://github.com/evancz/elm-get) is sandboxed by default,
+installing on a per-project basis. It is also backed by [GitHub](https://github.com/),
+so you can use it to install any public repo.
+
+|]
+
+rightCol w = width w [markdown|
+<style>
+h1,h2,h3,h4 {font-weight:normal;}
+pre { background-color: white;
+      padding: 10px;
+      border: 1px solid rgb(216, 221, 225);
+      border-radius: 4px;
+}
+li { padding: 4px; }
+</style>
+
+# Design Guidelines
+
+Before publishing libraries with [`elm-get`](https://github.com/evancz/elm-get),
+it is important to look through these basic guidelines:
+
+ * Design libraries for a concrete use case
+ * Always give functions human readable names
+ * Avoid abbreviation, avoid infix operators
+ * Avoid abstraction for the sake of abstraction
+ * Always use [semantic versioning](http://semver.org)
+
+After reviewing your library, publish it with:
+
+```
+elm-get publish user/project
+```
 
 |]
 
