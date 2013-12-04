@@ -1,7 +1,5 @@
 dist
-elm_dependencies
 cache/
 resources/elm-runtime.js
 resources/docs.json
 *.html
-RawInfixes.elm
