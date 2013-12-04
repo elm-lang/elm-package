@@ -50,7 +50,7 @@ so you can use it to install any public repo.
 
 <span style="color:#cc0000;">
 **Do not post publicly about this site!**
-</span> Everything is pre-release. The goal is
+</span> The current goal is
 to find and [report](https://github.com/evancz/elm-get)
 bugs in the library servers and `elm-get` before a broader
 public announcement.
