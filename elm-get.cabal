@@ -23,6 +23,7 @@ source-repository head
 
 Executable elm-get
   Main-is:             Get/Main.hs
+  ghc-options:         -threaded -O2
   Hs-Source-Dirs:
 
   other-modules:       Get.Utils,
@@ -50,3 +51,38 @@ Executable elm-get
                        process,
                        resourcet,
                        text
+
+Executable run-public-library
+  Main-is:             Registry/Server.hs
+  ghc-options:         -threaded -O2
+
+  other-modules:       Registry.Routes,
+                       Registry.Utils,
+                       Registry.Generate.Docs,
+                       Registry.Generate.Elm,
+                       Registry.Generate.Html,
+                       Registry.Generate.Listing,
+                       Model.Documentation,
+                       Model.Dependencies,
+                       Model.Name,
+                       Model.Version,
+                       Get.Utils
+
+  Build-depends:       aeson,
+                       base,
+                       binary,
+                       blaze-html,
+                       bytestring,
+                       cmdargs,
+                       containers,
+                       directory,
+                       Elm,
+                       filepath,
+                       mtl,
+                       parsec,
+                       process,
+                       snap-core,
+                       snap-server,
+                       text,
+                       unordered-containers
+
