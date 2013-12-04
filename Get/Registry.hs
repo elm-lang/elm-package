@@ -26,7 +26,7 @@ import qualified Get.Utils          as Utils
 import Data.Version (showVersion)
 import qualified Paths_elm_get as This
 
-domain = "http://localhost:8000"
+domain = "http://library.elm-lang.org"
 url path vars =
     domain ++ "/" ++ path ++ "?" ++ urlEncodeVars (version : vars)
   where
