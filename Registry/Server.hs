@@ -3,10 +3,12 @@ module Registry.Server where
 
 import qualified Data.ByteString as BS
 import qualified Data.HashMap.Strict as Map
-
-import Snap
-import Snap.Util.FileServe
+import Control.Applicative
 import Control.Monad.Error
+
+import Snap.Core
+import Snap.Http.Server
+import Snap.Util.FileServe
 import System.Console.CmdArgs
 import System.Directory
 import System.Exit

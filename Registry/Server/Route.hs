@@ -6,11 +6,12 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Maybe as Maybe
 import qualified Data.List as List
+import Control.Applicative
+import Control.Monad.Error
 
-import Snap
+import Snap.Core
 import Snap.Util.FileServe
 import Snap.Util.FileUploads
-import Control.Monad.Error
 import System.Directory
 import System.FilePath
 
@@ -52,17 +53,17 @@ register =
          let directory = Utils.libraryVersion name version
          exists <- liftIO $ doesDirectoryExist directory
          if exists
-         then error404 "That version has already been registered."
-         else do
-           liftIO $ createDirectoryIfMissing True directory
-           handleFileUploads "/tmp" defaultUploadPolicy perPartPolicy (handler directory)
-           result <- liftIO $ runErrorT $ Docs.generate directory
-           case result of
-             Right () -> writeBS "Registered successfully!"
-             Left err ->
-                 do liftIO $ removeDirectoryRecursive directory
-                    writeBS $ BSC.pack err
-                    httpError 500 "Internal Server Error"
+           then error404 "That version has already been registered."
+           else do
+             liftIO $ createDirectoryIfMissing True directory
+             handleFileUploads "/tmp" defaultUploadPolicy perPartPolicy (handler directory)
+             result <- liftIO $ runErrorT $ Docs.generate directory
+             case result of
+               Right () -> writeBS "Registered successfully!"
+               Left err ->
+                   do liftIO $ removeDirectoryRecursive directory
+                      writeBS $ BSC.pack err
+                      httpError 500 "Internal Server Error"
   where
     perPartPolicy info
         | okayPart "docs" info || okayPart "deps" info = allowWithMaximumSize $ 2^(19::Int)
