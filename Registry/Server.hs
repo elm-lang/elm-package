@@ -21,7 +21,7 @@ import qualified Model.Name as N
 import qualified Model.Version as V
 import qualified Registry.Generate.Docs as Docs
 import qualified Registry.Generate.Html as Html
-import qualified Registry.Server.Route as Route
+import qualified Registry.Routes as Route
 import qualified Language.Elm as Elm
 
 data Flags = Flags

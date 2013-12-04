@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Registry.Server.Route where
+module Registry.Routes where
 
 import qualified Data.Binary as Binary
 import qualified Data.ByteString as BS
