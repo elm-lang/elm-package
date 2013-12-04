@@ -38,7 +38,8 @@ main :: IO ()
 main = do
   setNumCapabilities =<< getNumProcessors
   getRuntimeAndDocs
-  setupRootFiles
+  setupLogging
+  setupSrcHtml
   createDirectoryIfMissing True Utils.libDir
   cargs <- cmdArgs flags
   httpServe (setPort (port cargs) defaultConfig) $
@@ -58,8 +59,18 @@ getRuntimeAndDocs = do
   BS.writeFile "resources/elm-runtime.js" =<< BS.readFile =<< Elm.runtime
   BS.writeFile "resources/docs.json" =<< BS.readFile =<< Elm.docs
 
-setupRootFiles :: IO ()
-setupRootFiles =
+setupLogging :: IO ()
+setupLogging =
+    do createDirectoryIfMissing True "log"
+       createIfMissing "log/access.log"
+       createIfMissing "log/error.log"
+    where
+      createIfMissing path = do
+        exists <- doesFileExist path
+        when (not exists) $ BS.writeFile path ""
+
+setupSrcHtml :: IO ()
+setupSrcHtml =
     do createDirectoryIfMissing True "public"
        result <- runErrorT generate
        case result of
