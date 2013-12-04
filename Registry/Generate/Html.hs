@@ -25,8 +25,9 @@ generateSrc path =
                      , "--build-dir=.", "--src-dir=src", path]
      let old = FP.replaceExtension path "html"
          new = FP.replaceDirectory old "public"
-     liftIO $ renameFile old new
-     liftIO $ adjustHtmlFile new
+     liftIO $ do
+       renameFile old new
+       adjustHtmlFile new
 
 adjustHtmlFile :: FilePath -> IO ()
 adjustHtmlFile file =

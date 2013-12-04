@@ -60,7 +60,8 @@ getRuntimeAndDocs = do
 
 setupRootFiles :: IO ()
 setupRootFiles =
-    do result <- runErrorT generate
+    do createDirectoryIfMissing True "public"
+       result <- runErrorT generate
        case result of
          Right _ -> return ()
          Left err -> do hPutStrLn stderr err
