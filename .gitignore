@@ -1,5 +1,6 @@
 dist
-cache/
+cache
 resources/elm-runtime.js
 resources/docs.json
 *.html
+log
