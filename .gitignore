@@ -4,3 +4,4 @@ resources/elm-runtime.js
 resources/docs.json
 *.html
 log
+ghc_output
