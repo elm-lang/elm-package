@@ -3,7 +3,7 @@ module Model.Dependencies where
 
 import Control.Applicative
 import Control.Monad.Error
-import Control.Exception
+import qualified Control.Exception as E
 import Data.Aeson
 import Data.List (isPrefixOf, isSuffixOf)
 import qualified Data.ByteString.Lazy as BS
@@ -72,8 +72,8 @@ withDeps handle path =
     where
       readPath :: ErrorT String IO BS.ByteString
       readPath = do
-        result <- liftIO $ catch (Right <$> BS.readFile path)
-                                 (\err -> return $ Left (err :: IOError))
+        result <- liftIO $ E.catch (Right <$> BS.readFile path)
+                                   (\err -> return $ Left (err :: IOError))
         case result of
           Right bytes -> return bytes
           Left _ -> throwError $
