@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings, DeriveDataTypeable #-}
-module Registry.Server where
+module Main where
 
 import qualified Data.ByteString as BS
 import qualified Data.HashMap.Strict as Map
