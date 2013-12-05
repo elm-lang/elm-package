@@ -85,7 +85,8 @@ directoryConfig :: MonadSnap m => DirectoryConfig m
 directoryConfig =
     fancyDirectoryConfig
     { indexGenerator = defaultIndexGenerator defaultMimeTypes indexStyle
-    , mimeTypes = Map.insert ".elm" "text/plain" defaultMimeTypes
+    , mimeTypes = Map.insert ".elm" "text/plain" $
+                  Map.insert ".ico" "image/x-icon" $ defaultMimeTypes
     }
 
 indexStyle :: BS.ByteString
