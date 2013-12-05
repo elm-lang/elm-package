@@ -80,7 +80,7 @@ title =
     flow down
     [ text . Text.height 50 . Text.color C.mediumGrey <| toText "Elm Public Library"
     , spacer 10 4
-    , text . Text.height 18 . Text.color C.mediumGrey <| toText "    discover libraries, browse documentation"
+    , text . Text.height 20 . Text.color C.mediumGrey <| toText "discover libraries, browse documentation"
     ]
 
 accents = [C.accent0,C.accent1,C.accent2,C.accent3,C.accent4]
