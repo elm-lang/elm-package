@@ -5,3 +5,4 @@ resources/docs.json
 *.html
 log
 ghc_output
+public-library
