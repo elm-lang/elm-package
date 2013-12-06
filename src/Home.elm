@@ -74,15 +74,16 @@ li { padding: 4px; }
 # Design Guidelines
 
 Before publishing libraries with [`elm-get`](https://github.com/evancz/elm-get),
-it is important to look through these basic guidelines:
+look through the [Library Design Guidelines](/DesignGuidelines.html). Some
+key takeaways are:
 
- * Design libraries for a concrete use case
+ * Design for a concrete use case
  * Always give functions human readable names
- * Avoid abbreviations and infix operators
- * Avoid abstraction for the sake of abstraction
- * Always use [semantic versioning](http://semver.org)
+ * Avoid gratuitous abstraction
+ * Use [semantic versioning](http://semver.org)
 
-After reviewing your library, publish it with:
+After looking through [the guidelines](/DesignGuidelines.html) carefully,
+publish your library with:
 
 ```
 elm-get publish
