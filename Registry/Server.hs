@@ -26,11 +26,13 @@ import qualified Language.Elm as Elm
 
 data Flags = Flags
   { port :: Int
+  , regenerate :: Bool
   } deriving (Data,Typeable,Show,Eq)
 
 flags :: Flags
 flags = Flags
   { port = 8000 &= help "set the port of the server"
+  , regenerate = False &= help "flag to regenerate all documentation"
   }
 
 -- | Set up the server.
@@ -42,6 +44,7 @@ main = do
   setupSrcHtml
   createDirectoryIfMissing True Utils.libDir
   cargs <- cmdArgs flags
+  when (regenerate cargs) Docs.regenerate
   httpServe (setPort (port cargs) defaultConfig) $
       ifTop (serveFile "public/Home.html")
       <|> route [ ("catalog"  , Route.catalog)
