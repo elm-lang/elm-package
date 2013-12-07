@@ -13,7 +13,7 @@ entry w name tipe assocPrec prose =
         tipe' = box 2 topLeft . text <| monospace (toText " ") ++ prettify tipe
     in
       flow down [ tag name . color C.mediumGrey <| spacer w 1
-                , color (rgb 240 240 240) <| layers <| ap ++ [ tipe' ]
+                , color (rgb 238 238 240) <| layers <| ap ++ [ tipe' ]
                 , flow right [ spacer 40 10, width (w-40) prose ]
                 , spacer w 12
                 ]
