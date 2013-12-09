@@ -8,10 +8,9 @@ import qualified Data.Map as Map
 import qualified Registry.Generate.Elm as Elm
 import qualified Registry.Generate.Html as Html
 import qualified Registry.Generate.Listing as Listing
-import qualified Registry.Utils as Utils
-import qualified Get.Utils as GUtils
-import qualified Model.Dependencies as D
-import qualified Model.Name as N
+import qualified Utils.Paths as Path
+import qualified Utils.Model.Dependencies as D
+import qualified Utils.Model.Name as N
 import System.FilePath
 import System.IO
 import System.Exit
@@ -35,12 +34,12 @@ regenerate =
   where
     getDirs (Listing.Listing name _ vs) =
         do project <- N.toFilePath <$> N.fromString' name
-           return $ map (\version -> Utils.libDir </> project </> version) vs
+           return $ map (\version -> Path.libDir </> project </> version) vs
 
 makeHtml :: FilePath -> ErrorT String IO D.Deps
 makeHtml directory =
-  do docs' <- liftIO $ BS.readFile $ directory </> Utils.json
-     deps' <- liftIO $ BS.readFile $ directory </> GUtils.depsFile
+  do docs' <- liftIO $ BS.readFile $ directory </> Path.json
+     deps' <- liftIO $ BS.readFile $ directory </> Path.depsFile
      case (,) <$> Json.eitherDecode docs' <*> Json.eitherDecode deps' of
        Left err -> throwError err
        Right (docs,deps) ->

@@ -13,9 +13,8 @@ import Data.Version (showVersion)
 import qualified Get.Install  as Install
 import qualified Get.Publish  as Publish
 import qualified Get.Registry as Registry
-import qualified Get.Utils    as Utils
-
-import qualified Model.Name   as N
+import qualified Utils.Commands     as Cmd
+import qualified Utils.Model.Name   as N
 
 data Commands
     = Install { lib :: String, version :: Maybe String }
@@ -74,5 +73,5 @@ handle options =
 
       Publish -> Publish.publish
 
-      _ -> do Utils.out "Not implemented yet!"
+      _ -> do Cmd.out "Not implemented yet!"
               liftIO $ print options

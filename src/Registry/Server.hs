@@ -15,10 +15,9 @@ import System.Exit
 import System.IO
 import GHC.Conc
 
-import qualified Get.Utils as GUtils
-import qualified Registry.Utils as Utils
-import qualified Model.Name as N
-import qualified Model.Version as V
+import qualified Utils.Paths as Path
+import qualified Utils.Model.Name as N
+import qualified Utils.Model.Version as V
 import qualified Registry.Generate.Docs as Docs
 import qualified Registry.Generate.Html as Html
 import qualified Registry.Routes as Route
@@ -42,7 +41,7 @@ main = do
   getRuntimeAndDocs
   setupLogging
   setupSrcHtml
-  createDirectoryIfMissing True Utils.libDir
+  createDirectoryIfMissing True Path.libDir
   cargs <- cmdArgs flags
   when (regenerate cargs) Docs.regenerate
   httpServe (setPort (port cargs) defaultConfig) $

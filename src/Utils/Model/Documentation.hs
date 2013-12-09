@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Model.Documentation where
+module Utils.Model.Documentation where
 
 import Control.Applicative ((<$>),(<*>))
 import Control.Monad

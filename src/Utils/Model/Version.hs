@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable, TemplateHaskell #-}
-module Model.Version where
+module Utils.Model.Version where
 
 import           Control.Applicative
 import           Data.Aeson

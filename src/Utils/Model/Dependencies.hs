@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Model.Dependencies where
+module Utils.Model.Dependencies where
 
 import Control.Applicative
 import Control.Monad.Error
@@ -9,8 +9,8 @@ import Data.List (isPrefixOf, isSuffixOf)
 import qualified Data.ByteString.Lazy as BS
 import qualified Data.Map as Map
 import qualified Data.Text as Text
-import qualified Model.Name as N
-import qualified Model.Version as V
+import qualified Utils.Model.Name as N
+import qualified Utils.Model.Version as V
 
 data Deps = Deps
     { name :: N.Name

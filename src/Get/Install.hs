@@ -8,21 +8,23 @@ import qualified Data.Maybe as Maybe
 import System.Directory
 import System.FilePath
 
-import qualified Get.Utils as Utils
 import qualified Get.Registry as R
-import qualified Model.Dependencies as D
-import qualified Model.Name as N
-import qualified Model.Version as V
+import qualified Utils.Paths as Path
+import qualified Utils.Commands as Cmd
+import qualified Utils.Http as Http
+import qualified Utils.Model.Dependencies as D
+import qualified Utils.Model.Name as N
+import qualified Utils.Model.Version as V
 
 install :: N.Name -> Maybe String -> ErrorT String IO ()
 install name version =
     do location <-
-           Utils.inDir Utils.root $ do
-             (repo,tag) <- Utils.inDir Utils.internals (get name version)
+           Cmd.inDir Path.root $ do
+             (repo,tag) <- Cmd.inDir Path.internals (get name version)
              liftIO $ createDirectoryIfMissing True repo
-             liftIO $ Utils.copyDir (Utils.internals </> repo) (repo </> tag)
+             liftIO $ Cmd.copyDir (Path.internals </> repo) (repo </> tag)
              return (repo </> tag)
-       installDependencies (Utils.root </> location </> Utils.depsFile)
+       installDependencies (Path.root </> location </> Path.depsFile)
     where
       installDependencies :: FilePath -> ErrorT String IO ()
       installDependencies path = do
@@ -37,25 +39,25 @@ get name maybeVersion =
   do exists <- liftIO $ doesDirectoryExist directory
      if exists then update else clone
      version <- getVersion name maybeVersion
-     Utils.inDir directory (checkout version)
+     Cmd.inDir directory (checkout version)
      return (directory, show version)
   where
     directory = N.toFilePath name
 
     update = do
-      Utils.out $ "Getting updates for repo " ++ show name
-      Utils.inDir directory (Utils.git ["pull"])
+      Cmd.out $ "Getting updates for repo " ++ show name
+      Cmd.inDir directory (Cmd.git ["pull"])
       return ()
 
     clone = do
-      Utils.out $ "Cloning repo " ++ show name
-      Utils.git [ "clone", "--progress", "https://github.com/" ++ show name ++ ".git" ]
+      Cmd.out $ "Cloning repo " ++ show name
+      Cmd.git [ "clone", "--progress", "https://github.com/" ++ show name ++ ".git" ]
       liftIO $ renameDirectory (N.project name) directory
 
     checkout version =
         do let tag = show version
-           Utils.out $ "Checking out version " ++ tag
-           Utils.git [ "checkout", "tags/" ++ tag ]
+           Cmd.out $ "Checking out version " ++ tag
+           Cmd.git [ "checkout", "tags/" ++ tag ]
 
 {-| Check to see that the requested version number exists. In the case that no
 version number is requested, use the latest tagless version number in the registry.
@@ -86,13 +88,13 @@ getVersion name maybeVersion' =
 
       getVersions :: N.Name -> ErrorT String IO [V.Version]
       getVersions name = do
-        registryVersions <- R.send (R.versions name)
+        registryVersions <- Http.send (R.versions name)
         case registryVersions of
           Just vs -> return vs
           Nothing -> do
-            Utils.out $ "Warning: library " ++ show name ++
-                        " is not registered publicly. Checking github..."
-            tags <- lines <$> Utils.git [ "tag", "--list" ]
+            Cmd.out $ "Warning: library " ++ show name ++
+                      " is not registered publicly. Checking github..."
+            tags <- lines <$> Cmd.git [ "tag", "--list" ]
             return $ Maybe.mapMaybe V.fromString tags
 
       errorNoTags =

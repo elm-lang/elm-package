@@ -15,11 +15,10 @@ import qualified System.Directory as Dir
 import System.FilePath ((</>), (<.>))
 import Text.Parsec
 
-import Model.Dependencies as Deps
-import Model.Documentation as Docs
-import qualified Model.Name as N
-import qualified Registry.Utils as Utils
-import qualified Get.Utils as GUtils
+import Utils.Model.Dependencies as Deps
+import Utils.Model.Documentation as Docs
+import qualified Utils.Model.Name as N
+import qualified Utils.Paths as Path
 
 generate :: [Document] -> Deps -> FilePath -> ErrorT String IO [FilePath]
 generate docs deps directory = (++) <$> makeDocs <*> makeDeps
@@ -28,8 +27,8 @@ generate docs deps directory = (++) <$> makeDocs <*> makeDeps
           either throwError (liftIO . mapM (writeDocs directory)) (mapM (docToElm deps) docs)
 
       makeDeps =
-        do liftIO $ writeFile (directory </> Utils.index) (depsToElm deps)
-           return [directory </> Utils.index]
+        do liftIO $ writeFile (directory </> Path.index) (depsToElm deps)
+           return [directory </> Path.index]
 
 depsToElm :: Deps -> String
 depsToElm deps = 

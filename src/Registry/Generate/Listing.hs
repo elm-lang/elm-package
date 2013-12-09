@@ -10,8 +10,8 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified System.Directory as Dir
 import System.IO
 
-import qualified Registry.Utils as Utils
-import qualified Model.Dependencies as D
+import qualified Utils.Paths as Path
+import qualified Utils.Model.Dependencies as D
 
 add :: D.Deps -> IO ()
 add deps =
@@ -24,16 +24,16 @@ add deps =
                       Nothing -> [version]
                       Just listing -> version : versions listing
            listings' = Map.alter insert name listings
-       LBS.writeFile Utils.listingBits (Binary.encode listings')
-       LBS.writeFile Utils.listing $ Json.encode $ Map.elems listings'
+       LBS.writeFile Path.listingBits (Binary.encode listings')
+       LBS.writeFile Path.listing $ Json.encode $ Map.elems listings'
 
 readListings :: IO (Map.Map String Listing)
 readListings =
-    do exists <- Dir.doesFileExist Utils.listingBits
+    do exists <- Dir.doesFileExist Path.listingBits
        when (not exists) $
             let empty = Binary.encode (Map.empty :: Map.Map String [String])
-            in  LBS.writeFile Utils.listingBits empty
-       withBinaryFile Utils.listingBits ReadMode $ \handle -> do
+            in  LBS.writeFile Path.listingBits empty
+       withBinaryFile Path.listingBits ReadMode $ \handle -> do
          bits <- LBS.hGetContents handle
          LBS.length bits `seq` return (Binary.decode bits)
 

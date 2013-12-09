@@ -15,10 +15,9 @@ import Snap.Util.FileUploads
 import System.Directory
 import System.FilePath
 
-import qualified Get.Utils as GUtils
-import qualified Registry.Utils as Utils
-import qualified Model.Name as N
-import qualified Model.Version as V
+import qualified Utils.Paths as Path
+import qualified Utils.Model.Name as N
+import qualified Utils.Model.Version as V
 import qualified Registry.Generate.Docs as Docs
 
 catalog :: Snap ()
@@ -50,7 +49,7 @@ register =
      case nameAndVersion of
        Nothing -> error404 "Invalid library name or version number."
        Just (name,version) -> do
-         let directory = Utils.libraryVersion name version
+         let directory = Path.libraryVersion name version
          exists <- liftIO $ doesDirectoryExist directory
          if exists
            then error404 "That version has already been registered."
@@ -76,17 +75,17 @@ register =
     handler :: FilePath -> [(PartInfo, Either PolicyViolationException FilePath)] -> Snap ()
     handler dir [(info1, Right temp1), (info2, Right temp2)] 
         | okayPart "docs" info1 && okayPart "deps" info2 =
-            liftIO $ do BS.readFile temp1 >>= BS.writeFile (dir </> Utils.json)
-                        BS.readFile temp2 >>= BS.writeFile (dir </> GUtils.depsFile)
+            liftIO $ do BS.readFile temp1 >>= BS.writeFile (dir </> Path.json)
+                        BS.readFile temp2 >>= BS.writeFile (dir </> Path.depsFile)
         | okayPart "docs" info2 && okayPart "deps" info1 =
-            liftIO $ do BS.readFile temp2 >>= BS.writeFile (dir </> Utils.json)
-                        BS.readFile temp1 >>= BS.writeFile (dir </> GUtils.depsFile)
+            liftIO $ do BS.readFile temp2 >>= BS.writeFile (dir </> Path.json)
+                        BS.readFile temp1 >>= BS.writeFile (dir </> Path.depsFile)
     handler dir parts =
         do mapM (writeError . snd) parts
            error404' msg
 
     writeError = either (writeText . policyViolationExceptionReason) (const (return ()))
-    msg = "Files " ++ Utils.json ++ " and " ++ GUtils.depsFile ++ " were not uploaded."
+    msg = "Files " ++ Path.json ++ " and " ++ Path.depsFile ++ " were not uploaded."
 
 versions :: Snap ()
 versions = do
@@ -94,7 +93,7 @@ versions = do
   case N.fromString . BSC.unpack =<< library of
     Nothing -> error404 "The request arguments are not well-formed."
     Just name ->
-        do let path = Utils.library name
+        do let path = Path.library name
            exists <- liftIO $ doesDirectoryExist path
            versions <- case exists of
                          False -> return Nothing
@@ -105,11 +104,11 @@ versions = do
 metadata :: Snap ()
 metadata =
   do nameAndVersion <- getNameAndVersion
-     case uncurry Utils.libraryVersion <$> nameAndVersion of
+     case uncurry Path.libraryVersion <$> nameAndVersion of
        Nothing -> error404 "Invalid library name or version number."
        Just directory -> do
          exists <- liftIO $ doesDirectoryExist directory
-         if exists then serveFile (directory </> Utils.json)
+         if exists then serveFile (directory </> Path.json)
                    else error404 "That library and version is not registered."
 
 getNameAndVersion :: Snap (Maybe (N.Name, V.Version))

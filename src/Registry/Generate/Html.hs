@@ -10,19 +10,19 @@ import System.FilePath as FP
 import System.Directory
 import qualified Data.ByteString.Char8 as BSC
 
-import qualified Get.Utils as Utils
+import qualified Utils.Commands as Cmd
 
 generatePublic :: FilePath -> ErrorT String IO ()
 generatePublic path =
-  do Utils.run "elm" ["--make","--runtime=/resources/elm-runtime.js"
-                     , "--build-dir=.", "--src-dir=src", path]
+  do Cmd.run "elm" ["--make","--runtime=/resources/elm-runtime.js"
+                   , "--build-dir=.", "--src-dir=src", path]
      liftIO $ removeFile path
      liftIO $ adjustHtmlFile $ FP.replaceExtension path "html"
 
 generateSrc :: FilePath -> ErrorT String IO ()
 generateSrc path =
-  do Utils.run "elm" ["--make","--runtime=/resources/elm-runtime.js"
-                     , "--build-dir=.", "--src-dir=src", path]
+  do Cmd.run "elm" ["--make","--runtime=/resources/elm-runtime.js"
+                   , "--build-dir=.", "--src-dir=src", path]
      let old = FP.replaceExtension path "html"
          new = FP.replaceDirectory old "public"
      liftIO $ do

@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable #-}
-module Model.Name where
+module Utils.Model.Name where
 
 import Control.Applicative
 import Control.Monad.Error

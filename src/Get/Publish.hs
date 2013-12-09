@@ -10,25 +10,27 @@ import qualified Data.Maybe as Maybe
 import qualified Data.List as List
 import qualified Data.ByteString as BS
 
-import qualified Get.Utils          as Utils
-import qualified Get.Registry       as R
-import qualified Model.Dependencies as D
-import qualified Model.Name         as N
-import qualified Model.Version      as V
+import qualified Get.Registry             as R
+import qualified Utils.Paths              as Path
+import qualified Utils.Commands           as Cmd
+import qualified Utils.Http               as Http
+import qualified Utils.Model.Dependencies as D
+import qualified Utils.Model.Name         as N
+import qualified Utils.Model.Version      as V
 
 publish :: ErrorT String IO ()
 publish =
-  do deps <- D.depsAt Utils.depsFile
+  do deps <- D.depsAt Path.depsFile
      let name = D.name deps
          version = D.version deps
          exposedModules = D.exposed deps
-     Utils.out $ unwords [ "Verifying", show name, show version, "..." ]
+     Cmd.out $ unwords [ "Verifying", show name, show version, "..." ]
      verifyExposedModules exposedModules
      verifyVersion name version
      withCleanup $ do
        generateDocs exposedModules
-       R.send $ R.register name version Utils.combinedJson
-     Utils.out "Success!"
+       Http.send $ R.register name version Path.combinedJson
+     Cmd.out "Success!"
 
 withCleanup :: ErrorT String IO () -> ErrorT String IO ()
 withCleanup action =
@@ -47,14 +49,14 @@ verifyExposedModules modules =
        mapM_ verifyExists modules
     where
       verifyExists modul =
-          let path = Utils.moduleToElmFile modul in
+          let path = Path.moduleToElmFile modul in
           do exists <- liftIO $ doesFileExist path
              when (not exists) $ throwError $
                  "Cannod find module " ++ modul ++ " at " ++ path
 
 verifyVersion :: N.Name -> V.Version -> ErrorT String IO ()
 verifyVersion name version =
-    do response <- R.send (R.versions name)
+    do response <- Http.send (R.versions name)
        case response of
          Nothing -> return ()
          Just versions ->
@@ -70,7 +72,7 @@ verifyVersion name version =
       checkSemanticVersioning _ = return ()
 
       checkTag version = do
-        tags <- lines <$> Utils.git [ "tag", "--list" ]
+        tags <- lines <$> Cmd.git [ "tag", "--list" ]
         let v = show version
         when (show version `notElem` tags) $
              throwError (unlines (tagMessage v))
@@ -87,20 +89,20 @@ verifyVersion name version =
 
 generateDocs :: [String] -> ErrorT String IO ()
 generateDocs modules = 
-    do forM elms $ \path -> Utils.run "elm-doc" [path]
+    do forM elms $ \path -> Cmd.run "elm-doc" [path]
        liftIO $ do
-         let path = Utils.combinedJson
+         let path = Path.combinedJson
          BS.writeFile path "[\n"
          let addCommas = List.intersperse (BS.appendFile path ",\n")
          sequence_ $ addCommas $ map append jsons
          BS.appendFile path "\n]"
 
     where
-      elms = map Utils.moduleToElmFile modules
-      jsons = map Utils.moduleToJsonFile modules
+      elms = map Path.moduleToElmFile modules
+      jsons = map Path.moduleToJsonFile modules
 
       append :: FilePath -> IO ()
       append path = do
         json <- BS.readFile path
         BS.length json `seq` return ()
-        BS.appendFile Utils.combinedJson json
+        BS.appendFile Path.combinedJson json

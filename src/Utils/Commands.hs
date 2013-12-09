@@ -1,4 +1,4 @@
-module Get.Utils where         
+module Utils.Commands where         
          
 import Control.Monad (forM_)
 import Control.Monad.Error
@@ -7,10 +7,6 @@ import System.Exit
 import System.FilePath
 import System.IO
 import System.Process
-
-root = "elm_dependencies"
-internals = "_internals"
-depsFile = "elm_dependencies.json"
 
 yesOrNo :: IO Bool
 yesOrNo = do
@@ -74,14 +70,3 @@ out string = liftIO $ hPutStrLn stdout string'
     where
       string' = if not (null string) && last string == '\n' then init string else string
 
-moduleToElmFile :: String -> FilePath
-moduleToElmFile moduleName = swapDots moduleName ++ ".elm"
-
-moduleToJsonFile :: String -> FilePath
-moduleToJsonFile moduleName = "docs" </> swapDots moduleName ++ ".json"
-
-swapDots :: String -> String
-swapDots = map (\c -> if c == '.' then '/' else c)
-
-combinedJson :: FilePath
-combinedJson = "docs" </> "docs.json"
