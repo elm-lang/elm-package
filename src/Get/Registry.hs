@@ -17,7 +17,7 @@ import qualified Utils.Model.Version      as V
 import qualified Utils.Http               as Http
 import Utils.Paths (depsFile)
 
-domain = "http://localhost:8000" --"http://library.elm-lang.org"
+domain = "http://library.elm-lang.org"
 
 libraryUrl path vars =
     domain ++ "/" ++ path ++ "?" ++ urlEncodeVars (version : vars)
