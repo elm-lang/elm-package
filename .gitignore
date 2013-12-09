@@ -1,7 +1,10 @@
 dist
 cache
-resources/elm-runtime.js
-resources/docs.json
+elm-runtime.js
+docs.json
+elm_dependencies.json
+listing.bits
+libraries.json
 *.html
 log
 ghc_output
