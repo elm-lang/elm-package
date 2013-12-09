@@ -53,17 +53,19 @@ register =
          let directory = Path.libraryVersion name version
 
          exists <- liftIO $ doesDirectoryExist directory
-         if not exists then
+         if exists then
              error404' $ "Version " ++ show version ++ " has already been registered."
-         else actuallyRegister directory {-do
+         else do
            result <- liftIO $ runErrorT (Http.githubTags name)
+           let v = show version
+               msg = "The tag " ++ v ++ " has not been pushed to GitHub.\n" ++
+                     "Push tag " ++ v ++ " with the following command:\n\n" ++
+                     "    git push origin 0.9\n\n"
            case result of
              Left err -> error404' err
              Right (Http.Tags vs)
-                 | show version `notElem` vs ->
-                     error404' $ "The tag for version " ++ show version ++
-                                 " has not been pushed to GitHub."
-                 | otherwise -> actuallyRegister directory-}
+                 | v `notElem` vs -> error404' msg
+                 | otherwise -> actuallyRegister directory
 
 actuallyRegister directory =
   do liftIO $ createDirectoryIfMissing True directory

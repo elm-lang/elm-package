@@ -11,6 +11,7 @@ import Control.Monad.Trans.Resource
 import qualified Control.Exception as E
 
 import Data.Aeson as Json
+import Data.Monoid ((<>))
 import qualified Data.List as List
 import qualified Data.Vector as Vector
 import qualified Data.ByteString.Char8 as BSC
@@ -40,13 +41,16 @@ githubTags :: N.Name -> ErrorT String IO Tags
 githubTags name =
     do response <- send "https://api.github.com" $ \manager -> do
                      request <- parseUrl url
-                     httpLbs request manager
+                     httpLbs (request {requestHeaders = headers}) manager
        case Json.eitherDecode $ responseBody response of
          Left err -> throwError err
          Right tags -> return tags
     where
       url = "https://api.github.com/repos/" ++ N.user name ++
             "/" ++ N.project name ++ "/tags"
+
+      headers = [("User-Agent", "elm-get")] <>
+                [("Accept", "application/json")]
 
 
 data Tags = Tags [String]
