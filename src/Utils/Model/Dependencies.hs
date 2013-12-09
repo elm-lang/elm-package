@@ -20,6 +20,7 @@ data Deps = Deps
     , license :: String
     , repo :: String
     , exposed :: [String]
+    , elmVersion :: V.Version
     } deriving Show
 
 instance FromJSON Deps where
@@ -43,7 +44,9 @@ instance FromJSON Deps where
                 fail "there are no 'exposed-modules'.\n\
                      \At least one module must be exposed for anyone to use this library!"
 
-           return $ Deps name version summary desc license repo exposed
+           elmVersion <- obj .: "elm-version"
+
+           return $ Deps name version summary desc license repo exposed elmVersion
 
     parseJSON _ = mzero
 

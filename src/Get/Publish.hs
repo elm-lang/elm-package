@@ -10,6 +10,8 @@ import qualified Data.Maybe as Maybe
 import qualified Data.List as List
 import qualified Data.ByteString as BS
 
+import Data.Version
+import qualified Paths_elm_get            as This
 import qualified Get.Registry             as R
 import qualified Utils.Paths              as Path
 import qualified Utils.Commands           as Cmd
@@ -25,6 +27,7 @@ publish =
          version = D.version deps
          exposedModules = D.exposed deps
      Cmd.out $ unwords [ "Verifying", show name, show version, "..." ]
+     verifyElmVersion (D.elmVersion deps)
      verifyExposedModules exposedModules
      verifyVersion name version
      withCleanup $ do
@@ -40,6 +43,16 @@ withCleanup action =
        case either of
          Left err -> throwError err
          Right () -> return ()
+
+verifyElmVersion :: V.Version -> ErrorT String IO ()
+verifyElmVersion elmVersion@(V.V ns _)
+    | ns == ns' = return ()
+    | otherwise =
+        throwError $ "elm_dependencies.json says this project depends on version " ++
+                     show elmVersion ++ " of the compiler but the compiler you " ++
+                     "have installed is version " ++ showVersion This.version
+    where
+      Version ns' _ = This.version
 
 verifyExposedModules :: [String] -> ErrorT String IO ()
 verifyExposedModules modules =
