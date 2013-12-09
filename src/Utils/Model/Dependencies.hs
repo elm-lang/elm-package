@@ -49,18 +49,22 @@ instance FromJSON Deps where
 
 repoToName :: String -> Either String N.Name
 repoToName repo
-    | not (isPrefixOf start repo) = Left msg
-    | not (isSuffixOf end   repo) = Left msg
+    | not (end `isSuffixOf` repo) = Left msg
     | otherwise =
-        let raw = drop (length start) $ take (length repo - length end) repo
-        in  case N.fromString raw of
-              Nothing   -> Left msg
-              Just name -> Right name
+        do path <- getPath
+           let raw = take (length path - length end) path
+           case N.fromString raw of
+             Nothing   -> Left msg
+             Just name -> Right name
     where
-      start = "http://github.com/"
+      getPath | http  `isPrefixOf` repo = Right $ drop (length http ) repo
+              | https `isPrefixOf` repo = Right $ drop (length https) repo
+              | otherwise = Left msg
+      http  = "http://github.com/"
+      https = "https://github.com/"
       end = ".git"
       msg = "the 'repository' field must point to a GitHub project for now, something\n\
-            \like <http://github.com/USER/PROJECT.git> where USER is your GitHub name\n\
+            \like <https://github.com/USER/PROJECT.git> where USER is your GitHub name\n\
             \and PROJECT is the repo you want to upload."
 
 withDeps :: (Deps -> a) -> FilePath -> ErrorT String IO a
