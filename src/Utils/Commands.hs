@@ -27,8 +27,15 @@ inDir dir doStuff = do
   liftIO $ setCurrentDirectory here
   return result
 
-copyDir ::  FilePath -> FilePath -> IO ()
-copyDir src dst = liftIO $ do
+copyDir ::  FilePath -> FilePath -> ErrorT String IO ()
+copyDir src dst = do
+  exists <- liftIO $ doesDirectoryExist src
+  if exists
+    then liftIO $ copyDir' src dst
+    else throwError $ "Directory " ++ src ++ " does not exist"
+
+copyDir' ::  FilePath -> FilePath -> IO ()
+copyDir' src dst = do
   createDirectoryIfMissing True dst
   content <- getDirectoryContents src
   let paths = filter (`notElem` [".", "..",".git",".gitignore"]) content
@@ -36,7 +43,7 @@ copyDir src dst = liftIO $ do
     let srcPath = src </> name
     let dstPath = dst </> name
     isDirectory <- doesDirectoryExist srcPath
-    (if isDirectory then copyDir else copyFile) srcPath dstPath
+    (if isDirectory then copyDir' else copyFile) srcPath dstPath
 
 git :: [String] -> ErrorT String IO String
 git = run "git"

@@ -22,7 +22,7 @@ install name version =
            Cmd.inDir Path.root $ do
              (repo,tag) <- Cmd.inDir Path.internals (get name version)
              liftIO $ createDirectoryIfMissing True repo
-             liftIO $ Cmd.copyDir (Path.internals </> repo) (repo </> tag)
+             Cmd.copyDir (Path.internals </> repo) (repo </> tag)
              return (repo </> tag)
        installDependencies (Path.root </> location </> Path.depsFile)
     where
