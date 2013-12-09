@@ -88,7 +88,7 @@ getVersion name maybeVersion' =
 
       getVersions :: N.Name -> ErrorT String IO [V.Version]
       getVersions name = do
-        registryVersions <- Http.send (R.versions name)
+        registryVersions <- R.versions name
         case registryVersions of
           Just vs -> return vs
           Nothing -> do

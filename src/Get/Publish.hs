@@ -29,7 +29,7 @@ publish =
      verifyVersion name version
      withCleanup $ do
        generateDocs exposedModules
-       Http.send $ R.register name version Path.combinedJson
+       R.register name version Path.combinedJson
      Cmd.out "Success!"
 
 withCleanup :: ErrorT String IO () -> ErrorT String IO ()
@@ -56,7 +56,7 @@ verifyExposedModules modules =
 
 verifyVersion :: N.Name -> V.Version -> ErrorT String IO ()
 verifyVersion name version =
-    do response <- Http.send (R.versions name)
+    do response <- R.versions name
        case response of
          Nothing -> return ()
          Just versions ->

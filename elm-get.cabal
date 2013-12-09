@@ -52,4 +52,5 @@ Executable elm-get
                        network,
                        process,
                        resourcet,
-                       text
+                       text,
+                       vector

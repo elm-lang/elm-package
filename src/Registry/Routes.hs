@@ -16,6 +16,7 @@ import System.Directory
 import System.FilePath
 
 import qualified Utils.Paths as Path
+import qualified Utils.Http as Http
 import qualified Utils.Model.Name as N
 import qualified Utils.Model.Version as V
 import qualified Registry.Generate.Docs as Docs
@@ -50,19 +51,30 @@ register =
        Nothing -> error404 "Invalid library name or version number."
        Just (name,version) -> do
          let directory = Path.libraryVersion name version
+
          exists <- liftIO $ doesDirectoryExist directory
-         if exists
-           then error404 "That version has already been registered."
-           else do
-             liftIO $ createDirectoryIfMissing True directory
-             handleFileUploads "/tmp" defaultUploadPolicy perPartPolicy (handler directory)
-             result <- liftIO $ runErrorT $ Docs.generate directory
-             case result of
-               Right () -> writeBS "Registered successfully!"
-               Left err ->
-                   do liftIO $ removeDirectoryRecursive directory
-                      writeBS $ BSC.pack err
-                      httpError 500 "Internal Server Error"
+         if not exists then
+             error404' $ "Version " ++ show version ++ " has already been registered."
+         else actuallyRegister directory {-do
+           result <- liftIO $ runErrorT (Http.githubTags name)
+           case result of
+             Left err -> error404' err
+             Right (Http.Tags vs)
+                 | show version `notElem` vs ->
+                     error404' $ "The tag for version " ++ show version ++
+                                 " has not been pushed to GitHub."
+                 | otherwise -> actuallyRegister directory-}
+
+actuallyRegister directory =
+  do liftIO $ createDirectoryIfMissing True directory
+     handleFileUploads "/tmp" defaultUploadPolicy perPartPolicy (handler directory)
+     result <- liftIO $ runErrorT $ Docs.generate directory
+     case result of
+       Right () -> writeBS "Registered successfully!"
+       Left err ->
+           do liftIO $ removeDirectoryRecursive directory
+              writeBS $ BSC.pack err
+              httpError 500 "Internal Server Error"
   where
     perPartPolicy info
         | okayPart "docs" info || okayPart "deps" info = allowWithMaximumSize $ 2^(19::Int)
