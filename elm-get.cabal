@@ -46,7 +46,7 @@ Executable elm-get
                        directory,
                        filepath,
                        HTTP,
-                       http-conduit,
+                       http-conduit >= 1.9, http-conduit < 2.0,
                        http-types,
                        mtl,
                        network,
