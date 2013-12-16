@@ -46,6 +46,7 @@ Executable elm-get
                        HTTP,
                        http-conduit >= 1.9, http-conduit < 2.0,
                        http-types,
+                       json,
                        mtl,
                        network,
                        process,

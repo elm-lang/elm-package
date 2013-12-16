@@ -3,10 +3,15 @@ module Get.Install (install) where
 import Control.Applicative ((<$>))
 import Control.Monad (zipWithM_, when)
 import Control.Monad.Error
-import qualified Data.Map as Map
+import Data.Function (on)
+import qualified Data.List as List
 import qualified Data.Maybe as Maybe
 import System.Directory
+import System.Exit
 import System.FilePath
+import System.IO
+import Text.JSON
+import Text.JSON.Pretty
 
 import qualified Get.Registry as R
 import qualified Utils.Paths as Path
@@ -18,37 +23,30 @@ import qualified Elm.Internal.Name as N
 import qualified Elm.Internal.Version as V
 
 install :: N.Name -> Maybe String -> ErrorT String IO ()
-install name version =
-    do location <-
+install name maybeVersion =
+    do version <-
            Cmd.inDir EPath.dependencyDirectory $ do
-             (repo,tag) <- Cmd.inDir Path.internals (get name version)
+             (repo,version) <- Cmd.inDir Path.internals (get name maybeVersion)
              liftIO $ createDirectoryIfMissing True repo
-             Cmd.copyDir (Path.internals </> repo) (repo </> tag)
-             return (repo </> tag)
-       let path = EPath.dependencyDirectory </> location </> EPath.dependencyFile
-       installDependencies path
-    where
-      installDependencies :: FilePath -> ErrorT String IO ()
-      installDependencies path = do
-        exists <- liftIO $ doesFileExist path
-        when exists $ do
-          deps <- Map.toList <$> D.dependencies path
-          names <- mapM (N.fromString' . fst) deps
-          zipWithM_ install names (map (Just . snd) deps)
+             Cmd.copyDir (Path.internals </> repo) (repo </> show version)
+             return version
+       liftIO $ addToDepsFile name version
+       Cmd.out "Success!"
 
-get :: N.Name -> Maybe String -> ErrorT String IO (FilePath, FilePath)
+get :: N.Name -> Maybe String -> ErrorT String IO (FilePath, V.Version)
 get name maybeVersion =
   do exists <- liftIO $ doesDirectoryExist directory
      if exists then update else clone
      version <- getVersion name maybeVersion
      Cmd.inDir directory (checkout version)
-     return (directory, show version)
+     return (directory, version)
   where
     directory = N.toFilePath name
 
     update = do
       Cmd.out $ "Getting updates for repo " ++ show name
-      Cmd.inDir directory (Cmd.git ["pull"])
+      Cmd.inDir directory $ do Cmd.git ["checkout", "master"]
+                               Cmd.git ["pull"]
       return ()
 
     clone = do
@@ -110,3 +108,74 @@ getVersion name maybeVersion' =
           throwError $ unlines
           [ "could not find version " ++ show version ++ " on github."
           ]
+
+addToDepsFile :: N.Name -> V.Version -> IO ()
+addToDepsFile name version =
+    do exists <- doesFileExist file
+       add (if exists then yesFile else noFile)
+    where
+      file = EPath.dependencyFile
+
+      add msg = do
+        hPutStr stdout $ msg ++ " (y/n): "
+        yes <- Cmd.yesOrNo
+        if yes then writeFile file =<< newDependencies name version
+               else hPutStrLn stdout oddChoice
+
+      oddChoice =
+          "Okay, but if you decide to make this library visible to the compiler\n\
+          \later, add the dependency to your " ++ file ++ " file."
+
+      yesFile = "Should I add this library to your " ++ file ++ " file?"
+      noFile =
+        concat
+        [ "Your project does not have a " ++ file ++ " file yet.\n"
+        , "Should I create it and add the library you just installed?" ]
+
+newDependencies :: N.Name -> V.Version -> IO String
+newDependencies name version =
+    do exists <- doesFileExist EPath.dependencyFile
+       raw <- if not exists then return "{}" else
+                  withFile EPath.dependencyFile ReadMode $ \handle ->
+                      do stuff <- hGetContents handle
+                         length stuff `seq` return stuff
+       case decode raw of
+         Error msg -> do
+           hPutStrLn stderr $ "Error reading " ++ EPath.dependencyFile ++ ":\n" ++ msg
+           exitFailure
+         Ok obj ->
+             let assocs = fromJSObject obj in
+             case List.lookup "dependencies" assocs of
+               Just (JSObject entries) -> do
+                 entries' <- updateEntries (fromJSObject entries)
+                 return $ addDeps assocs entries'
+               _ -> return $ addDeps assocs [entry]
+
+    where
+      entry = (show name, JSString $ toJSString $ show version)
+
+      addDeps assocs entries = show $ pp_object obj
+          where
+            assocs' = filter ((/=) "dependencies" . fst) assocs
+            obj = assocs' ++ [("dependencies", JSObject $ toJSObject entries)]
+
+      updateEntries ::[(String,JSValue)] -> IO [(String,JSValue)]
+      updateEntries entries =
+          let name' = show name
+              entries' = List.insertBy (compare `on` fst) entry $
+                         filter ((/=) name' . fst) entries
+          in
+          case List.lookup name' entries of
+            Just (JSString oldVersion) -> do
+              hPutStr stdout $
+                 name' ++ " " ++ fromJSString oldVersion ++ " is already in " ++
+                 EPath.dependencyFile ++ ".\nDo you want to replace it " ++
+                 "with version " ++ show version ++ "? (y/n): "
+              yes <- Cmd.yesOrNo
+              case yes of
+                True -> return entries'
+                False -> hPutStrLn stdout msg >> return entries
+                    where msg = "Okay, but be sure to change the version number if\n\
+                                \you want to use the library you just installed."
+
+            _ -> return entries'
