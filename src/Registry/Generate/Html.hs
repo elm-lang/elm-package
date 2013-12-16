@@ -42,12 +42,14 @@ style =
     \  a:visited {text-decoration: none}\n\
     \  a:active {text-decoration: none}\n\
     \  a:hover {text-decoration: underline; color: rgb(234,21,122);}\n\
-    \  body { font-family: calibri, verdana, helvetica, arial }\n\
+    \  body { font-family: \"Lucida Grande\",\"Trebuchet MS\",\"Bitstream Vera Sans\",Verdana,Helvetica,sans-serif !important; }\n\
+    \  p, li { font-size: 14px !important;\n\
+    \          line-height: 1.5em !important; }\n\
     \</style>"
 
 -- | Add analytics to a page.
 analytics :: BSC.ByteString
-analytics = BSC.pack $ renderHtml $
+analytics = BSC.pack . renderHtml $
     H.script ! A.type_ "text/javascript" $
          "var _gaq = _gaq || [];\n\
          \_gaq.push(['_setAccount', 'UA-25827182-1']);\n\
