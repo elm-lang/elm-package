@@ -32,10 +32,7 @@ Executable elm-get
                        Paths_elm_get,
                        Utils.Paths,
                        Utils.Commands,
-                       Utils.Http,
-                       Utils.Model.Dependencies,
-                       Utils.Model.Name,
-                       Utils.Model.Version
+                       Utils.Http
 
   Build-depends:       aeson,
                        base,
@@ -44,6 +41,7 @@ Executable elm-get
                        cmdargs,
                        containers,
                        directory,
+                       Elm,
                        filepath,
                        HTTP,
                        http-conduit >= 1.9, http-conduit < 2.0,

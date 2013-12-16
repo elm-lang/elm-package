@@ -12,19 +12,21 @@ import qualified Get.Registry as R
 import qualified Utils.Paths as Path
 import qualified Utils.Commands as Cmd
 import qualified Utils.Http as Http
-import qualified Utils.Model.Dependencies as D
-import qualified Utils.Model.Name as N
-import qualified Utils.Model.Version as V
+import qualified Elm.Internal.Dependencies as D
+import qualified Elm.Internal.Paths as EPath
+import qualified Elm.Internal.Name as N
+import qualified Elm.Internal.Version as V
 
 install :: N.Name -> Maybe String -> ErrorT String IO ()
 install name version =
     do location <-
-           Cmd.inDir Path.root $ do
+           Cmd.inDir EPath.dependencyDirectory $ do
              (repo,tag) <- Cmd.inDir Path.internals (get name version)
              liftIO $ createDirectoryIfMissing True repo
              Cmd.copyDir (Path.internals </> repo) (repo </> tag)
              return (repo </> tag)
-       installDependencies (Path.root </> location </> Path.depsFile)
+       let path = EPath.dependencyDirectory </> location </> EPath.dependencyFile
+       installDependencies path
     where
       installDependencies :: FilePath -> ErrorT String IO ()
       installDependencies path = do
@@ -105,6 +107,6 @@ getVersion name maybeVersion' =
           ]
 
       errorNoMatch version =
-          throwError $ unlines 
+          throwError $ unlines
           [ "could not find version " ++ show version ++ " on github."
           ]

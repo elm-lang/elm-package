@@ -17,8 +17,9 @@ import System.FilePath
 
 import qualified Utils.Paths as Path
 import qualified Utils.Http as Http
-import qualified Utils.Model.Name as N
-import qualified Utils.Model.Version as V
+import qualified Elm.Internal.Name as N
+import qualified Elm.Internal.Version as V
+import qualified Elm.Internal.Paths as EPath
 import qualified Registry.Generate.Docs as Docs
 
 catalog :: Snap ()
@@ -89,17 +90,19 @@ actuallyRegister directory =
     handler :: FilePath -> [(PartInfo, Either PolicyViolationException FilePath)] -> Snap ()
     handler dir [(info1, Right temp1), (info2, Right temp2)] 
         | okayPart "docs" info1 && okayPart "deps" info2 =
-            liftIO $ do BS.readFile temp1 >>= BS.writeFile (dir </> Path.json)
-                        BS.readFile temp2 >>= BS.writeFile (dir </> Path.depsFile)
+            liftIO $ do
+              BS.readFile temp1 >>= BS.writeFile (dir </> Path.json)
+              BS.readFile temp2 >>= BS.writeFile (dir </> EPath.dependencyFile)
         | okayPart "docs" info2 && okayPart "deps" info1 =
-            liftIO $ do BS.readFile temp2 >>= BS.writeFile (dir </> Path.json)
-                        BS.readFile temp1 >>= BS.writeFile (dir </> Path.depsFile)
+            liftIO $ do
+              BS.readFile temp2 >>= BS.writeFile (dir </> Path.json)
+              BS.readFile temp1 >>= BS.writeFile (dir </> EPath.dependencyFile)
     handler dir parts =
         do mapM (writeError . snd) parts
            error404' msg
 
     writeError = either (writeText . policyViolationExceptionReason) (const (return ()))
-    msg = "Files " ++ Path.json ++ " and " ++ Path.depsFile ++ " were not uploaded."
+    msg = "Files " ++ Path.json ++ " and " ++ EPath.dependencyFile ++ " were not uploaded."
 
 versions :: Snap ()
 versions = do

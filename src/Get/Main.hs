@@ -14,7 +14,7 @@ import qualified Get.Install  as Install
 import qualified Get.Publish  as Publish
 import qualified Get.Registry as Registry
 import qualified Utils.Commands     as Cmd
-import qualified Utils.Model.Name   as N
+import qualified Elm.Internal.Name   as N
 
 data Commands
     = Install { lib :: String, version :: Maybe String }

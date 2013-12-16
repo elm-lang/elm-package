@@ -15,9 +15,9 @@ import qualified System.Directory as Dir
 import System.FilePath ((</>), (<.>))
 import Text.Parsec
 
-import Utils.Model.Dependencies as Deps
-import Utils.Model.Documentation as Docs
-import qualified Utils.Model.Name as N
+import Elm.Internal.Dependencies as Deps
+import Elm.Internal.Documentation as Docs
+import qualified Elm.Internal.Name as N
 import qualified Utils.Paths as Path
 
 generate :: [Document] -> Deps -> FilePath -> ErrorT String IO [FilePath]

@@ -11,11 +11,11 @@ import qualified Data.Binary as Binary
 
 import Data.Version (showVersion)
 import qualified Paths_elm_get as This
-import qualified Utils.Model.Dependencies as D
-import qualified Utils.Model.Name         as N
-import qualified Utils.Model.Version      as V
-import qualified Utils.Http               as Http
-import Utils.Paths (depsFile)
+import qualified Elm.Internal.Dependencies as D
+import qualified Elm.Internal.Name         as N
+import qualified Elm.Internal.Version      as V
+import qualified Elm.Internal.Paths        as Path
+import qualified Utils.Http                as Http
 
 domain = "http://library.elm-lang.org"
 
@@ -48,5 +48,5 @@ register name version path =
     where
       vars = [ ("library", show name), ("version", show version) ]
       files = [ partFileSource "docs" path
-              , partFileSource "deps" depsFile
+              , partFileSource "deps" Path.dependencyFile
               ]

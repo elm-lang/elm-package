@@ -11,7 +11,7 @@ import qualified System.Directory as Dir
 import System.IO
 
 import qualified Utils.Paths as Path
-import qualified Utils.Model.Dependencies as D
+import qualified Elm.Internal.Dependencies as D
 
 add :: D.Deps -> IO ()
 add deps =

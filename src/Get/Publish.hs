@@ -11,18 +11,19 @@ import qualified Data.List as List
 import qualified Data.ByteString as BS
 
 import Data.Version
-import qualified Paths_elm_get            as This
-import qualified Get.Registry             as R
-import qualified Utils.Paths              as Path
-import qualified Utils.Commands           as Cmd
-import qualified Utils.Http               as Http
-import qualified Utils.Model.Dependencies as D
-import qualified Utils.Model.Name         as N
-import qualified Utils.Model.Version      as V
+import qualified Paths_elm_get             as This
+import qualified Get.Registry              as R
+import qualified Utils.Paths               as Path
+import qualified Utils.Commands            as Cmd
+import qualified Utils.Http                as Http
+import qualified Elm.Internal.Dependencies as D
+import qualified Elm.Internal.Paths        as EPath
+import qualified Elm.Internal.Name         as N
+import qualified Elm.Internal.Version      as V
 
 publish :: ErrorT String IO ()
 publish =
-  do deps <- D.depsAt Path.depsFile
+  do deps <- D.depsAt EPath.dependencyFile
      let name = D.name deps
          version = D.version deps
          exposedModules = D.exposed deps

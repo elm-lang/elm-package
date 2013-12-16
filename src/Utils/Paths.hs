@@ -1,12 +1,10 @@
 module Utils.Paths where
 
 import System.FilePath
-import qualified Utils.Model.Name as N
-import qualified Utils.Model.Version as V
+import qualified Elm.Internal.Name as N
+import qualified Elm.Internal.Version as V
 
-root = "elm_dependencies"
 internals = "_internals"
-depsFile = "elm_dependencies.json"
 
 libDir = "public" </> "catalog"
 

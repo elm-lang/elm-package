@@ -16,12 +16,12 @@ import System.IO
 import GHC.Conc
 
 import qualified Utils.Paths as Path
-import qualified Utils.Model.Name as N
-import qualified Utils.Model.Version as V
+import qualified Elm.Internal.Name as N
+import qualified Elm.Internal.Version as V
 import qualified Registry.Generate.Docs as Docs
 import qualified Registry.Generate.Html as Html
 import qualified Registry.Routes as Route
-import qualified Language.Elm as Elm
+import qualified Elm.Internal.Paths as Elm
 
 data Flags = Flags
   { port :: Int
@@ -58,8 +58,8 @@ main = do
 
 getRuntimeAndDocs :: IO ()
 getRuntimeAndDocs = do
-  BS.writeFile "resources/elm-runtime.js" =<< BS.readFile =<< Elm.runtime
-  BS.writeFile "resources/docs.json" =<< BS.readFile =<< Elm.docs
+  BS.writeFile "resources/elm-runtime.js" =<< BS.readFile Elm.runtime
+  BS.writeFile "resources/docs.json" =<< BS.readFile Elm.docs
 
 setupLogging :: IO ()
 setupLogging =

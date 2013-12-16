@@ -15,8 +15,8 @@ import Data.Monoid ((<>))
 import qualified Data.List as List
 import qualified Data.Vector as Vector
 import qualified Data.ByteString.Char8 as BSC
-import qualified Utils.Model.Name as N
-import qualified Utils.Model.Version as V
+import qualified Elm.Internal.Name as N
+import qualified Elm.Internal.Version as V
 
 send :: String -> (Manager -> ResourceT IO a) -> ErrorT String IO a
 send domain request =

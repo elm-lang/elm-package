@@ -9,8 +9,9 @@ import qualified Registry.Generate.Elm as Elm
 import qualified Registry.Generate.Html as Html
 import qualified Registry.Generate.Listing as Listing
 import qualified Utils.Paths as Path
-import qualified Utils.Model.Dependencies as D
-import qualified Utils.Model.Name as N
+import qualified Elm.Internal.Dependencies as D
+import qualified Elm.Internal.Name as N
+import qualified Elm.Internal.Paths as EPath
 import System.FilePath
 import System.IO
 import System.Exit
@@ -39,7 +40,7 @@ regenerate =
 makeHtml :: FilePath -> ErrorT String IO D.Deps
 makeHtml directory =
   do docs' <- liftIO $ BS.readFile $ directory </> Path.json
-     deps' <- liftIO $ BS.readFile $ directory </> Path.depsFile
+     deps' <- liftIO $ BS.readFile $ directory </> EPath.dependencyFile
      case (,) <$> Json.eitherDecode docs' <*> Json.eitherDecode deps' of
        Left err -> throwError err
        Right (docs,deps) ->
