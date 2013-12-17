@@ -43,7 +43,8 @@ register name version path =
     Http.send domain $ \manager ->
     do request <- parseUrl $ libraryUrl "register" vars
        request' <- formDataBody files request
-       httpLbs request' manager
+       let request'' = request' { responseTimeout = Nothing }
+       httpLbs request'' manager
        return ()
     where
       vars = [ ("library", show name), ("version", show version) ]
