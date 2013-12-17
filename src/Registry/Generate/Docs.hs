@@ -24,9 +24,7 @@ generate directory =
 regenerate :: IO ()
 regenerate =
   do listings <- Listing.readListings
-     result <- runErrorT $ do
-                 dirs <- concat <$> mapM getDirs (Map.elems listings)
-                 mapM makeHtml dirs
+     result <- runErrorT $ mapM makeHtml (concatMap getDirs (Map.elems listings))
      case result of
        Right _ -> return ()
        Left err ->
@@ -34,8 +32,7 @@ regenerate =
               exitFailure
   where
     getDirs (Listing.Listing name _ vs) =
-        do project <- N.toFilePath <$> N.fromString' name
-           return $ map (\version -> Path.libDir </> project </> version) vs
+        map (\version -> Path.libDir </> N.toFilePath name </> show version) vs
 
 makeHtml :: FilePath -> ErrorT String IO D.Deps
 makeHtml directory =
