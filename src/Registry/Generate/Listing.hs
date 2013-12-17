@@ -12,20 +12,33 @@ import System.IO
 
 import qualified Utils.Paths as Path
 import qualified Elm.Internal.Dependencies as D
+import qualified Elm.Internal.Name as N
+import qualified Elm.Internal.Version as V
 
 add :: D.Deps -> IO ()
 add deps =
     do listings <- readListings
-       let name = show $ D.name deps
-           version = show $ D.version deps
+       let name = D.name deps
+           version = D.version deps
            insert maybe =
                Just . Listing name (D.summary deps) $
                     case maybe of
                       Nothing -> [version]
                       Just listing -> version : versions listing
-           listings' = Map.alter insert name listings
+           listings' = Map.alter insert (show name) listings
        LBS.writeFile Path.listingBits (Binary.encode listings')
        LBS.writeFile Path.listing $ Json.encode $ Map.elems listings'
+
+remove :: N.Name -> V.Version -> IO ()
+remove name version =
+    do listings <- readListings
+       let listings' = Map.adjust removeVersion (show name) listings
+       LBS.writeFile Path.listingBits (Binary.encode listings')
+       LBS.writeFile Path.listing $ Json.encode $ Map.elems listings'
+    where
+      removeVersion listing =
+          listing { versions = filter (/=version) (versions listing) }
+          
 
 readListings :: IO (Map.Map String Listing)
 readListings =
@@ -39,9 +52,9 @@ readListings =
 
 
 data Listing = Listing
-    { name :: String
+    { name :: N.Name
     , summary :: String
-    , versions :: [String]
+    , versions :: [V.Version]
     }
 
 instance Binary Listing where
