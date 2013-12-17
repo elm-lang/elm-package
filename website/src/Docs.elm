@@ -8,7 +8,7 @@ entry w name tipe assocPrec prose =
     let box n pos txt = container w (heightOf txt + n) pos txt
         ap = case assocPrec of
                Nothing -> []
-               Just (a,p) -> [ box 2 topRight . text . monospace . toText <|
+               Just (a,p) -> [ box 2 topRight . plainText <|
                                    a ++ "-associative, precedence " ++ show p ++ " " ]
         tipe' = box 2 topLeft . text <| monospace (toText " ") ++ prettify tipe
     in
