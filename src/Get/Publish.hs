@@ -11,7 +11,6 @@ import qualified Data.List as List
 import qualified Data.ByteString as BS
 
 import Data.Version
-import qualified Paths_elm_get             as This
 import qualified Get.Registry              as R
 import qualified Utils.Paths               as Path
 import qualified Utils.Commands            as Cmd
@@ -61,9 +60,9 @@ verifyElmVersion elmVersion@(V.V ns _)
     | otherwise =
         throwError $ "elm_dependencies.json says this project depends on version " ++
                      show elmVersion ++ " of the compiler but the compiler you " ++
-                     "have installed is version " ++ showVersion This.version
+                     "have installed is version " ++ show V.elmVersion
     where
-      Version ns' _ = This.version
+      V.V ns' _ = V.elmVersion
 
 verifyExposedModules :: [String] -> ErrorT String IO ()
 verifyExposedModules modules =
