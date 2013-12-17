@@ -76,9 +76,11 @@ homeHeader outer inner =
            
 
 pos = midLeftAt (absolute 30) (relative 0.5)
+bigWords = Text.height 50 <| Text.color C.mediumGrey <| toText "Elm Public Library "
+alpha = Text.height 20 <| Text.color C.accent3 <| toText "ALPHA"
 title =
     flow down
-    [ text . (Text.height 50 <| Text.color C.mediumGrey <| toText "Elm Public Library") ++ (Text.height 20 <| Text.color C.accent3 <| toText " ALPHA")
+    [ text <| bigWords ++ alpha
     , spacer 10 4
     , text . Text.height 20 . Text.color C.mediumGrey <| toText "Discover libraries, browse documentation"
     ]
