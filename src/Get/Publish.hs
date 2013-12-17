@@ -50,10 +50,10 @@ verifyNoDependencies :: [(N.Name,V.Version)] -> ErrorT String IO ()
 verifyNoDependencies [] = return ()
 verifyNoDependencies _ =
     throwError
-        "Unfortunately, elm-get is not able to publish projects with\n\
-        \dependencies yet. This is obviously a very high proirity, and I am\n\
-        \working as fast as I can! For now, let people know about your library\n\
-        \on the mailing list: <https://groups.google.com/forum/#!forum/elm-discuss>"
+        "elm-get is not able to publish projects with dependencies\n\
+        \yet. This is obviously a very high proirity, and I am working as\n\
+        \fast as I can! For now, let people know about your library on the\n\
+        \mailing list: <https://groups.google.com/forum/#!forum/elm-discuss>"
 
 verifyElmVersion :: V.Version -> ErrorT String IO ()
 verifyElmVersion elmVersion@(V.V ns _)
