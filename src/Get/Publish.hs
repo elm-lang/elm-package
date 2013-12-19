@@ -5,10 +5,15 @@ import Control.Applicative ((<$>))
 import Control.Monad (when)
 import Control.Monad.Error
 import System.Directory
+import System.Exit
 import System.FilePath (replaceExtension, (</>))
+import System.IO
 import qualified Data.Maybe as Maybe
 import qualified Data.List as List
+import qualified Data.Map as Map
 import qualified Data.ByteString as BS
+import Text.JSON
+import qualified Utils.PrettyJson as Pretty
 
 import Data.Version
 import qualified Get.Registry              as R
@@ -22,7 +27,7 @@ import qualified Elm.Internal.Version      as V
 
 publish :: ErrorT String IO ()
 publish =
-  do deps <- D.depsAt EPath.dependencyFile
+  do deps <- getDeps
      let name = D.name deps
          version = D.version deps
          exposedModules = D.exposed deps
@@ -35,6 +40,51 @@ publish =
        generateDocs exposedModules
        R.register name version Path.combinedJson
      Cmd.out "Success!"
+
+getDeps :: ErrorT String IO D.Deps
+getDeps =
+  do either <- liftIO $ runErrorT $ D.depsAt EPath.dependencyFile
+     case either of
+       Right deps -> return deps
+       Left err ->
+           liftIO $ do
+             hPutStrLn stderr $ "\nError: " ++ err
+             hPutStr stdout $ "\nWould you like me to add the missing fields? (y/n) "
+             yes <- Cmd.yesOrNo
+             case yes of
+               False -> hPutStrLn stdout "Okay, maybe next time!"
+               True -> do
+                 addMissing =<< readFields
+                 hPutStrLn stdout $ "Done! Now go through " ++ EPath.dependencyFile ++ 
+                      " and check that\neach field is filled in with valid and helpful information."
+             exitFailure
+            
+addMissing :: Map.Map String JSValue -> IO ()
+addMissing existingFields =
+    writeFile EPath.dependencyFile $ show $ Pretty.object obj'
+    where
+      obj' = map (\(f,v) -> (f, Maybe.fromMaybe v (Map.lookup f existingFields))) obj
+
+      str = JSString . toJSString
+      obj = [ ("version", str "0.1")
+            , ("summary", str "concise, helpful summary of your project")
+            , ("description", str "full description of this project, describe your use case")
+            , ("license", str "BSD3")
+            , ("repository", str "https://github.com/USER/PROJECT.git")
+            , ("exposed-modules", JSArray [])
+            , ("elm-version", str $ show V.elmVersion)
+            , ("dependencies", JSObject $ toJSObject [])
+            ]
+
+readFields :: IO (Map.Map String JSValue)
+readFields =
+    do exists <- doesFileExist EPath.dependencyFile
+       case exists of
+         False -> return Map.empty
+         True -> do raw <- readFile EPath.dependencyFile
+                    case decode raw of
+                      Error err -> return Map.empty
+                      Ok obj -> return (Map.fromList $ fromJSObject obj)
 
 withCleanup :: ErrorT String IO () -> ErrorT String IO ()
 withCleanup action =
@@ -67,8 +117,8 @@ verifyElmVersion elmVersion@(V.V ns _)
 verifyExposedModules :: [String] -> ErrorT String IO ()
 verifyExposedModules modules =
     do when (null modules) $ throwError $
-              "There are no exposed modules! All libraries must make at \
-              \least one module available to users."
+              "There are no exposed modules in " ++ EPath.dependencyFile ++
+              "!\nAll libraries must make at least one module available to users."
        mapM_ verifyExists modules
     where
       verifyExists modul =

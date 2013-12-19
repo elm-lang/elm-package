@@ -11,7 +11,7 @@ import System.Exit
 import System.FilePath
 import System.IO
 import Text.JSON
-import Text.JSON.Pretty
+import qualified Utils.PrettyJson as Pretty
 
 import qualified Get.Registry as R
 import qualified Utils.Paths as Path
@@ -154,7 +154,7 @@ newDependencies name version =
     where
       entry = (show name, JSString $ toJSString $ show version)
 
-      addDeps assocs entries = show $ pp_object obj
+      addDeps assocs entries = show $ Pretty.object obj
           where
             assocs' = filter ((/=) "dependencies" . fst) assocs
             obj = assocs' ++ [("dependencies", JSObject $ toJSObject entries)]

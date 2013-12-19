@@ -49,6 +49,7 @@ Executable elm-get
                        json,
                        mtl,
                        network,
+                       pretty,
                        process,
                        resourcet,
                        text,
