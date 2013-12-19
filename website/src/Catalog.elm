@@ -40,8 +40,8 @@ row : Int -> Library -> Element
 row w library =
     flow down
     [ color C.mediumGrey <| spacer w 1
-    , flow right [ container 200 36 midLeft (text . Text.link ("/catalog/" ++ deslash library.name ++ "/" ++ head library.versions) <| toText library.name)
-                 , container (w-200) 36 midLeft (plainText library.summary)
+    , flow right [ container 240 36 midLeft (text . Text.link ("/catalog/" ++ deslash library.name ++ "/" ++ head library.versions) <| toText library.name)
+                 , container (w-240) 36 midLeft (plainText library.summary)
                  ]
     ]
 
