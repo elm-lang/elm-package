@@ -45,7 +45,9 @@ depsToElm deps =
             , "  , width w [markdown|" ++ Deps.description deps ++ "|]"
             , "  , width w [markdown|" ++ concatMap markdownLink (Deps.exposed deps) ++ "|]"
             , "  , width w [markdown|The [source code is on GitHub](" ++ Deps.repo deps ++ "),"
-            , "so you can star projects, report issues, and follow great library designers.|]"
+            , "so you can star projects, report issues, and follow great library designers."
+            , ""
+            , "See all previous versions of this library [here](/catalog/" ++ N.toFilePath (Deps.name deps) ++ ").|]"
             , "  ]"
             ]
     where
