@@ -36,7 +36,7 @@ Executable elm-get
                        Utils.PrettyJson
 
   Build-depends:       aeson,
-                       base,
+                       base >=4.2 && <5,
                        binary,
                        bytestring,
                        cmdargs,
