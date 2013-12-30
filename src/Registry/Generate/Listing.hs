@@ -29,16 +29,12 @@ add deps =
        LBS.writeFile Path.listingBits (Binary.encode listings')
        LBS.writeFile Path.listing $ Json.encode $ Map.elems listings'
 
-remove :: N.Name -> V.Version -> IO ()
-remove name version =
+remove :: String -> IO ()
+remove name =
     do listings <- readListings
-       let listings' = Map.adjust removeVersion (show name) listings
+       let listings' = Map.delete name listings
        LBS.writeFile Path.listingBits (Binary.encode listings')
        LBS.writeFile Path.listing $ Json.encode $ Map.elems listings'
-    where
-      removeVersion listing =
-          listing { versions = filter (/=version) (versions listing) }
-          
 
 readListings :: IO (Map.Map String Listing)
 readListings =
