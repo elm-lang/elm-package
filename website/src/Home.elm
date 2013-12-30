@@ -48,9 +48,8 @@ so you can use it to install any public repo.
 
 # Warning
 
-This is a very young project and package management is very tough
-to get right. It's conceivable that there will be breaking changes
-in future releases, so it may be necessary to clear out the catalog
+It's conceivable that there will be breaking changes in future
+releases, so it may be necessary to clear out the catalog
 at some point for the long-term health of `elm-get`.
 
 |]
