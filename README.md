@@ -51,12 +51,8 @@ Some key takeaways are:
 
 After looking through
 [the guidelines](http://library.elm-lang.org/DesignGuidelines.html)
-carefully, publish your library with:
-
-    elm-get publish
-
-This will require that you flesh out your `elm_dependencies.json` file
-to look something like this:
+carefully, flesh out your `elm_dependencies.json` file to look
+something like this:
 
 ```json
 { "version": "0.1"
@@ -88,3 +84,10 @@ A couple important notes for filling in these fields for your project are:
     community libraries. It is the highest priority for this project
     to lift this restriction while ensuring that dependency management
     does not become a hellish nightmare.
+
+Once that is all done, use git to tag the specific commit you want to
+release with an appropriate version number. This should match the
+`version` listed in `elm_dependencies.json`. Finally, you can publish
+your library with:
+
+    elm-get publish
