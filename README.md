@@ -10,9 +10,13 @@ The full catalog of Elm libraries lives at
 
 This will install the `elm-get` executable in `/home/YOU/.cabal/bin`.
 
-### Use
+## Use
 
-#### Install
+The next two sections will cover the basics of using `elm-get` to
+install libraries from [the catalog](http://library.elm-lang.org/) and
+publish your own.
+
+### Install Libraries
 
 To install a library run:
 
@@ -34,7 +38,7 @@ library in your project, you will need to add it to your
 `elm_dependencies.json` file which tells the compiler where to look
 for extra libraries.
 
-#### Publish
+### Publish Libraries
 
 Before publishing, look through the
 [Library Design Guidelines](http://library.elm-lang.org/DesignGuidelines.html).
