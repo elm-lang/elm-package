@@ -10,7 +10,7 @@ License-file:        LICENSE
 
 Author:              Evan Czaplicki
 Maintainer:          info@elm-lang.org
-Copyright:           Copyright: (c) 2013 Evan Czaplicki
+Copyright:           Copyright: (c) 2013-2014 Evan Czaplicki
 
 Category:            Language
 
@@ -30,9 +30,10 @@ Executable elm-get
                        Get.Publish,
                        Get.Registry,
                        Paths_elm_get,
-                       Utils.Paths,
                        Utils.Commands,
-                       Utils.Http
+                       Utils.Http,
+                       Utils.Paths,
+                       Utils.PrettyJson
 
   Build-depends:       aeson,
                        base,
@@ -41,7 +42,7 @@ Executable elm-get
                        cmdargs,
                        containers,
                        directory,
-                       Elm,
+                       Elm >= 0.10.1,
                        filepath,
                        HTTP,
                        http-conduit >= 1.9, http-conduit < 2.0,

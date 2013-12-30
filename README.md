@@ -1,15 +1,11 @@
 # elm-get
 
-A command line tool to share Elm libraries. Currently in pre-release, only for testing!
+A command line tool to share Elm libraries.
+The full catalog of Elm libraries lives at
+[library.elm-lang.org](http://library.elm-lang.org/).
 
-### Install
+## Install
 
-```bash
-git clone https://github.com/evancz/elm-get.git
-cd elm-get
-cabal install
-```
+    cabal install elm-get
 
 This will install the `elm-get` executable in `/home/YOU/.cabal/bin`.
-
-Ease of install will improve when this is properly released!
