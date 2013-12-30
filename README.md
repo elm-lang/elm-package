@@ -70,7 +70,7 @@ to look something like this:
 }
 ```
 
-A couple key things to try to do in your file are:
+A couple important notes for filling in these fields for your project are:
 
   * Keep the `summary` under 80 characters.
   * Make the `description` a useful outline of the library. It should
@@ -81,8 +81,9 @@ A couple key things to try to do in your file are:
   * The recommended `license` is BSD3, but of course, you can use
     whatever license you want.
   * The `exposed-modules` are the subset of modules that people can
-    use when they install your library. This ensures that internal
-    details do not need to leak out and pollute the API.
+    use when they install your library. Use this to stop internal
+    details from polluting your API and cluttering the docs with
+    modules that are not meant for users.
   * For now, you cannot publish libraries with `dependencies` on
     community libraries. It is the highest priority for this project
     to lift this restriction while ensuring that dependency management
