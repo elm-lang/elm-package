@@ -48,15 +48,11 @@ so you can use it to install any public repo.
 
 # Warning
 
-<span style="color:#cc0000;">
-**Do not post publicly about this site!**
-</span> The current goal is
-to find and [report](https://github.com/evancz/elm-get)
-bugs in the library servers and `elm-get` before a broader
-public announcement.
-
-The catalog will be cleared before the official release,
-so please experiment with publishing and try to find corner cases!
+This is a very young project and package management is very tough
+to get right, so there will breaking changes in future releases.
+I will try to minimize this of course, but it may be necessary to
+restart the catalog in future releases for the long-term health of
+this project.
 
 |]
 
