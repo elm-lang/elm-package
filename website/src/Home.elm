@@ -46,12 +46,6 @@ elm-get install user/project
 installing on a per-project basis. It is also backed by [GitHub](https://github.com/),
 so you can use it to install any public repo.
 
-# Warning
-
-It's conceivable that there will be breaking changes in future
-releases, so it may be necessary to clear out the catalog
-at some point for the long-term health of `elm-get`.
-
 |]
 
 rightCol w = width w [markdown|
