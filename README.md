@@ -47,7 +47,7 @@ Some key takeaways are:
 * Design for a concrete use case
 * Always give functions human readable names
 * Avoid gratuitous abstraction
-* Use semantic versioning
+* Use [semantic versioning](http://semver.org/)
 
 After looking through
 [the guidelines](http://library.elm-lang.org/DesignGuidelines.html)
