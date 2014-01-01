@@ -1,7 +1,4 @@
-import String
-import Website.ColorScheme as C
 import Website.Skeleton (skeleton)
-import Window
 import JavaScript as JS
 
 title = constant (JS.fromString "Library Design Guidelines")
@@ -120,7 +117,3 @@ and writers do not need to argue about style.
 
 
 |]
-
-content w = width (min 600 w) intro
-
-main = lift (skeleton content) Window.dimensions

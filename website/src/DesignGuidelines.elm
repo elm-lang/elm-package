@@ -1,7 +1,4 @@
-import String
-import Website.ColorScheme as C
 import Website.Skeleton (skeleton)
-import Window
 import JavaScript as JS
 
 title = constant (JS.fromString "Library Design Guidelines")
