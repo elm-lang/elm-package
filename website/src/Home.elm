@@ -72,12 +72,13 @@ look through the [Library Design Guidelines](/DesignGuidelines.html). Some
 key takeaways are:
 
  * Design for a concrete use case
- * Always give functions human readable names
+ * Use human readable names
  * Avoid gratuitous abstraction
  * Use [semantic versioning](http://semver.org)
+ * Write [nice documentation](/Documentation.html)
 
-After looking through [the guidelines](/DesignGuidelines.html) carefully,
-publish your library with:
+After looking through [the guidelines](/DesignGuidelines.html) carefully
+and [writing helpful documentation](/Documentation.html), publish your library with:
 
 ```
 elm-get publish
