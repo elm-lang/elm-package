@@ -62,12 +62,13 @@ fromList = ...
 
 Notice that:
 
-  * the documentation starts with `\{-|`
-  * the text begins after a single space
-  * subsequent lines are aligned with the zeroth column
-  * code is indented four spaces
-  * there is an example that shows a typical use of the function
-  * there is an explicit type annotation
+  * A documentation comment starts `{-|` and ends with `-}`. The vertical
+    bar indicates that it is a special comment.
+  * The text begins after a single space, and all subsequent lines are
+    aligned with the zeroth column.
+  * Code is indented four spaces.
+  * There is an example that shows a typical use of the function.
+  * There is an explicit type annotation.
 
 All of these things are necessary. Use this style when documenting your
 publicly exposed functions. The goal is to have consistency across all
