@@ -1,5 +1,3 @@
-module Home where
-
 import String
 import Website.ColorScheme as C
 import Website.Skeleton (skeleton)
@@ -30,6 +28,19 @@ li { padding: 4px; }
 These guidelines are meant to promote consistency and quality across all
 Elm libraries. It is a collection of best practices that will help you
 write better libraries and your users write better code with your library.
+Here is the overview, but it is important to read through and see why
+these recommendations matter.
+
+  * [Design for a concrete use case](#design-for-a-concrete-use-case)
+  * [Avoid gratuitous abstraction](#avoid-gratuitous-abstraction)
+  * [Use semantic versioning](#use-semantic-versioning)
+  * [Write helpful documentation with examples](#write-helpful-documentation-with-examples)
+  * [The data structure is always the last argument](#the-data-structure-is-always-the-last-argument)
+  * [Do not expose ADTs or record constructors](#do-not-expose-ADTs-or-record-constructors)
+  * [Naming](#naming)
+    - [Use human readable names](#use-human-readable-names)
+    - [Module names should not reappear in function names](#module-names-should-not-reappear-in-function-names)
+    - [Avoid infix operators](#avoid-infix-operators)
 
 ## Design for a concrete use case
 
@@ -61,6 +72,21 @@ making someones life easier, it is not a good idea. If you cannot
 ## Use semantic versioning
 
 Read [this](http://semver.org/) and follow the rules. It makes everyone's life better.
+
+## Write helpful documentation with examples
+
+[This document](/Documentation.html) describes how documentation works in Elm.
+
+Providing examples of common uses is extremely helpful. Do it! The standard
+libraries all make a point to have examples that show how one *should* be using
+those functions.
+
+Also, make the documentation for the library itself helpful. Perhaps have an
+example that shows how to use many functions together, showcasing the API.
+
+Finally, think hard about the order that the functions appear in and what kind
+of title each section gets. People will read documentation linearly when learning
+a library so give them some structure!
 
 ## The data structure is always the last argument
 
@@ -94,7 +120,7 @@ these values.
 
 ## Naming
 
-#### Give functions human readable names
+#### Use human readable names
 
 Abbreviations are generally a silly idea for an API. Having an API
 that is clear is more important than saving three or four characters
