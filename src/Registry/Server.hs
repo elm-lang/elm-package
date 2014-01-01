@@ -81,7 +81,7 @@ setupSrcHtml =
                         exitFailure
     where
       generate = mapM Html.generateSrc $ map (\name -> "src/" ++ name ++ ".elm") elms
-      elms = ["Error404","Catalog","Home","DesignGuidelines"]
+      elms = ["Error404","Catalog","Home","DesignGuidelines","Documentation"]
 
 directoryConfig :: MonadSnap m => DirectoryConfig m
 directoryConfig =
