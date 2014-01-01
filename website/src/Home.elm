@@ -56,7 +56,7 @@ pre { background-color: white;
       border: 1px solid rgb(216, 221, 225);
       border-radius: 4px;
 }
-li { padding: 4px; }
+li { padding: 2px; }
 </style>
 
 # Design Guidelines

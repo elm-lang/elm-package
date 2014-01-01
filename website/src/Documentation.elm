@@ -19,7 +19,7 @@ pre {
   border: 1px solid rgb(216, 221, 225);
   border-radius: 4px;
 }
-li { padding: 4px; }
+li { padding: 2px; }
 code > span.kw { color: #204a87; font-weight: bold; }
 code > span.dt { color: #204a87; }
 code > span.dv { color: #0000cf; }
