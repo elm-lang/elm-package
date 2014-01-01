@@ -38,7 +38,7 @@ code > span.er { font-weight: bold; }
 
 This documentation format strives for simplicity and regularity. It should
 be easy for readers to glance through a file and find the information they
-need.
+need. Modules that are missing documentation cannot be uploaded to the catalog.
 
 All documentation can use the same markdown as in Elm. You can check out
 the [Maybe](https://github.com/evancz/Elm/blob/master/libraries/Maybe.elm)
