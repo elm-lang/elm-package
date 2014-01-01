@@ -5,6 +5,8 @@ title = constant (JS.fromString "Library Design Guidelines")
 foreign export jsevent "title"
   title : Signal JS.JSString
 
+main = skeleton [] scene (constant ())
+
 scene _ () w =
     let words' = width (min w 800) words in
     container w (heightOf words') middle words'
@@ -170,5 +172,3 @@ they are unfamiliar with, they can scan the imports for a `Whatever.Infix` modul
 and limit the scope of their annoying search for your dumb operator.
 
 |]
-
-main = skeleton [] scene (constant ())

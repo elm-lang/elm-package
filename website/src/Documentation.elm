@@ -1,9 +1,11 @@
 import Website.Skeleton (skeleton)
 import JavaScript as JS
 
-title = constant (JS.fromString "Library Design Guidelines")
+title = constant (JS.fromString "Documentation Format")
 foreign export jsevent "title"
   title : Signal JS.JSString
+
+main = skeleton [] scene (constant ())
 
 scene _ () w =
     let words' = width (min w 800) words in
@@ -32,7 +34,7 @@ code > span.fu { color: #000000; }
 code > span.er { font-weight: bold; }
 </style>
 
-# Documentation
+# Documentation Format
 
 This documentation format strives for simplicity and regularity. It should
 be easy for readers to glance through a file and find the information they
