@@ -34,25 +34,26 @@ depsToElm :: Deps -> String
 depsToElm deps = 
     unlines [ "import Website.Skeleton (skeleton)"
             , "import Website.ColorScheme as C"
+            , "import Website.Docs.Library as Library"
+            , ""
+            , "port title : String"
+            , "port title = \"" ++ show (Deps.name deps) ++ "\""
             , ""
             , "links = [ (\"" ++ toLink deps "" ++ "\", toText \"" ++ N.project (Deps.name deps) ++ "\") ]"
             , ""
-            , "main = skeleton links scene (constant ())"
+            , "main = skeleton links scene Library.docs"
             , ""
-            , "scene term () w ="
+            , "scene term docs w ="
             , "  flow down"
             , "  [ color C.mediumGrey <| spacer w 1"
             , "  , width w [markdown|" ++ Deps.description deps ++ "|]"
-            , "  , width w [markdown|" ++ concatMap markdownLink (Deps.exposed deps) ++ "|]"
+            , "  , Library.scene term docs"
             , "  , width w [markdown|The [source code is on GitHub](" ++ Deps.repo deps ++ "),"
             , "so you can star projects, report issues, and follow great library designers."
             , ""
             , "See all previous versions of this library [here](/catalog/" ++ N.toFilePath (Deps.name deps) ++ ").|]"
             , "  ]"
             ]
-    where
-      markdownLink m = "[" ++ m ++ "](" ++ toLink deps m ++ ")<br/>"
-
 
 toLink deps m =
     concat [ "/catalog/"
@@ -76,7 +77,7 @@ docToElm deps doc =
            Right . (,) name $
            unlines [ "import Website.Skeleton (skeleton)"
                    , "import Website.ColorScheme as C"
-                   , "import Docs (entry)"
+                   , "import Website.Docs.Entry (entry)"
                    , "import String"
                    , ""
                    , "links = [ (\"" ++ toLink deps "" ++ "\", toText \"" ++ N.project (Deps.name deps) ++ "\")"
@@ -134,8 +135,6 @@ contentToElm entries content =
                                 , "entry w"
                                 , show name
                                 , show (raw entry)
-                                , case assocPrec entry of
-                                    Nothing -> "Nothing"
-                                    Just ap -> "(" ++ show (Just ap) ++ ")"
+                                , "(" ++ show (assocPrec entry) ++ ")"
                                 , "[markdown|" ++ comment entry ++ "|]"
                                 ]

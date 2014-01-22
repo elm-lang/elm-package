@@ -1,4 +1,4 @@
-module Docs where
+module Website.Docs.Entry (entry) where
 
 import String
 import Website.ColorScheme as C
