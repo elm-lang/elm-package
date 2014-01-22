@@ -69,7 +69,7 @@ showModule (name, values) =
     in
       flow down [ moduleLink name
                 , results
-                , spacer 10 (if isEmpty values then 6 else 14) ]
+                , spacer 10 (if isEmpty values then 6 else 16) ]
 
 moduleLink : String -> Element
 moduleLink name =
