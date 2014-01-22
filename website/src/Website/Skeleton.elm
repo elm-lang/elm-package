@@ -8,7 +8,7 @@ import Window
 headerHeight = 95
 footerHeight = 40
 
-(box, searchTerm) = Input.field "  search"
+(box, searchTerm) = Input.field "  filter"
 
 skeleton : [(String,Text)] -> (String -> a -> Int -> Element) -> Signal a -> Signal Element
 skeleton links bodyFunc info =
