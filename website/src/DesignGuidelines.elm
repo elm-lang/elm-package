@@ -1,9 +1,8 @@
 import Website.Skeleton (skeleton)
 import JavaScript as JS
 
-title = constant (JS.fromString "Library Design Guidelines")
-foreign export jsevent "title"
-  title : Signal JS.JSString
+port title : String
+port title = "Library Design Guidelines"
 
 main = skeleton [] scene (constant ())
 

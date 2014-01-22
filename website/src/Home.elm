@@ -6,9 +6,8 @@ import Website.Skeleton (home)
 import Window
 import JavaScript as JS
 
-title = constant (JS.fromString "Elm Public Library")
-foreign export jsevent "title"
-  title : Signal JS.JSString
+port title : String
+port title = "Elm Public Library"
 
 padCol w col =
     let col' = col (w-60) in
