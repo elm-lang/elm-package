@@ -38,9 +38,10 @@ deslash = String.map (\c -> if c == '/' then '-' else c)
 
 row : Int -> Library -> Element
 row w library =
+    let url = "/catalog/" ++ deslash library.name ++ "/" ++ head library.versions in
     flow down
     [ color C.mediumGrey <| spacer w 1
-    , flow right [ container 240 36 midLeft (text . Text.link ("/catalog/" ++ deslash library.name ++ "/" ++ head library.versions) <| toText library.name)
+    , flow right [ container 240 36 midLeft (text . Text.link url <| toText library.name)
                  , container (w-240) 36 midLeft (plainText library.summary)
                  ]
     ]
