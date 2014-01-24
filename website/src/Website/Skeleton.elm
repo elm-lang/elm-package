@@ -98,5 +98,5 @@ footerWords =
           toText words1 ++ Text.link href (toText words2) ++ toText words3
   in
      Text.color (rgb 145 145 145) <|
-       wordLink "written in Elm and " "https://github.com/evancz/elm-get" "open source" "" ++
+       wordLink "written in Elm and " "https://github.com/evancz/elm-get/tree/master/website/src" "open source" "" ++
        wordLink " / " "https://github.com/evancz" "Evan Czaplicki" " &copy;2013-14"
