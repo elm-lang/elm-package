@@ -6,7 +6,7 @@ import Graphics.Input as Input
 import Window
 
 headerHeight = 95
-footerHeight = 40
+footerHeight = 60
 
 (box, searchTerm) = Input.field "  filter"
 
@@ -34,10 +34,7 @@ internalSkeleton links bodyFunc box term info (outer,h) =
     , let contentHeight = max (heightOf content)
                               (h - topBarHeight - headerHeight - footerHeight)
       in  container outer contentHeight midTop content
-    , container outer footerHeight (midBottomAt (relative 0.5) (absolute 10)) <|
-       Text.centered <|
-           Text.color (rgb 145 145 145) (toText "&copy; 2013-2014 ") ++
-           Text.link "https://github.com/evancz" (toText "Evan Czaplicki")
+    , footer outer
     ]
 
 home bodyFunc = internalHome bodyFunc <~ Window.dimensions
@@ -54,10 +51,7 @@ internalHome bodyFunc (outer,h) =
     , let contentHeight = max (heightOf content)
                               (h - topBarHeight - homeHeaderHeight - footerHeight)
       in  container outer contentHeight midTop content
-    , container outer footerHeight (midBottomAt (relative 0.5) (absolute 10)) <|
-       Text.centered <|
-           Text.color (rgb 145 145 145) (toText "&copy; 2011-2013 ") ++
-           Text.link "https://github.com/evancz" (toText "Evan Czaplicki")
+    , footer outer
     ]
 
 homeHeaderHeight = 160
@@ -74,7 +68,6 @@ homeHeader outer inner =
                  ]
     ]
            
-
 pos = midLeftAt (absolute 30) (relative 0.5)
 bigWords = Text.height 50 <| Text.color C.mediumGrey <| toText "Elm Public Library "
 alpha = Text.height 20 <| Text.color C.accent3 <| toText "ALPHA"
@@ -97,3 +90,13 @@ topBar k n =
         box w = spacer w topBarHeight
         boxes = map (\_ -> box) [1..k]
     in  flow right <| addColors (zipWith (<|) boxes ws)
+
+footer outer = container outer footerHeight footerPosition <| Text.centered footerWords
+footerPosition = midBottomAt (relative 0.5) (absolute 10)
+footerWords =
+  let wordLink words1 href words2 words3 =
+          toText words1 ++ Text.link href (toText words2) ++ toText words3
+  in
+     Text.color (rgb 145 145 145) <|
+       wordLink "written in Elm and " "https://github.com/evancz/elm-get" "open source" "" ++
+       wordLink " / " "https://github.com/evancz" "Evan Czaplicki" " &copy;2013-14"
