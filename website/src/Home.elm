@@ -10,13 +10,14 @@ port title : String
 port title = "Elm Public Library"
 
 padCol w col =
-    let col' = col (w-60) in
-    container w (heightOf col') middle col'
+    let col' = col (w-40) in
+    container (w-40) (heightOf col') middle col'
 
 scene w =
     flow down 
     [ spacer w 20
     , flow right [ padCol (div w 2) leftCol
+                 , spacer 80 10
                  , padCol (div w 2) rightCol ]
     ]
 

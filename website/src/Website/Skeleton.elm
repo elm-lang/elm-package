@@ -5,7 +5,7 @@ import Website.ColorScheme as C
 import Graphics.Input as Input
 import Window
 
-headerHeight = 95
+headerHeight = 80
 footerHeight = 60
 
 (box, searchTerm) = Input.field "  filter"
@@ -16,14 +16,17 @@ skeleton links bodyFunc info =
 
 internalSkeleton links bodyFunc box term info (outer,h) =
     let margin = outer `div` 10
-        inner = truncate (toFloat outer * 0.8)
-        content = bodyFunc term info (min inner outer)
+        inner = margin * 8
+        leftGutter = max margin headerHeight
+        content = bodyFunc term info (min inner (outer - leftGutter))
     in
     color C.lightGrey <|
     flow down
-    [ topBar 10 outer
-    , container outer headerHeight middle <| flow right
-      [ container (inner - widthOf box - 10) headerHeight midLeft <|
+    [ topBar outer
+    , flow right
+      [ container leftGutter headerHeight middle <| link "http://elm-lang.org" <|
+        container 50 50 middle <| image 50 50 "/resources/elm_logo_grey.svg"
+      , container (inner - widthOf box - 10) headerHeight midLeft <|
         text <| Text.height 30 <| concat <| intersperse (toText " / ") <| (Text.link "/" <| toText "~") ::
         zipWith (<|) (repeat (length links) (uncurry Text.link) ++ [snd]) (("/catalog", toText "Catalog") :: links)
       , container (widthOf box + 10) headerHeight midRight <|
@@ -33,63 +36,61 @@ internalSkeleton links bodyFunc box term info (outer,h) =
       ]
     , let contentHeight = max (heightOf content)
                               (h - topBarHeight - headerHeight - footerHeight)
-      in  container outer contentHeight midTop content
+      in  flow right [ spacer leftGutter contentHeight, content ]
     , footer outer
     ]
 
+home : (Int -> Element) -> Signal Element
 home bodyFunc = internalHome bodyFunc <~ Window.dimensions
 
+internalHome : (Int -> Element) -> (Int,Int) -> Element
 internalHome bodyFunc (outer,h) =
     let margin = outer `div` 10
-        inner = truncate (toFloat outer * 0.8)
-        content = bodyFunc (min inner outer)
+        inner = outer - 2 * homeHeaderHeight
+        content = bodyFunc inner
     in
     color C.lightGrey <|
     flow down
-    [ topBar 10 outer
+    [ topBar outer
     , homeHeader outer inner
     , let contentHeight = max (heightOf content)
                               (h - topBarHeight - homeHeaderHeight - footerHeight)
-      in  container outer contentHeight midTop content
+      in  container outer contentHeight (topLeftAt (absolute homeHeaderHeight) (absolute 0)) content
     , footer outer
     ]
 
-homeHeaderHeight = 160
+(logoButton, _) =
+    let box c = color c <| container (tileSize) (tileSize) middle <| image 80 80 "/resources/elm_logo_grey.svg"
+    in  Input.customButton (box (rgb 57 59 58)) (box C.accent1) (box C.accent1)
+
+tileSize = 84
+homeHeaderHeight = 3 * (tileSize `div` 2)
 homeHeader outer inner =
     color (rgb 60 60 60) <| layers
-    [ tiledImage outer homeHeaderHeight "/resources/pattern.gif"
-    , container outer homeHeaderHeight middle <|
-      flow right [ container (inner - 172) homeHeaderHeight pos title
-                 , container 172 homeHeaderHeight midLeft <|
+    [ tiledImage outer homeHeaderHeight "/resources/tile.png"
+    , flow right [ container homeHeaderHeight homeHeaderHeight middle <|
+                   link "http://elm-lang.org" logoButton
+                 , container (inner - 142) homeHeaderHeight midLeft title
+                 , container 142 homeHeaderHeight middle <|
                    link "/catalog" <| 
-                   color C.mediumGrey <| container 142 62 middle <|
-                   color C.accent4 <| container 140 60 middle <|
+                   color C.mediumGrey <| container 122 52 middle <|
+                   color C.accent1 <| container 120 50 middle <|
                    text . Text.height 20 . Text.color C.lightGrey <| toText "Browse"
                  ]
     ]
-           
-pos = midLeftAt (absolute 30) (relative 0.5)
-bigWords = Text.height 50 <| Text.color C.mediumGrey <| toText "Elm Public Library "
-alpha = Text.height 20 <| Text.color C.accent3 <| toText "ALPHA"
+
+bigWords = Text.height 40 <| Text.color C.mediumGrey <| toText "Elm Public Library "
+alpha = Text.height 20 <| Text.color C.accent1 <| toText "ALPHA"
 title =
     flow down
     [ text <| bigWords ++ alpha
     , spacer 10 4
-    , text . Text.height 20 . Text.color C.mediumGrey <| toText "Discover libraries, browse documentation"
+    , text . Text.height 16 . Text.color C.mediumGrey <| toText "Discover libraries, browse documentation"
     ]
 
-accents = [C.accent0,C.accent1,C.accent2,C.accent3,C.accent4]
-
-topBarHeight = 5
-topBar k n =
-    let n' = toFloat n
-        k' = toFloat k
-        segs = map (\i -> round (n' * toFloat i / k')) [1..k]
-        ws = zipWith (-) segs (0::segs)
-        addColors = zipWith color (accents ++ accents)
-        box w = spacer w topBarHeight
-        boxes = map (\_ -> box) [1..k]
-    in  flow right <| addColors (zipWith (<|) boxes ws)
+topBarHeight = 6
+topBar outer =
+    color C.accent1 <| spacer outer topBarHeight
 
 footer outer = container outer footerHeight footerPosition <| Text.centered footerWords
 footerPosition = midBottomAt (relative 0.5) (absolute 10)

@@ -1,14 +1,13 @@
-import Website.Skeleton (skeleton)
+import Website.Skeleton (home)
 import JavaScript as JS
 
 port title : String
 port title = "Documentation Format"
 
-main = skeleton [] scene (constant ())
+main = home scene
 
-scene _ () w =
-    let words' = width (min w 800) words in
-    container w (heightOf words') middle words'
+scene w =
+    width (min w 800) words
 
 words = [markdown|
 <style>
@@ -18,19 +17,17 @@ pre {
   border: 1px solid rgb(216, 221, 225);
   border-radius: 4px;
 }
-li { padding: 2px; }
-code > span.kw { color: #204a87; font-weight: bold; }
-code > span.dt { color: #204a87; }
-code > span.dv { color: #0000cf; }
-code > span.bn { color: #0000cf; }
-code > span.fl { color: #0000cf; }
-code > span.ch { color: #4e9a06; }
-code > span.st { color: #4e9a06; }
-code > span.co { color: #8f5902; font-style: italic; }
-code > span.ot { color: #8f5902; }
-code > span.al { color: #ef2929; }
-code > span.fu { color: #000000; }
-code > span.er { font-weight: bold; }
+code > span.kw { color: #268BD2; }
+code > span.dt { color: #268BD2; }
+code > span.dv, code > span.bn, code > span.fl { color: #D33682; }
+code > span.ch { color: #DC322F; }
+code > span.st { color: #2AA198; }
+code > span.co { color: #93A1A1; }
+code > span.ot { color: #A57800; }
+code > span.al { color: #CB4B16; font-weight: bold; }
+code > span.fu { color: #268BD2; }
+code > span.re { }
+code > span.er { color: #D30102; font-weight: bold; }
 </style>
 
 # Documentation Format
