@@ -1,24 +1,34 @@
-import Website.Skeleton (skeleton)
+import Website.Skeleton (home)
 import JavaScript as JS
 
 port title : String
 port title = "Library Design Guidelines"
 
-main = skeleton [] scene (constant ())
+main = home scene
 
-scene _ () w =
-    let words' = width (min w 800) words in
-    container w (heightOf words') middle words'
+scene w =
+    width (min w 800) words
 
 words = [markdown|
 <style>
+li { padding: 2px; }
 pre {
   background-color: white;
   padding: 10px;
   border: 1px solid rgb(216, 221, 225);
   border-radius: 4px;
 }
-li { padding: 2px; }
+code > span.kw { color: #268BD2; }
+code > span.dt { color: #268BD2; }
+code > span.dv, code > span.bn, code > span.fl { color: #D33682; }
+code > span.ch { color: #DC322F; }
+code > span.st { color: #2AA198; }
+code > span.co { color: #93A1A1; }
+code > span.ot { color: #A57800; }
+code > span.al { color: #CB4B16; font-weight: bold; }
+code > span.fu { color: #268BD2; }
+code > span.re { }
+code > span.er { color: #D30102; font-weight: bold; }
 </style>
 
 # Library Design Guidelines
@@ -90,7 +100,7 @@ a library so give them some structure!
 
 Function composition works better when the data structure is the last argument:
 
-```
+```haskell
 getCombinedHeight = foldl (+) 0 . map .height
 ```
 
