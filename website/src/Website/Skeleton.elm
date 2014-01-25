@@ -71,8 +71,8 @@ homeHeader outer inner =
                  , container (inner - 142) homeHeaderHeight midLeft title
                  , container 142 homeHeaderHeight middle <|
                    link "/catalog" <| 
-                   color C.mediumGrey <| container 142 62 middle <|
-                   color C.accent4 <| container 140 60 middle <|
+                   color C.mediumGrey <| container 122 52 middle <|
+                   color C.accent1 <| container 120 50 middle <|
                    text . Text.height 20 . Text.color C.lightGrey <| toText "Browse"
                  ]
     ]
