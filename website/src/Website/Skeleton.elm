@@ -40,8 +40,10 @@ internalSkeleton links bodyFunc box term info (outer,h) =
     , footer outer
     ]
 
+home : (Int -> Element) -> Signal Element
 home bodyFunc = internalHome bodyFunc <~ Window.dimensions
 
+internalHome : (Int -> Element) -> (Int,Int) -> Element
 internalHome bodyFunc (outer,h) =
     let margin = outer `div` 10
         inner = outer - 2 * homeHeaderHeight
