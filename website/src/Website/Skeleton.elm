@@ -5,7 +5,7 @@ import Website.ColorScheme as C
 import Graphics.Input as Input
 import Window
 
-headerHeight = 95
+headerHeight = 80
 footerHeight = 60
 
 (box, searchTerm) = Input.field "  filter"
