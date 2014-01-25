@@ -38,8 +38,8 @@ adjustHtmlFile file =
 style :: BSC.ByteString
 style = 
     "<style type=\"text/css\">\n\
-    \  a:link {text-decoration: none; color: rgb(15,102,230);}\n\
-    \  a:visited {text-decoration: none; color: rgb(15,102,230);}\n\
+    \  a:link {text-decoration: none; color: rgb(96,181,204);}\n\
+    \  a:visited {text-decoration: none; color: rgb(96,181,204);}\n\
     \  a:active {text-decoration: none}\n\
     \  a:hover {text-decoration: underline; color: rgb(234,21,122);}\n\
     \  body { font-family: \"Lucida Grande\",\"Trebuchet MS\",\"Bitstream Vera Sans\",Verdana,Helvetica,sans-serif !important; }\n\
