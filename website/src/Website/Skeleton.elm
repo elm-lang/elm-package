@@ -16,14 +16,17 @@ skeleton links bodyFunc info =
 
 internalSkeleton links bodyFunc box term info (outer,h) =
     let margin = outer `div` 10
-        inner = truncate (toFloat outer * 0.8)
-        content = bodyFunc term info (min inner outer)
+        inner = margin * 8
+        leftGutter = max margin headerHeight
+        content = bodyFunc term info (min inner (outer - leftGutter))
     in
     color C.lightGrey <|
     flow down
     [ topBar outer
-    , container outer headerHeight middle <| flow right
-      [ container (inner - widthOf box - 10) headerHeight midLeft <|
+    , flow right
+      [ container leftGutter headerHeight middle <| link "http://elm-lang.org" <|
+        container 50 50 middle <| image 50 50 "/resources/elm_logo_grey.svg"
+      , container (inner - widthOf box - 10) headerHeight midLeft <|
         text <| Text.height 30 <| concat <| intersperse (toText " / ") <| (Text.link "/" <| toText "~") ::
         zipWith (<|) (repeat (length links) (uncurry Text.link) ++ [snd]) (("/catalog", toText "Catalog") :: links)
       , container (widthOf box + 10) headerHeight midRight <|
@@ -33,7 +36,7 @@ internalSkeleton links bodyFunc box term info (outer,h) =
       ]
     , let contentHeight = max (heightOf content)
                               (h - topBarHeight - headerHeight - footerHeight)
-      in  container outer contentHeight midTop content
+      in  flow right [ spacer leftGutter contentHeight, content ]
     , footer outer
     ]
 
