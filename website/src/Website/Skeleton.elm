@@ -83,7 +83,7 @@ bigWords = Text.height 40 <| Text.color C.mediumGrey <| toText "Elm Public Libra
 alpha = Text.height 20 <| Text.color C.accent1 <| toText "ALPHA"
 title =
     flow down
-    [ text <| bigWords ++ alpha
+    [ link "/" <| text <| bigWords ++ alpha
     , spacer 10 4
     , text . Text.height 16 . Text.color C.mediumGrey <| toText "Discover libraries, browse documentation"
     ]
