@@ -1,25 +1,26 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Get.Publish where
 
-import Control.Applicative ((<$>))
-import Control.Monad.Error
-import System.Directory
-import System.Exit
-import System.IO
-import qualified Data.Maybe as Maybe
-import qualified Data.List as List
-import qualified Data.Map as Map
-import qualified Data.ByteString as BS
-import Text.JSON
-import qualified Utils.PrettyJson as Pretty
+import           Control.Applicative       ((<$>))
+import           Control.Monad.Error
+import qualified Data.ByteString           as BS
+import qualified Data.List                 as List
+import qualified Data.Map                  as Map
+import qualified Data.Maybe                as Maybe
+import           System.Directory
+import           System.Exit
+import           System.IO
+import           Text.JSON
+
+import qualified Elm.Internal.Dependencies as D
+import qualified Elm.Internal.Name         as N
+import qualified Elm.Internal.Paths        as EPath
+import qualified Elm.Internal.Version      as V
 
 import qualified Get.Registry              as R
-import qualified Utils.Paths               as Path
 import qualified Utils.Commands            as Cmd
-import qualified Elm.Internal.Dependencies as D
-import qualified Elm.Internal.Paths        as EPath
-import qualified Elm.Internal.Name         as N
-import qualified Elm.Internal.Version      as V
+import qualified Utils.Paths               as Path
+import qualified Utils.PrettyJson          as Pretty
 
 publish :: ErrorT String IO ()
 publish =
@@ -51,10 +52,10 @@ getDeps =
                False -> hPutStrLn stdout "Okay, maybe next time!"
                True -> do
                  addMissing =<< readFields
-                 hPutStrLn stdout $ "Done! Now go through " ++ EPath.dependencyFile ++ 
+                 hPutStrLn stdout $ "Done! Now go through " ++ EPath.dependencyFile ++
                       " and check that\neach field is filled in with valid and helpful information."
              exitFailure
-            
+
 addMissing :: Map.Map String JSValue -> IO ()
 addMissing existingFields =
     writeFile EPath.dependencyFile $ show $ Pretty.object obj'
@@ -157,7 +158,7 @@ verifyVersion name version =
           ]
 
 generateDocs :: [String] -> ErrorT String IO ()
-generateDocs modules = 
+generateDocs modules =
     do forM elms $ \path -> Cmd.run "elm-doc" [path]
        liftIO $ do
          let path = Path.combinedJson

@@ -1,24 +1,24 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Registry.Generate.Elm (generate) where
 
-import Control.Monad.Error
-import Control.Applicative ((<$>),(<*>))
-import qualified Data.Aeson as Json
-import qualified Data.Map as Map
-import qualified Data.List as List
-import qualified Data.Char as Char
-import qualified Data.Maybe as Maybe
-import qualified Data.Either as Either
+import           Control.Applicative        ((<$>), (<*>))
+import           Control.Monad.Error
+import qualified Data.Aeson                 as Json
 import qualified Data.ByteString.Lazy.Char8 as BS
-import qualified System.FilePath as FP
-import qualified System.Directory as Dir
-import System.FilePath ((</>), (<.>))
-import Text.Parsec
+import qualified Data.Char                  as Char
+import qualified Data.Either                as Either
+import qualified Data.List                  as List
+import qualified Data.Map                   as Map
+import qualified Data.Maybe                 as Maybe
+import qualified System.Directory           as Dir
+import           System.FilePath            ((<.>), (</>))
+import qualified System.FilePath            as FP
+import           Text.Parsec
 
-import Elm.Internal.Dependencies as Deps
-import Elm.Internal.Documentation as Docs
-import qualified Elm.Internal.Name as N
-import qualified Utils.Paths as Path
+import           Elm.Internal.Dependencies  as Deps
+import           Elm.Internal.Documentation as Docs
+import qualified Elm.Internal.Name          as N
+import qualified Utils.Paths                as Path
 
 generate :: [Document] -> Deps -> FilePath -> ErrorT String IO [FilePath]
 generate docs deps directory = (++) <$> makeDocs <*> makeDeps
@@ -31,7 +31,7 @@ generate docs deps directory = (++) <$> makeDocs <*> makeDeps
            return [directory </> Path.index]
 
 depsToElm :: Deps -> String
-depsToElm deps = 
+depsToElm deps =
     unlines [ "import Website.Skeleton (skeleton)"
             , "import Website.ColorScheme as C"
             , ""

@@ -1,15 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Decode.Type where
 
-import Control.Applicative
-import Control.Monad
-import Data.Aeson
-import qualified Data.Text as Text
-import qualified Data.Vector as Vector
+import           Control.Applicative
+import           Control.Monad
+import           Data.Aeson
 import qualified Data.ByteString.Lazy.Char8 as BS
-import qualified Data.HashMap.Strict as HM
-import qualified Data.Text as Text
-import Data.Traversable (traverse)
+import qualified Data.HashMap.Strict        as HM
+import qualified Data.Text                  as Text
+import qualified Data.Text                  as Text
+import           Data.Traversable           (traverse)
+import qualified Data.Vector                as Vector
 
 data Type = App Type Type
           | Var Text.Text
@@ -25,7 +25,7 @@ instance FromJSON Type where
           do rawFields <- traverse parseJSON pairs
              let ext = HM.lookupDefault EmptyRecord "_" rawFields
              return $ Record ext (HM.delete "_" rawFields)
-                 
+
       Array values ->
           case Vector.length values of
             0 -> mzero

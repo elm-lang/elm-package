@@ -1,16 +1,17 @@
-{-# LANGUAGE OverloadedStrings, DeriveDataTypeable #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE OverloadedStrings  #-}
 module Registry.Generate.Html where
 
-import Control.Monad.Error
-import Text.Blaze.Html5 ((!))
-import qualified Text.Blaze.Html5 as H
-import qualified Text.Blaze.Html5.Attributes as A
-import Text.Blaze.Html.Renderer.String (renderHtml)
-import System.FilePath as FP
-import System.Directory
-import qualified Data.ByteString.Char8 as BSC
+import           Control.Monad.Error
+import qualified Data.ByteString.Char8           as BSC
+import           System.Directory
+import           System.FilePath                 as FP
+import           Text.Blaze.Html.Renderer.String (renderHtml)
+import           Text.Blaze.Html5                ((!))
+import qualified Text.Blaze.Html5                as H
+import qualified Text.Blaze.Html5.Attributes     as A
 
-import qualified Utils.Commands as Cmd
+import qualified Utils.Commands                  as Cmd
 
 generatePublic :: FilePath -> ErrorT String IO ()
 generatePublic path =
@@ -36,7 +37,7 @@ adjustHtmlFile file =
      BSC.writeFile file $ BSC.concat [before, style, after, analytics]
 
 style :: BSC.ByteString
-style = 
+style =
     "<style type=\"text/css\">\n\
     \  a:link {text-decoration: none; color: rgb(15,102,230);}\n\
     \  a:visited {text-decoration: none; color: rgb(15,102,230);}\n\
