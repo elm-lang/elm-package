@@ -1,6 +1,5 @@
 module Utils.Commands where         
          
-import Control.Monad (forM_)
 import Control.Monad.Error
 import System.Directory
 import System.Exit

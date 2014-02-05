@@ -2,11 +2,9 @@
 module Get.Publish where
 
 import Control.Applicative ((<$>))
-import Control.Monad (when)
 import Control.Monad.Error
 import System.Directory
 import System.Exit
-import System.FilePath (replaceExtension, (</>))
 import System.IO
 import qualified Data.Maybe as Maybe
 import qualified Data.List as List
@@ -15,11 +13,9 @@ import qualified Data.ByteString as BS
 import Text.JSON
 import qualified Utils.PrettyJson as Pretty
 
-import Data.Version
 import qualified Get.Registry              as R
 import qualified Utils.Paths               as Path
 import qualified Utils.Commands            as Cmd
-import qualified Utils.Http                as Http
 import qualified Elm.Internal.Dependencies as D
 import qualified Elm.Internal.Paths        as EPath
 import qualified Elm.Internal.Name         as N
@@ -82,9 +78,9 @@ readFields =
        case exists of
          False -> return Map.empty
          True -> do raw <- readFile EPath.dependencyFile
-                    case decode raw of
-                      Error err -> return Map.empty
-                      Ok obj -> return (Map.fromList $ fromJSObject obj)
+                    return $ case decode raw of
+                      Error _ -> Map.empty
+                      Ok obj  -> Map.fromList $ fromJSObject obj
 
 withCleanup :: ErrorT String IO () -> ErrorT String IO ()
 withCleanup action =

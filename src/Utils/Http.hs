@@ -1,12 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Utils.Http where
 
+import Control.Monad.Error
+import qualified Control.Exception as E
 import Network
 import Network.HTTP.Types
 import Network.HTTP.Client
-
-import Control.Monad.Error
-import qualified Control.Exception as E
 
 import Data.Aeson as Json
 import Data.Monoid ((<>))
