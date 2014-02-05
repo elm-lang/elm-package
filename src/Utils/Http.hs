@@ -2,12 +2,10 @@
 module Utils.Http where
 
 import Network
-import Network.HTTP
 import Network.HTTP.Types
-import Network.HTTP.Conduit
+import Network.HTTP.Client
 
 import Control.Monad.Error
-import Control.Monad.Trans.Resource
 import qualified Control.Exception as E
 
 import Data.Aeson as Json
@@ -16,18 +14,17 @@ import qualified Data.List as List
 import qualified Data.Vector as Vector
 import qualified Data.ByteString.Char8 as BSC
 import qualified Elm.Internal.Name as N
-import qualified Elm.Internal.Version as V
 
-send :: String -> (Manager -> ResourceT IO a) -> ErrorT String IO a
+send :: String -> (Manager -> IO a) -> ErrorT String IO a
 send domain request =
     do result <- liftIO $ E.catch (Right `fmap` mkRequest) handler
        either throwError return result
     where
-      mkRequest = withSocketsDo $ withManager request
+      mkRequest = withSocketsDo $ withManager defaultManagerSettings request
 
       handler exception =
           case exception of
-            sce@(StatusCodeException (Status code err) headers _) ->
+            StatusCodeException (Status _code err) headers _ ->
                 let details = case List.lookup "X-Response-Body-Start" headers of
                                 Just msg | not (BSC.null msg) -> msg
                                 _ -> err

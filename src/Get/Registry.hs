@@ -2,14 +2,14 @@
 module Get.Registry where
 
 import Network.HTTP
-import Network.HTTP.Conduit
-import Network.HTTP.Conduit.MultipartFormData
+import Network.HTTP.Client
+import Network.HTTP.Client.MultipartFormData
 
 import Control.Monad.Error
 import qualified Data.Aeson as Json
 import qualified Data.Binary as Binary
-
 import Data.Version (showVersion)
+
 import qualified Paths_elm_get as This
 import qualified Elm.Internal.Dependencies as D
 import qualified Elm.Internal.Name         as N
