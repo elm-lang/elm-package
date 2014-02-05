@@ -1,10 +1,10 @@
 module Main where
 
-import           System.Environment
-import           System.Exit
-import           System.IO
+import System.Environment
+import System.Exit
+import System.IO
 
-import           Registry.Generate.Listing
+import Registry.Generate.Listing
 
 main = do
   args <- getArgs

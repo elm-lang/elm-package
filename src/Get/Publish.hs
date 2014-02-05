@@ -1,26 +1,26 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Get.Publish where
 
-import           Control.Applicative       ((<$>))
-import           Control.Monad.Error
-import qualified Data.ByteString           as BS
-import qualified Data.List                 as List
-import qualified Data.Map                  as Map
-import qualified Data.Maybe                as Maybe
-import           System.Directory
-import           System.Exit
-import           System.IO
-import           Text.JSON
+import Control.Applicative ((<$>))
+import Control.Monad.Error
+import qualified Data.ByteString as BS
+import qualified Data.List as List
+import qualified Data.Map as Map
+import qualified Data.Maybe as Maybe
+import System.Directory
+import System.Exit
+import System.IO
+import Text.JSON
 
 import qualified Elm.Internal.Dependencies as D
-import qualified Elm.Internal.Name         as N
-import qualified Elm.Internal.Paths        as EPath
-import qualified Elm.Internal.Version      as V
+import qualified Elm.Internal.Name as N
+import qualified Elm.Internal.Paths as EPath
+import qualified Elm.Internal.Version as V
 
-import qualified Get.Registry              as R
-import qualified Utils.Commands            as Cmd
-import qualified Utils.Paths               as Path
-import qualified Utils.PrettyJson          as Pretty
+import qualified Get.Registry as R
+import qualified Utils.Commands as Cmd
+import qualified Utils.Paths as Path
+import qualified Utils.PrettyJson as Pretty
 
 publish :: ErrorT String IO ()
 publish =

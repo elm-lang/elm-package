@@ -1,7 +1,7 @@
 module Utils.PrettyJson where
 
-import           Text.JSON
-import           Text.JSON.Pretty
+import Text.JSON
+import Text.JSON.Pretty
 
 value :: JSValue -> Doc
 value val =

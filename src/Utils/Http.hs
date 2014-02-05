@@ -1,18 +1,18 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Utils.Http where
 
-import qualified Control.Exception     as E
-import           Control.Monad.Error
-import           Data.Aeson            as Json
+import qualified Control.Exception as E
+import Control.Monad.Error
+import Data.Aeson as Json
 import qualified Data.ByteString.Char8 as BSC
-import qualified Data.List             as List
-import           Data.Monoid           ((<>))
-import qualified Data.Vector           as Vector
-import           Network
-import           Network.HTTP.Client
-import           Network.HTTP.Types
+import qualified Data.List as List
+import Data.Monoid ((<>))
+import qualified Data.Vector as Vector
+import Network
+import Network.HTTP.Client
+import Network.HTTP.Types
 
-import qualified Elm.Internal.Name     as N
+import qualified Elm.Internal.Name as N
 
 send :: String -> (Manager -> IO a) -> ErrorT String IO a
 send domain request =

@@ -1,11 +1,11 @@
 module Utils.Commands where
 
-import           Control.Monad.Error
-import           System.Directory
-import           System.Exit
-import           System.FilePath
-import           System.IO
-import           System.Process
+import Control.Monad.Error
+import System.Directory
+import System.Exit
+import System.FilePath
+import System.IO
+import System.Process
 
 yesOrNo :: IO Bool
 yesOrNo = do

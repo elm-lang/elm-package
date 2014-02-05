@@ -2,19 +2,19 @@
 {-# LANGUAGE RecordWildCards    #-}
 module Main where
 
-import           Control.Monad.Error
-import           Data.Version           (showVersion)
-import qualified Paths_elm_get          as This
-import           System.Console.CmdArgs
-import           System.Environment     (getArgs, withArgs)
-import           System.Exit
-import           System.IO
+import Control.Monad.Error
+import Data.Version (showVersion)
+import qualified Paths_elm_get as This
+import System.Console.CmdArgs
+import System.Environment (getArgs, withArgs)
+import System.Exit
+import System.IO
 
-import qualified Elm.Internal.Name      as N
+import qualified Elm.Internal.Name as N
 
-import qualified Get.Install            as Install
-import qualified Get.Publish            as Publish
-import qualified Utils.Commands         as Cmd
+import qualified Get.Install as Install
+import qualified Get.Publish as Publish
+import qualified Utils.Commands as Cmd
 
 data Commands
     = Install { lib :: String, version :: Maybe String }

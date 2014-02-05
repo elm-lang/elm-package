@@ -2,16 +2,16 @@
 {-# LANGUAGE OverloadedStrings  #-}
 module Registry.Generate.Html where
 
-import           Control.Monad.Error
-import qualified Data.ByteString.Char8           as BSC
-import           System.Directory
-import           System.FilePath                 as FP
-import           Text.Blaze.Html.Renderer.String (renderHtml)
-import           Text.Blaze.Html5                ((!))
-import qualified Text.Blaze.Html5                as H
-import qualified Text.Blaze.Html5.Attributes     as A
+import Control.Monad.Error
+import qualified Data.ByteString.Char8 as BSC
+import System.Directory
+import System.FilePath as FP
+import Text.Blaze.Html.Renderer.String (renderHtml)
+import Text.Blaze.Html5 ((!))
+import qualified Text.Blaze.Html5 as H
+import qualified Text.Blaze.Html5.Attributes as A
 
-import qualified Utils.Commands                  as Cmd
+import qualified Utils.Commands as Cmd
 
 generatePublic :: FilePath -> ErrorT String IO ()
 generatePublic path =
