@@ -1,29 +1,28 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Registry.Routes where
 
+import Control.Applicative
+import Control.Monad.Error
 import qualified Data.Binary as Binary
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
-import qualified Data.Maybe as Maybe
 import qualified Data.List as List
-import Control.Applicative
-import Control.Monad.Error
-
+import qualified Data.Maybe as Maybe
 import Snap.Core
 import Snap.Util.FileServe
 import Snap.Util.FileUploads
 import System.Directory
 import System.FilePath
 
-import qualified Utils.Paths as Path
-import qualified Utils.Http as Http
 import qualified Elm.Internal.Name as N
-import qualified Elm.Internal.Version as V
 import qualified Elm.Internal.Paths as EPath
+import qualified Elm.Internal.Version as V
 import qualified Registry.Generate.Docs as Docs
+import qualified Utils.Http as Http
+import qualified Utils.Paths as Path
 
 catalog :: Snap ()
-catalog = 
+catalog =
     ifTop (serveFile "public/Catalog.html")
     <|> routeLocal [ (":name/:version", serveLibrary) ]
   where
@@ -88,7 +87,7 @@ actuallyRegister directory =
         && partContentType part == "application/json"
 
     handler :: FilePath -> [(PartInfo, Either PolicyViolationException FilePath)] -> Snap ()
-    handler dir [(info1, Right temp1), (info2, Right temp2)] 
+    handler dir [(info1, Right temp1), (info2, Right temp2)]
         | okayPart "docs" info1 && okayPart "deps" info2 =
             liftIO $ do
               BS.readFile temp1 >>= BS.writeFile (dir </> Path.json)

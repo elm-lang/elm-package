@@ -1,7 +1,6 @@
 module Get.Install (install) where
 
 import Control.Applicative ((<$>))
-import Control.Monad (zipWithM_, when)
 import Control.Monad.Error
 import Data.Function (on)
 import qualified Data.List as List
@@ -11,16 +10,15 @@ import System.Exit
 import System.FilePath
 import System.IO
 import Text.JSON
-import qualified Utils.PrettyJson as Pretty
+
+import qualified Elm.Internal.Name as N
+import qualified Elm.Internal.Paths as EPath
+import qualified Elm.Internal.Version as V
 
 import qualified Get.Registry as R
-import qualified Utils.Paths as Path
 import qualified Utils.Commands as Cmd
-import qualified Utils.Http as Http
-import qualified Elm.Internal.Dependencies as D
-import qualified Elm.Internal.Paths as EPath
-import qualified Elm.Internal.Name as N
-import qualified Elm.Internal.Version as V
+import qualified Utils.Paths as Path
+import qualified Utils.PrettyJson as Pretty
 
 install :: N.Name -> Maybe String -> ErrorT String IO ()
 install name maybeVersion =
@@ -98,7 +96,7 @@ getVersion name maybeVersion' =
             return $ Maybe.mapMaybe V.fromString tags
 
       errorNoTags =
-          throwError $ unlines 
+          throwError $ unlines
           [ "did not find any properly tagged releases of this library."
           , "Libraries have at least one tag (like 0.1.2 or 1.0) to ensure that your build"
           , "process is stable and repeatable. These tags should follow Semantic Versioning."

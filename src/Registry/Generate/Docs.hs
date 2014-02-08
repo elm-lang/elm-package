@@ -5,16 +5,18 @@ import Control.Monad.Error
 import qualified Data.Aeson as Json
 import qualified Data.ByteString.Lazy.Char8 as BS
 import qualified Data.Map as Map
+import System.Exit
+import System.FilePath
+import System.IO
+
+import qualified Elm.Internal.Dependencies as D
+import qualified Elm.Internal.Name as N
+import qualified Elm.Internal.Paths as EPath
+
 import qualified Registry.Generate.Elm as Elm
 import qualified Registry.Generate.Html as Html
 import qualified Registry.Generate.Listing as Listing
 import qualified Utils.Paths as Path
-import qualified Elm.Internal.Dependencies as D
-import qualified Elm.Internal.Name as N
-import qualified Elm.Internal.Paths as EPath
-import System.FilePath
-import System.IO
-import System.Exit
 
 generate :: FilePath -> ErrorT String IO ()
 generate directory =

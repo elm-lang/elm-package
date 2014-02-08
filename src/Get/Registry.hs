@@ -1,21 +1,21 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Get.Registry where
 
-import Network.HTTP
-import Network.HTTP.Client
-import Network.HTTP.Client.MultipartFormData
-
 import Control.Monad.Error
 import qualified Data.Aeson as Json
 import qualified Data.Binary as Binary
 import Data.Version (showVersion)
+import Network.HTTP
+import Network.HTTP.Client
+import Network.HTTP.Client.MultipartFormData
 
-import qualified Paths_elm_get as This
 import qualified Elm.Internal.Dependencies as D
-import qualified Elm.Internal.Name         as N
-import qualified Elm.Internal.Version      as V
-import qualified Elm.Internal.Paths        as Path
-import qualified Utils.Http                as Http
+import qualified Elm.Internal.Name as N
+import qualified Elm.Internal.Paths as Path
+import qualified Elm.Internal.Version as V
+import qualified Paths_elm_get as This
+
+import qualified Utils.Http as Http
 
 domain = "http://library.elm-lang.org"
 

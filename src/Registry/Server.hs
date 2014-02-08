@@ -1,11 +1,12 @@
-{-# LANGUAGE OverloadedStrings, DeriveDataTypeable #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE OverloadedStrings  #-}
 module Main where
 
-import qualified Data.ByteString as BS
-import qualified Data.HashMap.Strict as Map
 import Control.Applicative
 import Control.Monad.Error
-
+import qualified Data.ByteString as BS
+import qualified Data.HashMap.Strict as Map
+import GHC.Conc
 import Snap.Core
 import Snap.Http.Server
 import Snap.Util.FileServe
@@ -13,18 +14,17 @@ import System.Console.CmdArgs
 import System.Directory
 import System.Exit
 import System.IO
-import GHC.Conc
 
-import qualified Utils.Paths as Path
 import qualified Elm.Internal.Name as N
+import qualified Elm.Internal.Paths as Elm
 import qualified Elm.Internal.Version as V
 import qualified Registry.Generate.Docs as Docs
 import qualified Registry.Generate.Html as Html
 import qualified Registry.Routes as Route
-import qualified Elm.Internal.Paths as Elm
+import qualified Utils.Paths as Path
 
 data Flags = Flags
-  { port :: Int
+  { port       :: Int
   , regenerate :: Bool
   } deriving (Data,Typeable,Show,Eq)
 

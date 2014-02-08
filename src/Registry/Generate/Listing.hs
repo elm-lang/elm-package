@@ -5,15 +5,15 @@ import Control.Applicative
 import Control.Monad (when)
 import Data.Aeson as Json
 import Data.Binary as Binary
-import qualified Data.Map as Map
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Map as Map
 import qualified System.Directory as Dir
 import System.IO
 
-import qualified Utils.Paths as Path
 import qualified Elm.Internal.Dependencies as D
 import qualified Elm.Internal.Name as N
 import qualified Elm.Internal.Version as V
+import qualified Utils.Paths as Path
 
 add :: D.Deps -> IO ()
 add deps =
@@ -48,8 +48,8 @@ readListings =
 
 
 data Listing = Listing
-    { name :: N.Name
-    , summary :: String
+    { name     :: N.Name
+    , summary  :: String
     , versions :: [V.Version]
     }
 

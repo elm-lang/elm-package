@@ -23,7 +23,7 @@ source-repository head
 
 Executable elm-get
   Main-is:             Get/Main.hs
-  ghc-options:         -threaded -O2
+  ghc-options:         -threaded -O2 -W
   Hs-Source-Dirs:      src
 
   other-modules:       Get.Install,
