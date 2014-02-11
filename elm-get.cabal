@@ -27,6 +27,7 @@ Executable elm-get
   Hs-Source-Dirs:      src
 
   other-modules:       Get.Install,
+                       Get.Options,
                        Get.Publish,
                        Get.Registry,
                        Paths_elm_get,
@@ -39,7 +40,6 @@ Executable elm-get
                        base >=4.2 && <5,
                        binary,
                        bytestring,
-                       cmdargs,
                        containers,
                        directory,
                        Elm >= 0.10.1,
@@ -51,6 +51,7 @@ Executable elm-get
                        json,
                        mtl,
                        network,
+                       optparse-applicative,
                        pretty,
                        process,
                        resourcet,
