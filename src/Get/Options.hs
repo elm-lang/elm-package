@@ -18,6 +18,7 @@ data Command
     = Install { lib :: String, version :: Maybe String }
     | Update  { libs :: [String] }
     | Publish
+    | Version
     deriving (Data, Typeable, Show, Eq)
 
 parse :: IO Command
@@ -25,14 +26,13 @@ parse = customExecParser prefs parser
   where prefs = Opt.prefs $ mempty <> showHelpOnError
 
 parser :: ParserInfo Command
-parser = info (helper <*> (commands))
+parser = info (helper <*> commands)
               ( fullDesc
                <> header top
                <> progDesc "install, update, and publish elm libraries"
                <> footer moreHelp
               )
-  where --versn = long "version" <> short 'v'
-        top = unwords [ "elm-get"
+  where top = unwords [ "elm-get"
                       , showVersion This.version ++ ":"
                       , " The Elm Package Manager "
                       , "(c) Evan Czaplicki 2013"]
@@ -46,6 +46,7 @@ commands = hsubparser $
      command "install" installOpts
   <> command "update"  updateOpts
   <> command "publish" publishOpts
+  <> command "version" versionOpts
 
 installOpts :: ParserInfo Command
 installOpts = info
@@ -79,3 +80,8 @@ publishOpts :: ParserInfo Command
 publishOpts = info
               (pure Publish)
               (fullDesc <> progDesc "Publish project to the central repository")
+
+versionOpts :: ParserInfo Command
+versionOpts = info
+              (pure Version)
+              (fullDesc <> progDesc "Display the project version")

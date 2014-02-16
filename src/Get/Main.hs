@@ -1,8 +1,9 @@
-{-# LANGUAGE RecordWildCards    #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# OPTIONS_GHC -W    #-}
 module Main where
 
 import Control.Monad.Error
+import Data.Version (showVersion)
 import System.Exit
 import System.IO
 
@@ -11,6 +12,7 @@ import qualified Elm.Internal.Name as N
 import qualified Get.Install as Install
 import Get.Options as Options
 import qualified Get.Publish as Publish
+import qualified Paths_elm_get as This
 import qualified Utils.Commands as Cmd
 
 main :: IO ()
@@ -28,6 +30,8 @@ main = do
 handle :: Command -> ErrorT String IO ()
 handle options =
     case options of
+      Version ->
+        liftIO $ putStrLn $ "elm-get " ++ showVersion This.version
       Install { lib=library, version=maybeVersion } ->
           do name <- N.fromString' library
              Install.install name maybeVersion
