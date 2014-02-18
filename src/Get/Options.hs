@@ -1,7 +1,6 @@
 {-# OPTIONS_GHC -W    #-}
 module Get.Options ( parse
                    , Command(..)
-                   , Library(..)
                    )
        where
 

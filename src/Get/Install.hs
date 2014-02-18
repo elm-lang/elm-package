@@ -29,8 +29,23 @@ type InstallM l = ReaderT l (ErrorT String IO)
 
 install :: Maybe Library -> ErrorT String IO ()
 install maybeLib = case maybeLib of
-  Nothing -> error "Unimplemented: install all dependencies"
   Just l  -> runReaderT install1 l
+  Nothing -> do
+    massoc <- readDepsFile
+    case massoc of
+      Nothing -> throwError msg
+      Just asc -> do
+        case List.lookup "dependencies" asc of
+          Just (JSObject entries) -> do
+            mapM_ (runReaderT install1 <=< mkLib) . fromJSObject $ entries
+          Just _ -> throwError $ "dependencies field should be an object in" ++ EPath.dependencyFile
+          _      -> throwError $ "no dependencies field found in " ++ EPath.dependencyFile
+  where msg = "Could not find dependency file: " ++ EPath.dependencyFile
+        mkLib (name, jsv) = do
+          name' <- N.fromString' name
+          case jsv of
+            JSString vsn -> return $ Lib.Library' name' (Just . fromJSString $ vsn)
+            _            -> throwError $ "Invalid version number " ++ show jsv
 
 install1 :: InstallM Library ()
 install1 = do
@@ -121,7 +136,7 @@ getVersion =
           [ "could not find version " ++ show version ++ " on github."
           ]
 
-addToDepsFile :: (MonadReader Lib.VsnLibrary m, MonadIO m) => m ()
+addToDepsFile :: InstallM Lib.VsnLibrary ()
 addToDepsFile =
     do exists <- liftIO $ doesFileExist file
        add (if exists then yesFile else noFile)
@@ -146,26 +161,32 @@ addToDepsFile =
         [ "Your project does not have a " ++ file ++ " file yet.\n"
         , "Should I create it and add the library you just installed?" ]
 
-newDependencies :: (MonadReader Lib.VsnLibrary m, MonadIO m) => m String
-newDependencies =
-    do exists <- liftIO $ doesFileExist EPath.dependencyFile
-       raw <- if not exists
-              then return "{}"
-              else liftIO $ withFile EPath.dependencyFile ReadMode $ \handle ->
-                do stuff <- hGetContents handle
-                   length stuff `seq` return stuff
-       case decode raw of
-         Error msg -> liftIO $ do
-           hPutStrLn stderr $ "Error reading " ++ EPath.dependencyFile ++ ":\n" ++ msg
-           exitFailure
-         Ok obj -> do
-           lib <- ask
-           let assocs = fromJSObject obj
-           case List.lookup "dependencies" assocs of
-             Just (JSObject entries) -> do
-               entries' <- liftIO $ updateEntries lib (fromJSObject entries)
-               return $ addDeps assocs entries'
-             _ -> return $ addDeps assocs [entry lib]
+-- | Returns Nothing if the dependency file doesn't exist, throws an
+--   error if its ill-formed
+readDepsFile :: (MonadError String m, MonadIO m) => m (Maybe [(String, JSValue)])
+readDepsFile = do
+  exists <- liftIO $ doesFileExist EPath.dependencyFile
+  if not exists
+    then return Nothing
+    else do
+    raw <- liftIO $ withFile EPath.dependencyFile ReadMode $ \handle ->
+      do stuff <- hGetContents handle
+         length stuff `seq` return stuff
+    case decode raw of
+      Error msg -> liftIO $ do
+        hPutStrLn stderr $ "Error reading " ++ EPath.dependencyFile ++ ":\n" ++ msg
+        exitFailure
+      Ok obj -> return . Just $ fromJSObject obj
+
+newDependencies :: InstallM Lib.VsnLibrary String
+newDependencies = do
+  assocs <- maybe [] id <$> readDepsFile
+  lib    <- ask
+  case List.lookup "dependencies" assocs of
+    Just (JSObject entries) -> do
+      entries' <- liftIO $ updateEntries lib (fromJSObject entries)
+      return $ addDeps assocs entries'
+    _ -> return $ addDeps assocs [entry lib]
 
     where
       entry l = (show $ Lib.lib l, JSString . toJSString . show $ Lib.version l)
@@ -175,7 +196,7 @@ newDependencies =
             assocs' = filter ((/=) "dependencies" . fst) assocs
             obj = assocs' ++ [("dependencies", JSObject $ toJSObject entries)]
 
-      updateEntries :: Lib.VsnLibrary -> [(String,JSValue)] -> IO [(String,JSValue)]
+      updateEntries :: Lib.VsnLibrary -> [(String, JSValue)] -> IO [(String, JSValue)]
       updateEntries l entries =
           let name = Lib.lib l
               vsn  = Lib.version l

@@ -39,8 +39,7 @@ handle options =
 
       Publish -> Publish.publish
 
-      _ -> do Cmd.out "Not implemented yet!"
-              liftIO $ print options
+      _ -> Cmd.out "Not implemented yet!"
   where updateMaybe :: (Applicative f) => (a -> f b)-> Maybe a -> f (Maybe b)
         updateMaybe up m = case m of
           Nothing -> pure Nothing
