@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 module Utils.Commands where
 
 import Control.Monad.Error
@@ -17,7 +19,7 @@ yesOrNo = do
     _   -> do putStr "Must type 'y' for yes or 'n' for no: "
               yesOrNo
 
-inDir :: FilePath -> ErrorT String IO a -> ErrorT String IO a
+inDir :: (MonadError String m, MonadIO m) => FilePath -> m a -> m a
 inDir dir doStuff = do
   here <- liftIO $ getCurrentDirectory
   liftIO $ createDirectoryIfMissing True dir
@@ -26,7 +28,7 @@ inDir dir doStuff = do
   liftIO $ setCurrentDirectory here
   return result
 
-copyDir ::  FilePath -> FilePath -> ErrorT String IO ()
+copyDir :: (MonadError String m, MonadIO m) => FilePath -> FilePath -> m ()
 copyDir src dst = do
   exists <- liftIO $ doesDirectoryExist src
   if exists
@@ -44,10 +46,10 @@ copyDir' src dst = do
     isDirectory <- doesDirectoryExist srcPath
     (if isDirectory then copyDir' else copyFile) srcPath dstPath
 
-git :: [String] -> ErrorT String IO String
+git :: (MonadError String m, MonadIO m) => [String] -> m String
 git = run "git"
 
-run :: String -> [String] -> ErrorT String IO String
+run :: (MonadError String m, MonadIO m) => String -> [String] -> m String
 run command args =
   do result <- liftIO runCommand
      case result of
@@ -71,7 +73,7 @@ run command args =
       msg <- hGetContents handle
       length msg `seq` return (label msg)
 
-out :: String -> ErrorT String IO ()
+out :: (MonadError String m, MonadIO m) => String -> m ()
 out string = liftIO $ hPutStrLn stdout string'
     where
       string' = if not (null string) && last string == '\n' then init string else string

@@ -27,6 +27,7 @@ Executable elm-get
   Hs-Source-Dirs:      src
 
   other-modules:       Get.Install,
+                       Get.Library,
                        Get.Options,
                        Get.Publish,
                        Get.Registry,

@@ -1,7 +1,10 @@
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 module Get.Install (install) where
 
 import Control.Applicative ((<$>))
 import Control.Monad.Error
+import Control.Monad.Reader
 import Data.Function (on)
 import qualified Data.List as List
 import qualified Data.Maybe as Maybe
@@ -15,39 +18,48 @@ import qualified Elm.Internal.Name as N
 import qualified Elm.Internal.Paths as EPath
 import qualified Elm.Internal.Version as V
 
+import Get.Library (Library)
+import qualified Get.Library as Lib
 import qualified Get.Registry as R
 import qualified Utils.Commands as Cmd
 import qualified Utils.Paths as Path
 import qualified Utils.PrettyJson as Pretty
 
-install :: N.Name -> Maybe String -> ErrorT String IO ()
-install name maybeVersion =
-    do version <-
-           Cmd.inDir EPath.dependencyDirectory $ do
-             (repo,version) <- Cmd.inDir Path.internals (get name maybeVersion)
-             liftIO $ createDirectoryIfMissing True repo
-             Cmd.copyDir (Path.internals </> repo) (repo </> show version)
-             return version
-       liftIO $ addToDepsFile name version
-       Cmd.out "Success!"
+type InstallM l = ReaderT l (ErrorT String IO)
 
-get :: N.Name -> Maybe String -> ErrorT String IO (FilePath, V.Version)
-get name maybeVersion =
-  do exists <- liftIO $ doesDirectoryExist directory
-     if exists then update else clone
-     version <- getVersion name maybeVersion
+install :: Maybe Library -> ErrorT String IO ()
+install maybeLib = case maybeLib of
+  Nothing -> error "Unimplemented: install all dependencies"
+  Just l  -> runReaderT install1 l
+
+install1 :: InstallM Library ()
+install1 = do
+  vsn <- Cmd.inDir EPath.dependencyDirectory $ do
+    (repo,version) <- Cmd.inDir Path.internals get
+    liftIO $ createDirectoryIfMissing True repo
+    Cmd.copyDir (Path.internals </> repo) (repo </> show version)
+    return version
+  withReaderT (\l -> l {Lib.version = vsn}) addToDepsFile
+  Cmd.out "Success!"
+
+get :: InstallM Library (FilePath, V.Version)
+get =
+  do directory <- N.toFilePath . Lib.lib <$> ask
+     exists    <- liftIO $ doesDirectoryExist directory
+     (if exists then update else clone) directory
+     version   <- getVersion
      Cmd.inDir directory (checkout version)
      return (directory, version)
   where
-    directory = N.toFilePath name
-
-    update = do
+    update directory = do
+      name <- Lib.lib <$> ask
       Cmd.out $ "Getting updates for repo " ++ show name
       Cmd.inDir directory $ do Cmd.git ["checkout", "master"]
                                Cmd.git ["pull"]
       return ()
 
-    clone = do
+    clone directory = do
+      name <- Lib.lib <$> ask
       Cmd.out $ "Cloning repo " ++ show name
       Cmd.git [ "clone", "--progress", "https://github.com/" ++ show name ++ ".git" ]
       liftIO $ renameDirectory (N.project name) directory
@@ -61,10 +73,10 @@ get name maybeVersion =
 version number is requested, use the latest tagless version number in the registry.
 If the repo is not in the registry, warn the user and check on github.
 -}
-getVersion :: N.Name -> Maybe String -> ErrorT String IO V.Version
-getVersion name maybeVersion' =
-    do maybeVersion <- validateVersion maybeVersion'
-       versions <- getVersions name
+getVersion :: InstallM Lib.Library V.Version
+getVersion =
+    do maybeVersion <- withReaderT Lib.version validateVersion
+       versions     <- withReaderT Lib.lib getVersions
        case maybeVersion of
          Nothing ->
              case filter V.tagless versions of
@@ -74,19 +86,21 @@ getVersion name maybeVersion' =
              | version `notElem` versions -> errorNoMatch version
              | otherwise                  -> return version
     where
-      validateVersion :: Maybe String -> ErrorT String IO (Maybe V.Version)
-      validateVersion version =
-          case (version, V.fromString =<< version) of
-            (Just tag, Nothing) ->
-                throwError $ unlines $
-                [ "tag " ++ tag ++ " is not a valid version number."
-                , "It must have the following format: 0.1.2 or 0.1.2-tag"
-                ]
-            (_, result) -> return result
+      validateVersion :: InstallM (Maybe String) (Maybe V.Version)
+      validateVersion = do
+        version <- ask
+        case (version, V.fromString =<< version) of
+          (Just tag, Nothing) ->
+            throwError $ unlines $
+            [ "tag " ++ tag ++ " is not a valid version number."
+            , "It must have the following format: 0.1.2 or 0.1.2-tag"
+            ]
+          (_, result) -> return result
 
-      getVersions :: N.Name -> ErrorT String IO [V.Version]
-      getVersions name = do
-        registryVersions <- R.versions name
+      getVersions :: InstallM N.Name [V.Version]
+      getVersions = do
+        name <- ask
+        registryVersions <- lift $ R.versions name
         case registryVersions of
           Just vs -> return vs
           Nothing -> do
@@ -107,18 +121,20 @@ getVersion name maybeVersion' =
           [ "could not find version " ++ show version ++ " on github."
           ]
 
-addToDepsFile :: N.Name -> V.Version -> IO ()
-addToDepsFile name version =
-    do exists <- doesFileExist file
+addToDepsFile :: (MonadReader Lib.VsnLibrary m, MonadIO m) => m ()
+addToDepsFile =
+    do exists <- liftIO $ doesFileExist file
        add (if exists then yesFile else noFile)
     where
       file = EPath.dependencyFile
 
       add msg = do
-        hPutStr stdout $ msg ++ " (y/n): "
-        yes <- Cmd.yesOrNo
-        if yes then writeFile file =<< newDependencies name version
-               else hPutStrLn stdout oddChoice
+        yes <- liftIO $ do
+          hPutStr stdout $ msg ++ " (y/n): "
+          Cmd.yesOrNo
+        if yes
+          then liftIO . writeFile file =<< newDependencies
+          else liftIO $ hPutStrLn stdout oddChoice
 
       oddChoice =
           "Okay, but if you decide to make this library visible to the compiler\n\
@@ -130,37 +146,41 @@ addToDepsFile name version =
         [ "Your project does not have a " ++ file ++ " file yet.\n"
         , "Should I create it and add the library you just installed?" ]
 
-newDependencies :: N.Name -> V.Version -> IO String
-newDependencies name version =
-    do exists <- doesFileExist EPath.dependencyFile
-       raw <- if not exists then return "{}" else
-                  withFile EPath.dependencyFile ReadMode $ \handle ->
-                      do stuff <- hGetContents handle
-                         length stuff `seq` return stuff
+newDependencies :: (MonadReader Lib.VsnLibrary m, MonadIO m) => m String
+newDependencies =
+    do exists <- liftIO $ doesFileExist EPath.dependencyFile
+       raw <- if not exists
+              then return "{}"
+              else liftIO $ withFile EPath.dependencyFile ReadMode $ \handle ->
+                do stuff <- hGetContents handle
+                   length stuff `seq` return stuff
        case decode raw of
-         Error msg -> do
+         Error msg -> liftIO $ do
            hPutStrLn stderr $ "Error reading " ++ EPath.dependencyFile ++ ":\n" ++ msg
            exitFailure
-         Ok obj ->
-             let assocs = fromJSObject obj in
-             case List.lookup "dependencies" assocs of
-               Just (JSObject entries) -> do
-                 entries' <- updateEntries (fromJSObject entries)
-                 return $ addDeps assocs entries'
-               _ -> return $ addDeps assocs [entry]
+         Ok obj -> do
+           lib <- ask
+           let assocs = fromJSObject obj
+           case List.lookup "dependencies" assocs of
+             Just (JSObject entries) -> do
+               entries' <- liftIO $ updateEntries lib (fromJSObject entries)
+               return $ addDeps assocs entries'
+             _ -> return $ addDeps assocs [entry lib]
 
     where
-      entry = (show name, JSString $ toJSString $ show version)
+      entry l = (show $ Lib.lib l, JSString . toJSString . show $ Lib.version l)
 
       addDeps assocs entries = show $ Pretty.object obj
           where
             assocs' = filter ((/=) "dependencies" . fst) assocs
             obj = assocs' ++ [("dependencies", JSObject $ toJSObject entries)]
 
-      updateEntries ::[(String,JSValue)] -> IO [(String,JSValue)]
-      updateEntries entries =
-          let name' = show name
-              entries' = List.insertBy (compare `on` fst) entry $
+      updateEntries :: Lib.VsnLibrary -> [(String,JSValue)] -> IO [(String,JSValue)]
+      updateEntries l entries =
+          let name = Lib.lib l
+              vsn  = Lib.version l
+              name' = show name
+              entries' = List.insertBy (compare `on` fst) (entry l) $
                          filter ((/=) name' . fst) entries
           in
           case List.lookup name' entries of
@@ -168,7 +188,7 @@ newDependencies name version =
               hPutStr stdout $
                  name' ++ " " ++ fromJSString oldVersion ++ " is already in " ++
                  EPath.dependencyFile ++ ".\nDo you want to replace it " ++
-                 "with version " ++ show version ++ "? (y/n): "
+                 "with version " ++ show vsn ++ "? (y/n): "
               yes <- Cmd.yesOrNo
               case yes of
                 True -> return entries'

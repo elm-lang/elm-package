@@ -1,25 +1,24 @@
-{-# LANGUAGE DeriveDataTypeable #-}
 {-# OPTIONS_GHC -W    #-}
 module Get.Options ( parse
                    , Command(..)
+                   , Library(..)
                    )
        where
 
 import Control.Applicative
-import Data.Data
 import Data.Monoid
 import Data.Version (showVersion)
 import Options.Applicative as Opt
 
+import Get.Library
 import qualified Paths_elm_get as This
 
--- | TODO: Add back support for -v/--version
 data Command
-    = Install { lib :: String, version :: Maybe String }
+    = Install (Maybe RawLibrary)
     | Update  { libs :: [String] }
     | Publish
     | Version
-    deriving (Data, Typeable, Show, Eq)
+    deriving (Show, Eq)
 
 parse :: IO Command
 parse = customExecParser prefs parser
@@ -50,19 +49,22 @@ commands = hsubparser $
 
 installOpts :: ParserInfo Command
 installOpts = info
-  (Install <$> (argument str (metavar "LIBRARY"
-                              <> help "Library to install"))
-           <*> (optional $
-                argument str (metavar "VERSION"
-                              <> help "Specific version of a project to install")))
+  (Install <$> optional library)
   ( fullDesc
   <> progDesc "Install libraries in the local project."
   <> footer   examples
   )
-  where examples = unlines
+  where library =
+          Library' <$> (argument str (metavar "LIBRARY"
+                                      <> help "Library to install"))
+                   <*> (optional $
+                        argument str (metavar "VERSION"
+                                      <> help "Specific version of a project to install"))
+        examples = unlines
           [ "Examples:"
-          , "  elm-get install            # install everything needed by elm_dependencies.json"
-          , "  elm-get install tom/Array  # install a specific github repo" ]
+          , "  elm-get install                # install everything needed by elm_dependencies.json"
+          , "  elm-get install tom/Array      # install a specific github repo"
+          , "  elm-get install tom/Array 1.2  # install a specific version tag github repo" ]
 
 updateOpts :: ParserInfo Command
 updateOpts = info
