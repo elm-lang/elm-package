@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings,DoAndIfThenElse #-}
 module Registry.Routes where
 
 import Control.Applicative

@@ -21,6 +21,33 @@ source-repository head
   type:     git
   location: git://github.com/evancz/elm-get.git
 
+Executable elm-public-library
+  hs-source-dirs:     src
+  Main-is:            Registry/Server.hs
+  ghc-options:        -threaded -O2 -W -rtsopts
+
+  Build-depends:      aeson,
+                      base >=4.2 && <5,
+                      binary,
+                      blaze-html,  
+                      bytestring,
+                      cmdargs,
+                      containers,
+                      Elm >= 0.11,
+                      directory,
+                      filepath,
+                      http-client >= 0.2 && <0.3,
+                      http-types,
+                      mtl,
+                      network,
+                      parsec,
+                      process,
+                      snap-core,
+                      snap-server,
+                      unordered-containers,
+                      vector
+
+
 Executable elm-get
   Main-is:             Get/Main.hs
   ghc-options:         -threaded -O2 -W
@@ -43,7 +70,7 @@ Executable elm-get
                        bytestring,
                        containers,
                        directory,
-                       Elm >= 0.10.1,
+                       Elm >= 0.11,
                        filepath,
                        HTTP,
                        http-client >= 0.2 && <0.3,
