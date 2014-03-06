@@ -3,16 +3,11 @@ module Registry.Generate.Elm (generate) where
 
 import Control.Applicative ((<$>), (<*>))
 import Control.Monad.Error
-import qualified Data.Aeson as Json
-import qualified Data.ByteString.Lazy.Char8 as BS
 import qualified Data.Char as Char
 import qualified Data.Either as Either
 import qualified Data.List as List
 import qualified Data.Map as Map
-import qualified Data.Maybe as Maybe
-import qualified System.Directory as Dir
 import System.FilePath ((<.>), (</>))
-import qualified System.FilePath as FP
 import Text.Parsec
 
 import Elm.Internal.Dependencies as Deps
@@ -95,7 +90,6 @@ docToElm deps doc =
            Left $ "In module " ++ name ++ ", could not find documentation for: " ++ List.intercalate ", " missing
   where
     name = moduleName doc
-    entries = getEntries doc
 
     parseDoc contents =
         choice [ eof >> return contents
