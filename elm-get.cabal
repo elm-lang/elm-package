@@ -21,39 +21,10 @@ source-repository head
   type:     git
   location: git://github.com/evancz/elm-get.git
 
-Executable elm-public-library
-  hs-source-dirs:     src
-  Main-is:            Registry/Server.hs
-  ghc-options:        -threaded -O2 -W -rtsopts
-
-  Build-depends:      aeson,
-                      base >=4.2 && <5,
-                      binary,
-                      blaze-html,  
-                      bytestring,
-                      cmdargs,
-                      containers,
-                      Elm >= 0.11,
-                      directory,
-                      filepath,
-                      http-client >= 0.2 && <0.3,
-                      http-types,
-                      mtl,
-                      network,
-                      parsec,
-                      process,
-                      snap-core,
-                      snap-server,
-                      unordered-containers,
-                      vector
-
-
-Executable elm-get
-  Main-is:             Get/Main.hs
+Library
   ghc-options:         -threaded -O2 -W
   Hs-Source-Dirs:      src
-
-  other-modules:       Get.Install,
+  exposed-modules:     Get.Install,
                        Get.Library,
                        Get.Options,
                        Get.Publish,
@@ -63,7 +34,32 @@ Executable elm-get
                        Utils.Http,
                        Utils.Paths,
                        Utils.PrettyJson
+  Build-depends:       aeson,
+                       base >=4.2 && <5,
+                       binary,
+                       bytestring,
+                       containers,
+                       directory,
+                       Elm >= 0.11,
+                       filepath,
+                       HTTP,
+                       http-client >= 0.2 && <0.3,
+                       http-client-multipart,
+                       http-types,
+                       json,
+                       mtl,
+                       network,
+                       optparse-applicative,
+                       pretty,
+                       process,
+                       resourcet,
+                       text,
+                       vector
 
+Executable elm-get
+  Main-is:             Get/Main.hs
+  ghc-options:         -threaded -O2 -W
+  Hs-Source-Dirs:      src
   Build-depends:       aeson,
                        base >=4.2 && <5,
                        binary,
