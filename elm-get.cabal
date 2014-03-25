@@ -19,7 +19,7 @@ Cabal-version:       >=1.9
 
 source-repository head
   type:     git
-  location: git://github.com/evancz/elm-get.git
+  location: git://github.com/elm-lang/elm-get.git
 
 Executable elm-get
   Main-is:             Get/Main.hs
