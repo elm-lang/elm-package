@@ -41,8 +41,8 @@ row w library =
     let url = "/catalog/" ++ deslash library.name ++ "/" ++ head library.versions in
     flow down
     [ color C.mediumGrey <| spacer w 1
-    , flow right [ container 240 36 midLeft (text . Text.link url <| toText library.name)
-                 , container (w-240) 36 midLeft (plainText library.summary)
+    , flow right [ container 280 36 midLeft (text . Text.link url <| toText library.name)
+                 , container (w-280) 36 midLeft (plainText library.summary)
                  ]
     ]
 
