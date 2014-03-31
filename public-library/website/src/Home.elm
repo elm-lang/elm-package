@@ -36,13 +36,13 @@ pre { background-color: white;
 
 # Install Libraries
 
-Use [`elm-get`](https://github.com/evancz/elm-get) to install libraries:
+Use [`elm-get`](https://github.com/elm-lang/elm-get) to install libraries:
 
 ```
 elm-get install user/project
 ```
 
-[`elm-get`](https://github.com/evancz/elm-get) is sandboxed by default,
+[`elm-get`](https://github.com/elm-lang/elm-get) is sandboxed by default,
 installing on a per-project basis. It is also backed by [GitHub](https://github.com/),
 so you can use it to install any public repo.
 
@@ -61,7 +61,7 @@ li { padding: 2px; }
 
 # Design Guidelines
 
-Before publishing libraries with [`elm-get`](https://github.com/evancz/elm-get),
+Before publishing libraries with [`elm-get`](https://github.com/elm-lang/elm-get),
 look through the [Library Design Guidelines](/DesignGuidelines.html). Some
 key takeaways are:
 
