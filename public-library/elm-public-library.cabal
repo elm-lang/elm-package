@@ -1,9 +1,9 @@
 Name:                elm-public-library
-Version:             0.12
-Synopsis:            Tool for sharing and using Elm libraries
-Description:         elm-get lets you install, update, and publish Elm libraries
+Version:             0.1
+Synopsis:            Server for hosting the Elm Public Library
+Description:         Generates web pages for docemuntation
 
-Homepage:            http://elm-lang.org
+Homepage:            http://library.elm-lang.org
 
 License:             BSD3
 License-file:        LICENSE
@@ -34,7 +34,7 @@ Executable elm-public-library
                       cmdargs,
                       containers,
                       Elm >= 0.12,
-                      elm-get >= 0.12,
+                      elm-get >= 0.1,
                       directory,
                       filepath,
                       http-client >= 0.2 && <0.3,
