@@ -1,6 +1,7 @@
 module Website.Skeleton (skeleton,home) where
 
 import Graphics.Input as Input
+import Graphics.Input.Field as F
 import Website.ColorScheme as C
 import Graphics.Input as Input
 import Window
@@ -8,17 +9,34 @@ import Window
 headerHeight = 80
 footerHeight = 60
 
-(box, searchTerm) = Input.field "  filter"
+search : Input.Input F.Content
+search = Input.input F.noContent
 
-skeleton : [(String,Text)] -> (String -> a -> Int -> Element) -> Signal a -> Signal Element
+searchWidth : Int
+searchWidth = 140
+
+searchStyle : F.Style
+searchStyle = { padding = { top=4, bottom=4, left=6, right=6 }
+              , outline = { color = C.mediumGrey
+                          , width = F.uniformly 1
+                          , radius = 4
+                          }
+              , highlight = F.noHighlight
+              , style = defaultStyle
+              }
+
+type BodyGen a = String -> a -> Int -> Element
+
+skeleton : [(String,Text)] -> BodyGen a -> Signal a -> Signal Element
 skeleton links bodyFunc info =
-    lift4 (internalSkeleton links bodyFunc) box searchTerm info Window.dimensions
+    lift3 (internalSkeleton links bodyFunc) search.signal info Window.dimensions
 
-internalSkeleton links bodyFunc box term info (outer,h) =
+internalSkeleton : [(String,Text)] -> BodyGen a -> F.Content -> a -> (Int,Int) -> Element
+internalSkeleton links bodyFunc term info (outer,h) =
     let margin = outer `div` 10
         inner = margin * 8
         leftGutter = max margin headerHeight
-        content = bodyFunc term info (min inner (outer - leftGutter))
+        content = bodyFunc term.string info (min inner (outer - leftGutter))
     in
     color C.lightGrey <|
     flow down
@@ -26,13 +44,11 @@ internalSkeleton links bodyFunc box term info (outer,h) =
     , flow right
       [ container leftGutter headerHeight middle <| link "http://elm-lang.org" <|
         container 50 50 middle <| image 50 50 "/resources/elm_logo_grey.svg"
-      , container (inner - widthOf box - 10) headerHeight midLeft <|
-        text <| Text.height 30 <| concat <| intersperse (toText " / ") <| (Text.link "/" <| toText "~") ::
+      , container (inner - searchWidth - 20) headerHeight midLeft <|
+        leftAligned <| Text.height 30 <| concat <| intersperse (toText " / ") <| (Text.link "/" <| toText "~") ::
         zipWith (<|) (repeat (length links) (uncurry Text.link) ++ [snd]) (("/catalog", toText "Catalog") :: links)
-      , container (widthOf box + 10) headerHeight midRight <|
-        color C.mediumGrey <|
-        container (widthOf box + 2) (heightOf box + 3) middle <|
-        color white box
+      , container (searchWidth + 20) headerHeight middle <| width searchWidth <|
+        F.field searchStyle search.handle id "filter" term
       ]
     , let contentHeight = max (heightOf content)
                               (h - topBarHeight - headerHeight - footerHeight)
@@ -59,9 +75,20 @@ internalHome bodyFunc (outer,h) =
     , footer outer
     ]
 
-(logoButton, _) =
+clicks : Input.Input ()
+clicks = Input.input ()
+
+logoButton : Element
+logoButton =
     let box c = color c <| container (tileSize) (tileSize) middle <| image 80 80 "/resources/elm_logo_grey.svg"
-    in  Input.customButton (box (rgb 57 59 58)) (box C.accent1) (box C.accent1)
+    in  Input.customButton clicks.handle () (box (rgb 57 59 58)) (box C.accent1) (box C.accent1)
+
+browseButton : Element
+browseButton = 
+    let box c = color c <| container 122 52 middle <|
+                color C.accent1 <| container 120 50 middle <|
+                leftAligned . Text.height 20 . Text.color C.lightGrey <| toText "Browse"
+    in  Input.customButton clicks.handle () (box C.mediumGrey) (box C.lightGrey) (box white)
 
 tileSize = 84
 homeHeaderHeight = 3 * (tileSize `div` 2)
@@ -72,10 +99,7 @@ homeHeader outer inner =
                    link "http://elm-lang.org" logoButton
                  , container (inner - 142) homeHeaderHeight midLeft title
                  , container 142 homeHeaderHeight middle <|
-                   link "/catalog" <| 
-                   color C.mediumGrey <| container 122 52 middle <|
-                   color C.accent1 <| container 120 50 middle <|
-                   text . Text.height 20 . Text.color C.lightGrey <| toText "Browse"
+                   link "/catalog" browseButton
                  ]
     ]
 
@@ -83,9 +107,9 @@ bigWords = Text.height 40 <| Text.color C.mediumGrey <| toText "Elm Public Libra
 alpha = Text.height 20 <| Text.color C.accent1 <| toText "ALPHA"
 title =
     flow down
-    [ link "/" <| text <| bigWords ++ alpha
+    [ link "/" <| leftAligned <| bigWords ++ alpha
     , spacer 10 4
-    , text . Text.height 16 . Text.color C.mediumGrey <| toText "Discover libraries, browse documentation"
+    , leftAligned . Text.height 16 . Text.color C.mediumGrey <| toText "Discover libraries, browse documentation"
     ]
 
 topBarHeight = 6
