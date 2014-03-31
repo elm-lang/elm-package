@@ -22,7 +22,7 @@ source-repository head
   location: git://github.com/evancz/elm-get.git
 
 Executable elm-public-library
-  hs-source-dirs:     src
+  hs-source-dirs:     server
   Main-is:            Registry/Server.hs
   ghc-options:        -threaded -O2 -W -rtsopts
 
