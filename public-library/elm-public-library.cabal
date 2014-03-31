@@ -1,5 +1,5 @@
 Name:                elm-public-library
-Version:             0.1
+Version:             0.12
 Synopsis:            Tool for sharing and using Elm libraries
 Description:         elm-get lets you install, update, and publish Elm libraries
 
@@ -33,8 +33,8 @@ Executable elm-public-library
                       bytestring,
                       cmdargs,
                       containers,
-                      Elm >= 0.11,
-                      elm-get,
+                      Elm >= 0.12,
+                      elm-get >= 0.12,
                       directory,
                       filepath,
                       http-client >= 0.2 && <0.3,
