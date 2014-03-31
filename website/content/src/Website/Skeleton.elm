@@ -16,7 +16,7 @@ searchWidth : Int
 searchWidth = 140
 
 searchStyle : F.Style
-searchStyle = { padding = { top=4, bottom=4, left=6, right=6 }
+searchStyle = { padding = { top=0, bottom=0, left=6, right=6 }
               , outline = { color = C.mediumGrey
                           , width = F.uniformly 1
                           , radius = 4
