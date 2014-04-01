@@ -1,5 +1,4 @@
 import Website.Skeleton (home)
-import JavaScript as JS
 
 port title : String
 port title = "Documentation Format"

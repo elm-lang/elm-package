@@ -4,7 +4,6 @@ import String
 import Website.ColorScheme as C
 import Website.Skeleton (home)
 import Window
-import JavaScript as JS
 
 port title : String
 port title = "Elm Public Library"

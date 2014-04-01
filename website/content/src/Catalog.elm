@@ -19,7 +19,7 @@ format response =
       Http.Success str ->
           case Json.fromString str of
             Just (Json.Array xs) ->
-                map (addSearchText . JSE.toRecord . Json.toJSObject) xs
+                map (addSearchText . JSE.toRecord . JSE.fromJson) xs
             _ -> []
       _ -> []
 
