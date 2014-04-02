@@ -8,9 +8,9 @@ entry w name tipe assocPrec prose =
     let box n pos txt = container w (heightOf txt + n) pos txt
         ap = case assocPrec of
                Nothing -> []
-               Just (a,p) -> [ box 2 topRight . text . Text.height 12 . toText <|
+               Just (a,p) -> [ box 2 topRight . leftAligned . Text.height 12 . toText <|
                                    a ++ "-associative, precedence " ++ show p ++ " " ]
-        tipe' = box 2 topLeft . text <| monospace (toText " ") ++ prettify tipe
+        tipe' = box 2 topLeft . leftAligned <| monospace (toText " ") ++ prettify tipe
     in
       flow down [ tag name . color C.mediumGrey <| spacer w 1
                 , color (rgb 238 238 240) <| layers <| ap ++ [ tipe' ]
