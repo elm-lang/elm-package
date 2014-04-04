@@ -5,6 +5,7 @@ module Main where
 import Control.Applicative
 import Control.Monad.Error
 import Data.Version (showVersion)
+import System.Directory (findExecutable)
 import System.Exit
 import System.IO
 
@@ -19,6 +20,7 @@ import qualified Utils.Commands as Cmd
 
 main :: IO ()
 main = do
+  gitCheck
   cmd <- parse
   result <- runErrorT (handle cmd)
   case result of
@@ -46,3 +48,18 @@ handle options =
         case m of
           Nothing -> pure Nothing
           Just x  -> Just <$> up x
+
+gitCheck :: IO ()
+gitCheck =
+  do maybePath <- findExecutable "git"
+     case maybePath of
+       Just _  -> return ()
+       Nothing ->
+           do hPutStrLn stderr gitNotInstalledMessage
+              exitFailure
+  where
+    gitNotInstalledMessage =
+        "\n\
+        \The REPL relies on git to download libraries and manage versions.\n\
+        \    It appears that you do not have git installed though!\n\
+        \    Get it from <http://git-scm.com/downloads> to continue."
