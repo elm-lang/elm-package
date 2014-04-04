@@ -31,16 +31,18 @@ main = do
 
 handle :: Command -> ErrorT String IO ()
 handle options =
-    case options of
-      Version ->
-        liftIO $ putStrLn $ "elm-get " ++ showVersion This.version
-      Install mLib ->
-        Install.install =<< (updateMaybe . updateName) N.fromString' mLib
+  case options of
+    Version ->
+      liftIO $ putStrLn $ "elm-get " ++ showVersion This.version
+    Install mLib ->
+      Install.install =<< (updateMaybe . updateName) N.fromString' mLib
 
-      Publish -> Publish.publish
+    Publish -> Publish.publish
 
-      _ -> Cmd.out "Not implemented yet!"
-  where updateMaybe :: (Applicative f) => (a -> f b)-> Maybe a -> f (Maybe b)
-        updateMaybe up m = case m of
+    _ -> Cmd.out "Not implemented yet!"
+  where
+    updateMaybe :: (Applicative f) => (a -> f b) -> Maybe a -> f (Maybe b)
+    updateMaybe up m =
+        case m of
           Nothing -> pure Nothing
           Just x  -> Just <$> up x
