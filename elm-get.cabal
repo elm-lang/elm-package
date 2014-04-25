@@ -1,9 +1,9 @@
 Name:                elm-get
-Version:             0.1
+Version:             0.1.1
 Synopsis:            Tool for sharing and using Elm libraries
 Description:         elm-get lets you install, update, and publish Elm libraries
 
-Homepage:            http://elm-lang.org
+Homepage:            http://github.com/elm-lang/elm-get
 
 License:             BSD3
 License-file:        LICENSE
@@ -46,8 +46,7 @@ Executable elm-get
                        Elm >= 0.10.1,
                        filepath,
                        HTTP,
-                       http-client >= 0.2 && <0.3,
-                       http-client-multipart,
+                       http-client,
                        http-types,
                        json,
                        mtl,
