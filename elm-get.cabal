@@ -1,5 +1,5 @@
 Name:                elm-get
-Version:             0.1.1
+Version:             0.1.1.2
 Synopsis:            Tool for sharing and using Elm libraries
 Description:         elm-get lets you install, update, and publish Elm libraries
 
