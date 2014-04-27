@@ -27,13 +27,13 @@ parser :: ParserInfo Command
 parser = info (helper <*> commands)
               ( fullDesc
                <> header top
-               <> progDesc "install, update, and publish elm libraries"
+               <> progDesc "install and publish elm libraries"
                <> footer moreHelp
               )
   where top = unwords [ "elm-get"
                       , showVersion This.version ++ ":"
                       , " The Elm Package Manager "
-                      , "(c) Evan Czaplicki 2013"]
+                      , "(c) Evan Czaplicki 2013-2014\n"]
         moreHelp = unlines
           ["To learn more about a command called COMMAND, just do"
           , "  elm-get COMMAND --help"
@@ -42,9 +42,9 @@ parser = info (helper <*> commands)
 commands :: Parser Command
 commands = hsubparser $
      command "install" installOpts
-  <> command "update"  updateOpts
   <> command "publish" publishOpts
   <> command "version" versionOpts
+--  <> command "update"  updateOpts -- TODO: implement update
 
 installOpts :: ParserInfo Command
 installOpts = info
@@ -65,17 +65,18 @@ installOpts = info
           , "  elm-get install tom/Array      # install a specific github repo"
           , "  elm-get install tom/Array 1.2  # install a specific version tag github repo" ]
 
-updateOpts :: ParserInfo Command
-updateOpts = info
-  (Update <$> many (argument str (metavar "LIBRARY" <> help "Library to update")))
-  ( fullDesc
-  <> progDesc "Check for updates to any local libraries, ask to upgrade."
-  <> footer   examples
-  )
-  where examples = unlines
-          [ "Examples:"
-          , "  elm-get update             # check for updates to local libraries"
-          , "  elm-get update tom/Array   # update from a specific github repo" ]
+-- | TODO: restore when update is actually implemented
+-- updateOpts :: ParserInfo Command
+-- updateOpts = info
+--   (Update <$> many (argument str (metavar "LIBRARY" <> help "Library to update")))
+--   ( fullDesc
+--   <> progDesc "Check for updates to any local libraries, ask to upgrade."
+--   <> footer   examples
+--   )
+--   where examples = unlines
+--           [ "Examples:"
+--           , "  elm-get update             # check for updates to local libraries"
+--           , "  elm-get update tom/Array   # update from a specific github repo" ]
 
 publishOpts :: ParserInfo Command
 publishOpts = info

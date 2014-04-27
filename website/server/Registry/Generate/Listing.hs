@@ -51,7 +51,7 @@ data Listing = Listing
     { name     :: N.Name
     , summary  :: String
     , versions :: [V.Version]
-    }
+    } deriving Show
 
 instance Binary Listing where
     get = Listing <$> get <*> get <*> get
@@ -61,3 +61,9 @@ instance Binary Listing where
 instance ToJSON Listing where
     toJSON (Listing name summary versions) =
         object ["name" .= name, "summary" .= summary, "versions" .= versions]
+
+instance FromJSON Listing where
+    parseJSON (Object v) =
+        Listing <$> v .: "name"
+                <*> v .: "summary"
+                <*> v .: "versions"

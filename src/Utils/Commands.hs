@@ -58,20 +58,18 @@ run command args =
                    "failure when running:" ++ concatMap (' ':) (command:args) ++ "\n" ++ err
   where
     runCommand = do
-      (_, Just out, Just err, handle) <-
-          createProcess (proc command args) { std_out = CreatePipe
-                                            , std_err = CreatePipe }
-      exitCode <- waitForProcess handle
-      result <- case exitCode of
-                  ExitSuccess   -> readFrom out Right
-                  ExitFailure _ -> readFrom err Left
-      hClose out
-      hClose err
-      return result
+      (exitCode, stdout, stderr) <- readProcessWithExitCode command args ""
+      return $ case exitCode of
+                 ExitSuccess -> Right stdout
+                 ExitFailure code
+                     | code == 127  -> Left missingExe  -- UNIX
+                     | code == 9009 -> Left missingExe  -- Windows
+                     | otherwise    -> Left stderr
 
-    readFrom handle label = do
-      msg <- hGetContents handle
-      length msg `seq` return (label msg)
+    missingExe =
+        "Could not find command '" ++ command ++ "'. Do you have it installed?\n\
+        \  Can it be run from anywhere? I.e. is it on your PATH?"
+
 
 out :: (MonadError String m, MonadIO m) => String -> m ()
 out string = liftIO $ hPutStrLn stdout string'
