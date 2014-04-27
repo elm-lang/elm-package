@@ -63,7 +63,10 @@ instance ToJSON Listing where
         object ["name" .= name, "summary" .= summary, "versions" .= versions]
 
 instance FromJSON Listing where
-    parseJSON (Object v) =
-        Listing <$> v .: "name"
-                <*> v .: "summary"
-                <*> v .: "versions"
+    parseJSON json =
+        case json of
+          Object v ->
+              Listing <$> v .: "name"
+                      <*> v .: "summary"
+                      <*> v .: "versions"
+          _ -> error "Cannot convert non-objects into listings."

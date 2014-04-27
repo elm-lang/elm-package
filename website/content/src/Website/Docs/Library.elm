@@ -18,7 +18,7 @@ extract response =
       Http.Success str ->
           case Json.fromString str of
             Just (Json.Array xs) ->
-                let rawModules = map (JSE.toRecord . Json.toJSObject) xs
+                let rawModules = map (JSE.toRecord . JSE.fromJson) xs
                 in  Doc (map .name rawModules) (concatMap toValues rawModules)
             _ -> Doc [] []
       _ -> Doc [] []
@@ -73,13 +73,13 @@ showModule (name, values) =
 
 moduleLink : String -> Element
 moduleLink name =
-    text . Text.link (toPath name) <| toText name
+    leftAligned . Text.link (toPath name) <| toText name
 
 valueLink : String -> String -> Element
 valueLink modul name =
     let address = toPath modul ++ "#" ++ name
     in  flow down [ spacer 10 4
-                  , spacer 20 4 `beside` (text . monospace . Text.link address <| toText name)
+                  , spacer 20 4 `beside` (leftAligned . monospace . Text.link address <| toText name)
                   ]
 
 toPath : String -> String

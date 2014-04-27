@@ -21,32 +21,47 @@ source-repository head
   type:     git
   location: git://github.com/elm-lang/elm-get.git
 
-Executable elm-get
-  Main-is:             Get/Main.hs
+Library
   ghc-options:         -threaded -O2 -W
   Hs-Source-Dirs:      src
-
-  other-modules:       Get.Install,
-                       Get.Library,
-                       Get.Options,
-                       Get.Publish,
-                       Get.Registry,
-                       Paths_elm_get,
-                       Utils.Commands,
+  exposed-modules:     Utils.Commands,
                        Utils.Http,
-                       Utils.Paths,
-                       Utils.PrettyJson
-
+                       Utils.Paths
   Build-depends:       aeson,
                        base >=4.2 && <5,
                        binary,
                        bytestring,
                        containers,
                        directory,
-                       Elm >= 0.10.1,
+                       Elm >= 0.12,
                        filepath,
                        HTTP,
-                       http-client,
+                       http-client >= 0.3.2,
+                       http-types,
+                       json,
+                       mtl,
+                       network,
+                       optparse-applicative,
+                       pretty,
+                       process,
+                       resourcet,
+                       text,
+                       vector
+
+Executable elm-get
+  Main-is:             Get/Main.hs
+  ghc-options:         -threaded -O2 -W
+  Hs-Source-Dirs:      src
+  Build-depends:       aeson,
+                       base >=4.2 && <5,
+                       binary,
+                       bytestring,
+                       containers,
+                       directory,
+                       Elm >= 0.12,
+                       filepath,
+                       HTTP,
+                       http-client >= 0.3.2,
                        http-types,
                        json,
                        mtl,

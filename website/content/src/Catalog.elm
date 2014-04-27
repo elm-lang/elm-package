@@ -19,7 +19,7 @@ format response =
       Http.Success str ->
           case Json.fromString str of
             Just (Json.Array xs) ->
-                map (addSearchText . JSE.toRecord . Json.toJSObject) xs
+                map (addSearchText . JSE.toRecord . JSE.fromJson) xs
             _ -> []
       _ -> []
 
@@ -41,7 +41,7 @@ row w library =
     let url = "/catalog/" ++ deslash library.name ++ "/" ++ head library.versions in
     flow down
     [ color C.mediumGrey <| spacer w 1
-    , flow right [ container 300 36 midLeft (text . Text.link url <| toText library.name)
+    , flow right [ container 300 36 midLeft (leftAligned . Text.link url <| toText library.name)
                  , container (w-300) 36 midLeft (plainText library.summary)
                  ]
     ]

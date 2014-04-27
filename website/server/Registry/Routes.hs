@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings,DoAndIfThenElse #-}
 module Registry.Routes where
 
 import Control.Applicative
@@ -96,7 +96,7 @@ actuallyRegister directory =
             liftIO $ do
               BS.readFile temp2 >>= BS.writeFile (dir </> Path.json)
               BS.readFile temp1 >>= BS.writeFile (dir </> EPath.dependencyFile)
-    handler dir parts =
+    handler _ parts =
         do mapM (writeError . snd) parts
            error404' msg
 
