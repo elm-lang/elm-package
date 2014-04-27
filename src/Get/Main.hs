@@ -8,6 +8,7 @@ import System.Exit
 import System.IO
 
 import qualified Elm.Internal.Name as N
+import qualified Elm.Internal.Version as V
 
 import qualified Get.Install as Install
 import Get.Library
@@ -32,26 +33,43 @@ handle :: Command -> ErrorT String IO ()
 handle options =
   case options of
     Install mLib ->
-      Install.install =<< (updateMaybe . updateName) N.fromString' mLib
+      case mLib of
+        Nothing -> Install.installAll
+        Just rawL -> do
+          namedL <- updateName N.fromString' rawL
+          vsndL  <- (updateVersion . updateMaybe) parseVsn namedL
+          liftIO $ print vsndL
+          Install.install vsndL
 
     Publish -> Publish.publish
 
     Update _ -> Cmd.out "Not implemented yet!"
   where
+    parseVsn s = case V.fromString s of
+      Nothing -> throwError $ unlines $
+            [ "tag " ++ s ++ " is not a valid version number."
+            , "It must have the following format: 0.1.2 or 0.1.2-tag"
+            ]
+      Just s  -> return s
+
     updateMaybe :: (Applicative f) => (a -> f b) -> Maybe a -> f (Maybe b)
     updateMaybe up m =
         case m of
           Nothing -> pure Nothing
           Just x  -> Just <$> up x
 
+errExit :: String -> IO ()
+errExit msg = do
+  hPutStrLn stderr msg
+  exitFailure
+
 gitCheck :: IO ()
 gitCheck =
   do maybePath <- findExecutable "git"
      case maybePath of
        Just _  -> return ()
-       Nothing ->
-           do hPutStrLn stderr gitNotInstalledMessage
-              exitFailure
+       Nothing -> errExit gitNotInstalledMessage
+         
   where
     gitNotInstalledMessage =
         "\n\

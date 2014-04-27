@@ -54,6 +54,7 @@ Executable elm-get
   ghc-options:         -threaded -O2 -W
   Hs-Source-Dirs:      src
   Build-depends:       aeson,
+                       aeson-pretty,
                        base >=4.2 && <5,
                        binary,
                        bytestring,
