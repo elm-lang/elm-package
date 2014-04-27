@@ -33,7 +33,7 @@ parser = info (helper <*> commands)
   where top = unwords [ "elm-get"
                       , showVersion This.version ++ ":"
                       , " The Elm Package Manager "
-                      , "(c) Evan Czaplicki 2013\n"]
+                      , "(c) Evan Czaplicki 2013-2014\n"]
         moreHelp = unlines
           ["To learn more about a command called COMMAND, just do"
           , "  elm-get COMMAND --help"
