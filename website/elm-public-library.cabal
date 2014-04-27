@@ -37,7 +37,7 @@ Executable elm-public-library
                       elm-get >= 0.1,
                       directory,
                       filepath,
-                      http-client >= 0.2 && <0.3,
+                      http-client >= 0.3.2,
                       http-types,
                       mtl,
                       network,
