@@ -28,6 +28,7 @@ generate docs deps directory = (++) <$> makeDocs <*> makeDeps
 depsToElm :: Deps -> String
 depsToElm deps =
     let name = Deps.name deps
+        latest = "/catalog/" ++ N.toFilePath name ++ "/latest"
     in
     unlines [ "import Website.Skeleton (skeleton)"
             , "import Website.ColorScheme as C"
@@ -49,7 +50,9 @@ depsToElm deps =
             , "  , width w [markdown|The [source code is on GitHub](" ++ Deps.repo deps ++ "),"
             , "so you can star projects, report issues, and follow great library designers."
             , ""
-            , "See all previous versions of this library [here](/catalog/" ++ N.toFilePath (Deps.name deps) ++ ").|]"
+            , "See all previous versions of this library [here](/catalog/" ++ N.toFilePath name ++ ")."
+            , ""
+            , "Link to the most recent release of this library with: [library.elm-lang.org" ++ latest ++ "](" ++ latest ++ ")|]"
             , "  ]"
             ]
 
