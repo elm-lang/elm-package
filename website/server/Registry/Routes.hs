@@ -24,11 +24,12 @@ import qualified Utils.Paths as Path
 catalog :: Snap ()
 catalog =
     ifTop (serveFile "public/Catalog.html")
-    <|> routeLocal [ (":name/:version", serveLibrary) ]
+    <|> route [ (":name/:version", serveLibrary) ]
   where
     serveLibrary :: Snap ()
     serveLibrary = do
       request <- getRequest
+      redirectIfLatest request
       let directory = "public" ++ BSC.unpack (rqContextPath request)
       when (List.isInfixOf ".." directory) pass
       exists <- liftIO $ doesDirectoryExist directory
@@ -43,6 +44,24 @@ catalog =
       exists <- liftIO $ doesFileExist path
       when (not exists) pass
       serveFile path
+
+    redirectIfLatest :: Request -> Snap ()
+    redirectIfLatest request =
+      case (,) <$> rqParam "name" request <*> rqParam "version" request of
+        Just ([name], ["latest"]) ->
+            let namePath = "catalog" </> BSC.unpack name in
+            do rawVersions <- liftIO (getDirectoryContents ("public" </> namePath))
+               case Maybe.catMaybes (map V.fromString rawVersions) of
+                 vs@(_:_) -> redirect (BSC.concat [ "/", BSC.pack path' ])
+                     where
+                       version = last (List.sort vs)
+                       rest  = BSC.unpack (rqPathInfo request)
+                       path' = namePath </> show version </> rest
+
+                 _ -> return ()
+
+        _ -> return ()
+
 
 register :: Snap ()
 register =
