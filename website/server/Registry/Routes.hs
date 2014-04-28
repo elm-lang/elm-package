@@ -52,11 +52,11 @@ catalog =
             let namePath = "catalog" </> BSC.unpack name in
             do rawVersions <- liftIO (getDirectoryContents ("public" </> namePath))
                case Maybe.catMaybes (map V.fromString rawVersions) of
-                 vs@(_:_) -> redirect (BSC.concat [ "/", BSC.pack path' ])
+                 vs@(_:_) -> redirect path'
                      where
+                       path' = BSC.concat [ "/", BSC.pack project, "/", rqPathInfo request ]
+                       project = namePath </> show version
                        version = last (List.sort vs)
-                       rest  = BSC.unpack (rqPathInfo request)
-                       path' = namePath </> show version </> rest
 
                  _ -> return ()
 

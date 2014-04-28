@@ -9,8 +9,10 @@ import String
 
 -- Extract library info from JSON
 
-docs : Signal Doc
-docs = extract <~ Http.sendGet (constant "docs.json")
+docs : String -> String -> Signal Doc
+docs name version =
+    let path = "/catalog/" ++ name ++ "/" ++ version ++ "/docs.json"
+    in  extract <~ Http.sendGet (constant path)
 
 extract : Http.Response String -> Doc
 extract response =

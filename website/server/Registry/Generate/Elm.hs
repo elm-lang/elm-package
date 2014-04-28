@@ -27,16 +27,19 @@ generate docs deps directory = (++) <$> makeDocs <*> makeDeps
 
 depsToElm :: Deps -> String
 depsToElm deps =
+    let name = Deps.name deps
+    in
     unlines [ "import Website.Skeleton (skeleton)"
             , "import Website.ColorScheme as C"
             , "import Website.Docs.Library as Library"
             , ""
             , "port title : String"
-            , "port title = \"" ++ show (Deps.name deps) ++ "\""
+            , "port title = \"" ++ show name ++ "\""
             , ""
-            , "links = [ (\"" ++ toLink deps "" ++ "\", toText \"" ++ N.project (Deps.name deps) ++ "\") ]"
+            , "links = [ (\"" ++ toLink deps "" ++ "\", toText \"" ++ N.project name ++ "\") ]"
             , ""
-            , "main = skeleton links scene Library.docs"
+            , "main = skeleton links scene (Library.docs \"" ++ N.toFilePath name ++
+              "\" \"" ++ show (Deps.version deps) ++ "\")"
             , ""
             , "scene term docs w ="
             , "  flow down"
