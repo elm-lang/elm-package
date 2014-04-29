@@ -77,12 +77,15 @@ installMay mlib =
     
     askCreate _ =
       do yes <-
-           liftIO $ do putStr . unlines $ [ "Your project does not have a " ++ depsFile ++ " file yet, which is needed by the elm compiler to detect dependencies."
-                                          , "Should I create it? (y/n)" ]
+           liftIO $ do putStr createMsg
                        Cmd.yesOrNo
          unless yes . liftIO . putStr $ didntUpdateMsg
          let create = if yes then Create else NoCreate
          return (create, defaultDeps)
+     where
+       createMsg =
+           "Your project does not have a " ++ depsFile ++ " file, which the Elm\n" ++
+           "compiler needs to detect dependencies. Should I create it? (y/n): "
 
 writeUpdates :: D.Deps -> Update -> IO ()
 writeUpdates deps ups = case applyUpdates deps ups of
@@ -200,5 +203,6 @@ getVersion (Lib.Library name mayVsn) =
       throwError $ "could not find version " ++ show version ++ " on github."
 
 didntUpdateMsg :: String
-didntUpdateMsg = "Okay, but if you decide to make this library visible to the compiler\nlater, add the dependency to your " ++ depsFile ++ " file."
-  where depsFile = EPath.dependencyDirectory
+didntUpdateMsg =
+    "Okay, but if you decide to make this library visible to the compiler later, add\n\
+    \the dependency to your " ++ EPath.dependencyFile ++ " file."
