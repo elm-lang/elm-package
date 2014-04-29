@@ -10,19 +10,19 @@ import Data.Monoid ((<>))
 import qualified Data.Vector as Vector
 import Network
 import Network.HTTP.Client
+import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Network.HTTP.Types
 
 import qualified Elm.Internal.Name as N
 
-send :: Show a => String -> (Request -> Manager -> IO a) -> ErrorT String IO a
+send :: String -> (Request -> Manager -> IO a) -> ErrorT String IO a
 send url handler =
     do result <- liftIO $ E.catch (Right `fmap` sendRequest) handleError
-       liftIO (putStr "send: " >> print result)
        either throwError return result
     where
       sendRequest = do
         request <- parseUrl url
-        withSocketsDo $ withManager defaultManagerSettings (handler request)
+        withSocketsDo $ withManager tlsManagerSettings (handler request)
 
       handleError exception =
           case exception of
