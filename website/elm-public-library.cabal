@@ -27,6 +27,7 @@ Executable elm-public-library
   ghc-options:        -threaded -O2 -W -rtsopts
 
   Build-depends:      aeson,
+                      aeson-pretty,
                       base >=4.2 && <5,
                       binary,
                       blaze-html,  

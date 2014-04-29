@@ -4,7 +4,6 @@ import Control.Applicative
 import Control.Monad.Error
 import qualified Data.Aeson as Json
 import qualified Data.ByteString.Lazy.Char8 as BS
-import qualified Data.Map as Map
 import System.Exit
 import System.FilePath
 import System.IO
@@ -26,7 +25,7 @@ generate directory =
 regenerate :: IO ()
 regenerate =
   do listings <- Listing.readListings
-     result <- runErrorT $ mapM makeHtml (concatMap getDirs (Map.elems listings))
+     result <- runErrorT $ mapM makeHtml (concatMap getDirs listings)
      case result of
        Right _ -> return ()
        Left err ->
