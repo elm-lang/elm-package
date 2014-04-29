@@ -26,27 +26,29 @@ libraryUrl path vars =
 
 metadata :: N.Name -> ErrorT String IO (Maybe D.Deps)
 metadata name =
-    Http.send domain $ \manager ->
-    do request  <- parseUrl $ libraryUrl "metadata" [("library", show name)]
-       response <- httpLbs request manager
+    Http.send url $ \request manager ->
+    do response <- httpLbs request manager
        return $ Json.decode $ responseBody response
+    where
+      url = libraryUrl "metadata" [("library", show name)]
 
 versions :: N.Name -> ErrorT String IO (Maybe [V.Version])
 versions name =
-    Http.send domain $ \manager ->
-    do request  <- parseUrl $ libraryUrl "versions" [("library", show name)]
-       response <- httpLbs request manager
+    Http.send url $ \request manager ->
+    do response <- httpLbs request manager
        return $ Binary.decode $ responseBody response
+    where
+      url = libraryUrl "versions" [("library", show name)]
 
 register :: N.Name -> V.Version -> FilePath -> ErrorT String IO ()
 register name version path =
-    Http.send domain $ \manager ->
-    do request <- parseUrl $ libraryUrl "register" vars
-       request' <- formDataBody files request
+    Http.send url $ \request manager ->
+    do request' <- formDataBody files request
        let request'' = request' { responseTimeout = Nothing }
        httpLbs request'' manager
        return ()
     where
+      url = libraryUrl "register" vars
       vars = [ ("library", show name), ("version", show version) ]
       files = [ partFileSource "docs" path
               , partFileSource "deps" Path.dependencyFile
