@@ -29,6 +29,8 @@ depsToElm :: Deps -> String
 depsToElm deps =
     let name = Deps.name deps
         latest = "/catalog/" ++ N.toFilePath name ++ "/latest"
+        projectVersion =
+            "\"" ++ N.toFilePath name ++ "\" \"" ++ show (Deps.version deps) ++ "\""
     in
     unlines [ "import Website.Skeleton (skeleton)"
             , "import Website.ColorScheme as C"
@@ -39,14 +41,13 @@ depsToElm deps =
             , ""
             , "links = [ (\"" ++ toLink deps "" ++ "\", toText \"" ++ N.project name ++ "\") ]"
             , ""
-            , "main = skeleton links scene (Library.docs \"" ++ N.toFilePath name ++
-              "\" \"" ++ show (Deps.version deps) ++ "\")"
+            , "main = skeleton links scene (Library.docs " ++ projectVersion ++ ")"
             , ""
             , "scene term docs w ="
             , "  flow down"
             , "  [ color C.mediumGrey <| spacer w 1"
             , "  , width w [markdown|" ++ Deps.description deps ++ "|]"
-            , "  , Library.scene term docs"
+            , "  , Library.scene " ++ projectVersion ++ " term docs"
             , "  , width w [markdown|The [source code is on GitHub](" ++ Deps.repo deps ++ "),"
             , "so you can star projects, report issues, and follow great library designers."
             , ""
