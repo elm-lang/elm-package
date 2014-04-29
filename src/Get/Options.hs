@@ -64,8 +64,8 @@ installOpts = info (Install <$> optional library) infoMod
         , "  elm-get install tom/Array 1.2  # install a specific version tag github repo"
         ]
 
-library :: Parser (Library' String (Maybe String))
-library = Library' <$> lib <*> optional ver
+library :: Parser RawLibrary
+library = Library <$> lib <*> optional ver
   where
     lib = argument str (metavar "LIBRARY"
                         <> help "A specific library (e.g. evancz/automaton)")

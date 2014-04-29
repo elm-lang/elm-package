@@ -122,7 +122,7 @@ mkUpdate oldDeps n v = case Map.lookup n oldDeps of
   m ->
     do let (askMsg, noMsg) = case m of
              Nothing -> (notInstalledAsk, didntUpdateMsg)
-             Just v'  -> (updateAsk v v', updateNo)
+             Just v'  -> (updateAsk v' v, updateNo)
        yes <- shouldI askMsg
        if yes
          then tell $ update $ Map.insert n v

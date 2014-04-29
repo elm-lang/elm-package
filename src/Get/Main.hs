@@ -38,7 +38,6 @@ handle options =
         Just rawL -> do
           namedL <- updateName N.fromString' rawL
           vsndL  <- (updateVersion . updateMaybe) parseVsn namedL
-          liftIO $ print vsndL
           Install.install vsndL
 
     Publish -> Publish.publish
