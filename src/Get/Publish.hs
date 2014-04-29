@@ -5,22 +5,20 @@ import Control.Applicative ((<$>))
 import Control.Monad.Error
 import qualified Data.ByteString as BS
 import qualified Data.List as List
-import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
 import System.Directory
 import System.Exit
 import System.IO
-import Text.JSON
 
 import qualified Elm.Internal.Dependencies as D
 import qualified Elm.Internal.Name as N
 import qualified Elm.Internal.Paths as EPath
 import qualified Elm.Internal.Version as V
 
+import Get.Dependencies (defaultDeps)
 import qualified Get.Registry as R
 import qualified Utils.Commands as Cmd
 import qualified Utils.Paths as Path
-import qualified Utils.PrettyJson as Pretty
 
 publish :: ErrorT String IO ()
 publish =
@@ -31,7 +29,8 @@ publish =
      Cmd.out $ unwords [ "Verifying", show name, show version, "..." ]
      verifyNoDependencies (D.dependencies deps)
      verifyElmVersion (D.elmVersion deps)
-     verifyExposedModules exposedModules
+     verifyMetadata deps
+     verifyExposedModulesExist exposedModules
      verifyVersion name version
      withCleanup $ do
        generateDocs exposedModules
@@ -46,42 +45,7 @@ getDeps =
        Left err ->
            liftIO $ do
              hPutStrLn stderr $ "\nError: " ++ err
-             hPutStr stdout $ "\nWould you like me to add the missing fields? (y/n) "
-             yes <- Cmd.yesOrNo
-             case yes of
-               False -> hPutStrLn stdout "Okay, maybe next time!"
-               True -> do
-                 addMissing =<< readFields
-                 hPutStrLn stdout $ "Done! Now go through " ++ EPath.dependencyFile ++
-                      " and check that\neach field is filled in with valid and helpful information."
              exitFailure
-
-addMissing :: Map.Map String JSValue -> IO ()
-addMissing existingFields =
-    writeFile EPath.dependencyFile $ show $ Pretty.object obj'
-    where
-      obj' = map (\(f,v) -> (f, Maybe.fromMaybe v (Map.lookup f existingFields))) obj
-
-      str = JSString . toJSString
-      obj = [ ("version", str "0.1")
-            , ("summary", str "concise, helpful summary of your project")
-            , ("description", str "full description of this project, describe your use case")
-            , ("license", str "BSD3")
-            , ("repository", str "https://github.com/USER/PROJECT.git")
-            , ("exposed-modules", JSArray [])
-            , ("elm-version", str $ show V.elmVersion)
-            , ("dependencies", JSObject $ toJSObject [])
-            ]
-
-readFields :: IO (Map.Map String JSValue)
-readFields =
-    do exists <- doesFileExist EPath.dependencyFile
-       case exists of
-         False -> return Map.empty
-         True -> do raw <- readFile EPath.dependencyFile
-                    return $ case decode raw of
-                      Error _ -> Map.empty
-                      Ok obj  -> Map.fromList $ fromJSObject obj
 
 withCleanup :: ErrorT String IO () -> ErrorT String IO ()
 withCleanup action =
@@ -96,9 +60,8 @@ verifyNoDependencies :: [(N.Name,V.Version)] -> ErrorT String IO ()
 verifyNoDependencies [] = return ()
 verifyNoDependencies _ =
     throwError
-        "elm-get is not able to publish projects with dependencies\n\
-        \yet. This is obviously a very high proirity, and I am working as\n\
-        \fast as I can! For now, let people know about your library on the\n\
+        "elm-get is not able to publish projects with dependencies yet. This is a\n\
+        \very high proirity, we are working on it! For now, announce your library on the\n\
         \mailing list: <https://groups.google.com/forum/#!forum/elm-discuss>"
 
 verifyElmVersion :: V.Version -> ErrorT String IO ()
@@ -111,18 +74,35 @@ verifyElmVersion elmVersion@(V.V ns _)
     where
       V.V ns' _ = V.elmVersion
 
-verifyExposedModules :: [String] -> ErrorT String IO ()
-verifyExposedModules modules =
-    do when (null modules) $ throwError $
-              "There are no exposed modules in " ++ EPath.dependencyFile ++
-              "!\nAll libraries must make at least one module available to users."
-       mapM_ verifyExists modules
+verifyExposedModulesExist :: [String] -> ErrorT String IO ()
+verifyExposedModulesExist modules =
+      mapM_ verifyExists modules
     where
       verifyExists modul =
           let path = Path.moduleToElmFile modul in
           do exists <- liftIO $ doesFileExist path
              when (not exists) $ throwError $
                  "Cannot find module " ++ modul ++ " at " ++ path
+
+verifyMetadata :: D.Deps -> ErrorT String IO ()
+verifyMetadata deps =
+    case problems of
+      [] -> return ()
+      _  -> throwError $ "Some of the fields in " ++ EPath.dependencyFile ++
+                         " have not been filled in yet:\n\n" ++ unlines problems ++
+                         "\nFill these in and try to publish again!"
+    where
+      problems = Maybe.catMaybes
+          [ verify D.repo        "  repository - must refer to a valid repo on GitHub"
+          , verify D.summary     "  summary - a quick summary of your project, 80 characters or less"
+          , verify D.description "  description - extended description, how to get started, any useful references"
+          , verify D.exposed     "  exposed-modules - list modules your project exposes to users"
+          ]
+
+      verify what msg =
+          if what deps == what defaultDeps
+            then Just msg
+            else Nothing
 
 verifyVersion :: N.Name -> V.Version -> ErrorT String IO ()
 verifyVersion name version =
