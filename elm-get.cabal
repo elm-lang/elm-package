@@ -50,9 +50,18 @@ Library
                        vector
 
 Executable elm-get
-  Main-is:             Get/Main.hs
   ghc-options:         -threaded -O2 -W
   Hs-Source-Dirs:      src
+  Main-is:             Get/Main.hs
+  other-modules:       Get.Dependencies,
+                       Get.Install,
+                       Get.Library,
+                       Get.Options,
+                       Get.Publish,
+                       Get.Registry,
+                       Utils.Commands,
+                       Utils.Http,
+                       Utils.Paths
   Build-depends:       aeson,
                        aeson-pretty,
                        base >=4.2 && <5,
