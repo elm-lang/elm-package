@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Registry.Generate.Listing where
+module Generate.Listing where
 
 import Control.Applicative
 import Control.Monad (when)

@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings,DoAndIfThenElse #-}
-module Registry.Routes where
+module Routes where
 
 import Control.Applicative
 import Control.Monad.Error
@@ -17,7 +17,7 @@ import System.FilePath
 import qualified Elm.Internal.Name as N
 import qualified Elm.Internal.Paths as EPath
 import qualified Elm.Internal.Version as V
-import qualified Registry.Generate.Docs as Docs
+import qualified Generate.Docs as Docs
 import qualified Utils.Http as Http
 import qualified Utils.Paths as Path
 

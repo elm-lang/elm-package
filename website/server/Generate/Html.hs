@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE OverloadedStrings  #-}
-module Registry.Generate.Html where
+module Generate.Html where
 
 import Control.Monad.Error
 import qualified Data.ByteString.Char8 as BSC
