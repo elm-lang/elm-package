@@ -31,8 +31,8 @@ until c xs =
 
 prettify raw =
     if | String.startsWith "type " raw || String.startsWith "data " raw ->
-           let (name, rest) = until ' ' (String.sub 5 (String.length raw) raw) in
-           monospace <| concat [ Text.color C.accent1 <| toText (String.sub 0 5 raw)
+           let (name, rest) = until ' ' (String.slice 5 (String.length raw) raw) in
+           monospace <| concat [ Text.color C.accent1 <| toText (String.slice 0 5 raw)
                                , bold <| toText name
                                , colorize "" rest
                                ]
