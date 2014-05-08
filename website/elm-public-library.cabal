@@ -23,7 +23,7 @@ source-repository head
 
 Executable elm-public-library
   hs-source-dirs:     server
-  Main-is:            Registry/Server.hs
+  Main-is:            Server.hs
   ghc-options:        -threaded -O2 -W -rtsopts
 
   Build-depends:      aeson,
