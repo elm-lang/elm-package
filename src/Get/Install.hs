@@ -63,7 +63,7 @@ installMay mlib =
                          forM_ libs $ install1 (shouldCreate /= NoCreate) deps
      liftIO $
        do writeUpdates deps ups
-          putStrLn "Done!"
+          putStrLn "Success!"
 
   where
     depsFile = EPath.dependencyFile
@@ -117,7 +117,6 @@ install1 shouldAsk oldDeps l@(Lib.Library name _) =
                     return version
 
      when shouldAsk $ mkUpdate (Map.fromList . D.dependencies $ oldDeps) name finalVsn
-     Cmd.out "Success!"
   
 mkUpdate :: DepsMap -> N.Name -> V.Version -> InstallM ()
 mkUpdate oldDeps n v = case Map.lookup n oldDeps of
