@@ -13,6 +13,7 @@ defaultDeps = Deps
     , license = "BSD3"
     , repo = "https://github.com/USER/PROJECT.git"
     , exposed = []
+    , native = []
     , elmVersion = V.elmVersion
     , dependencies = []
     }
