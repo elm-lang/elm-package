@@ -35,7 +35,7 @@ verify deps =
 whitelistError :: String
 whitelistError =
     "You are trying to publish a project that has native-modules. For now,\n\
-    \any modules that use Native code must go through a formal review process\n\
-    \to make sure the exposed API is pure and the use of Native code is absolutely\n\
-    \necessary. Please email <https://groups.google.com/forum/#!forum/elm-discuss>\n\
-    \to begin the review process."
+    \    any modules that use Native code must go through a formal review process\n\
+    \    to make sure the exposed API is pure and the Native code is absolutely\n\
+    \    necessary. Please open an issue with the title \"Native review for ____\"\n\
+    \    to begin the review process: <https://github.com/elm-lang/elm-get/issues>"
