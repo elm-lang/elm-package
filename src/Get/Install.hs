@@ -56,36 +56,37 @@ data InstallFlag = Create
 
 installMay :: Maybe Library -> ErrorT String IO ()
 installMay mlib =
-  do (shouldCreate, deps) <- (withUnknown $ D.depsAt depsFile) `catchError` askCreate
-     ups <-
-       execInstallM $ do when (shouldCreate == Create) $ tell (update id)
-                         libs <- toInstall deps
-                         forM_ libs $ install1 (shouldCreate /= NoCreate) deps
-     liftIO $
-       do writeUpdates deps ups
-          putStrLn "Success!"
-
+  do (shouldCreate, deps) <- getDeps `catchError` askCreate
+     ups <- execInstallM $ do
+              when (shouldCreate == Create) $ tell (update id)
+              libs <- toInstall deps
+              forM_ libs $ install1 (shouldCreate /= NoCreate) deps
+     liftIO $ do
+       writeUpdates deps ups
+       putStrLn "Success!"
   where
-    depsFile = EPath.dependencyFile
-    withUnknown = fmap ((,) Unknown)
+    getDeps =
+      do deps <- D.depsAt EPath.dependencyFile
+         return (Unknown, deps)
 
-    toInstall deps = case mlib of
-      Nothing ->
-        do liftIO $ putStrLn "Installing all declared dependencies..."
-           return $ map (\(n, v) -> Lib.Library n (Just v)) . D.dependencies $ deps
-      Just l  -> return [l]
+    toInstall deps =
+      case mlib of
+        Just lib -> return [lib]
+        Nothing ->
+            do liftIO $ putStrLn "Installing all declared dependencies..."
+               return $ map (\(n, v) -> Lib.Library n (Just v)) . D.dependencies $ deps
     
-    askCreate _ =
-      do yes <-
-           liftIO $ do putStr createMsg
-                       Cmd.yesOrNo
+    askCreate _errorMessage =
+      do yes <- liftIO $ do
+                  putStr createMsg
+                  Cmd.yesOrNo
          unless yes . liftIO . putStr $ didntUpdateMsg
          let create = if yes then Create else NoCreate
          return (create, defaultDeps)
-     where
-       createMsg =
-           "Your project does not have a " ++ depsFile ++ " file, which the Elm\n" ++
-           "compiler needs to detect dependencies. Should I create it? (y/n): "
+      where
+        createMsg =
+            "Your project does not have a " ++ EPath.dependencyFile ++ " file, which the Elm\n" ++
+            "compiler needs to detect dependencies. Should I create it? (y/n): "
 
 writeUpdates :: D.Deps -> Update -> IO ()
 writeUpdates deps ups = case applyUpdates deps ups of
