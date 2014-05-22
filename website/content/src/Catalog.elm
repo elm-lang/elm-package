@@ -49,4 +49,4 @@ row w library =
 scene term libraries w =
     flow down <| map (row w) (search term libraries)
 
-main = skeleton [] scene libraries
+main = skeleton "filter" [] scene libraries

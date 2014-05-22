@@ -27,12 +27,12 @@ searchStyle = { padding = { top=0, bottom=0, left=6, right=6 }
 
 type BodyGen a = String -> a -> Int -> Element
 
-skeleton : [(String,Text)] -> BodyGen a -> Signal a -> Signal Element
-skeleton links bodyFunc info =
-    lift3 (internalSkeleton links bodyFunc) search.signal info Window.dimensions
+skeleton : String -> [(String,Text)] -> BodyGen a -> Signal a -> Signal Element
+skeleton ghostText links bodyFunc info =
+    lift3 (internalSkeleton ghostText links bodyFunc) search.signal info Window.dimensions
 
-internalSkeleton : [(String,Text)] -> BodyGen a -> F.Content -> a -> (Int,Int) -> Element
-internalSkeleton links bodyFunc term info (outer,h) =
+internalSkeleton : String -> [(String,Text)] -> BodyGen a -> F.Content -> a -> (Int,Int) -> Element
+internalSkeleton ghostText links bodyFunc term info (outer,h) =
     let margin = outer `div` 10
         inner = margin * 8
         leftGutter = max margin headerHeight
@@ -48,7 +48,7 @@ internalSkeleton links bodyFunc term info (outer,h) =
         leftAligned <| Text.height 30 <| concat <| intersperse (toText " / ") <| (Text.link "/" <| toText "~") ::
         zipWith (<|) (repeat (length links) (uncurry Text.link) ++ [snd]) (("/catalog", toText "Catalog") :: links)
       , container (searchWidth + 20) headerHeight middle <| width searchWidth <|
-        F.field searchStyle search.handle id "filter" term
+        F.field searchStyle search.handle id ghostText term
       ]
     , let contentHeight = max (heightOf content)
                               (h - topBarHeight - headerHeight - footerHeight)
