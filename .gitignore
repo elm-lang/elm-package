@@ -10,3 +10,4 @@ log
 ghc_output
 public-library
 remove-library
+*~
