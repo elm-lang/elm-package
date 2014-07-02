@@ -146,7 +146,7 @@ getRepo l =
   do let directory = N.toFilePath . Lib.lib $ l
      exists  <- liftIO $ doesDirectoryExist directory
      (if exists then update else clone) (Lib.lib l) directory
-     version <- getVersion l
+     version <- getVersion directory l
      Cmd.inDir directory (checkout version)
      return (directory, version)
   where
@@ -170,8 +170,8 @@ getRepo l =
 version number is requested, use the latest tagless version number in the registry.
 If the repo is not in the registry, warn the user and check on github.
 -}
-getVersion :: Library -> ErrorT String IO V.Version
-getVersion (Lib.Library name mayVsn) =
+getVersion :: FilePath -> Library -> ErrorT String IO V.Version
+getVersion dir (Lib.Library name mayVsn) =
   do versions <- getVersions name
      case mayVsn of
        Nothing ->
@@ -189,7 +189,8 @@ getVersion (Lib.Library name mayVsn) =
            Just vs -> return vs
            Nothing ->
              do Cmd.out $ "Warning: library " ++ show name ++ " is not registered publicly. Checking github..."
-                tags <- lines <$> Cmd.git [ "tag", "--list" ]
+                tags <- lines <$> (Cmd.inDir dir . Cmd.git $ [ "tag", "--list" ])
+                Cmd.out $ unlines tags
                 return $ Maybe.mapMaybe V.fromString tags
 
     errorNoTags =
