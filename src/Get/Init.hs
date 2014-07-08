@@ -24,16 +24,19 @@ eitherFromMaybe def val = case val of
   Just r -> Right r
   Nothing -> Left def
 
-orIfEmpty :: [a] -> Maybe [a] -> [a]
-orIfEmpty [] (Just ys) = ys
-orIfEmpty xs _ = xs
+injectDefault :: Maybe [a] -> [a] -> [a]
+injectDefault (Just xs) [] = xs
+injectDefault _ ys = ys
 
 askForVersion :: Maybe String -> String -> IO V.Version
-askForVersion def req = askForChecked check (req `orIfEmpty` def)
-  where check = (eitherFromMaybe "Wrong version format!" . V.fromString)
+askForVersion def req = askForChecked check req
+  where check = (eitherFromMaybe "Wrong version format!" . V.fromString . injectDefault def)
 
 askFor :: String -> IO String
 askFor req = askForChecked Right req
+
+askForWithDefault :: String -> String -> IO String
+askForWithDefault def req = askForChecked (Right . injectDefault (Just def)) req
 
 askForLimited :: String -> Int -> String -> IO String
 askForLimited name limit req = askForChecked check req
@@ -52,7 +55,7 @@ readDeps = do
   version <- askForVersion (Just "0.1.0") "Initial version? [default: 0.1.0]"
   summary <- askForLimited "Summary" 80 "Summary:"
   description <- askFor "Description:"
-  license <- askFor "License?"
+  license <- askForWithDefault "BSD3" "License? [default: BSD3]"
   repo <- askFor "Repository address?"
   elmVersion <- askForVersion Nothing "Elm version?"
   return $ D.Deps (N.Name userName projectName) version summary description license repo [] [] elmVersion []
