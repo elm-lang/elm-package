@@ -66,6 +66,9 @@ something like this:
 }
 ```
 
+You can also use command `elm-get init` for initializing basic
+`elm_dependencies.json` in console interactively.
+
 A couple important notes for filling in these fields for your project are:
 
   * Keep the `summary` under 80 characters.
