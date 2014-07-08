@@ -15,6 +15,7 @@ import Get.Library
 import Get.Options as Options
 import qualified Get.Publish as Publish
 import qualified Utils.Commands as Cmd
+import qualified Get.Init as Init
 
 main :: IO ()
 main = do
@@ -41,6 +42,8 @@ handle options =
           Install.install vsndL
 
     Publish -> Publish.publish
+
+    Init -> lift Init.initialize
 
     Update _ -> Cmd.out "Not implemented yet!"
   where

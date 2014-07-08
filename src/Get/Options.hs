@@ -13,6 +13,7 @@ data Command
     = Install (Maybe RawLibrary)
     | Update  { libs :: [String] }
     | Publish
+    | Init
     deriving (Show, Eq)
 
 parse :: IO Command
@@ -46,6 +47,7 @@ commands =
     [ command "install" installOpts
     , command "publish" publishOpts
 --    , command "update"  updateOpts -- TODO: implement update
+    , command "init" initOpts
     ]
 
 installOpts :: ParserInfo Command
@@ -62,6 +64,14 @@ installOpts = info (Install <$> optional library) infoMod
         , "  elm-get install                # install everything needed by elm_dependencies.json"
         , "  elm-get install tom/Array      # install a specific github repo"
         , "  elm-get install tom/Array 1.2  # install a specific version tag github repo"
+        ]
+
+initOpts :: ParserInfo Command
+initOpts = info (pure Init) infoMod
+  where
+    infoMod = mconcat
+        [ fullDesc
+        , progDesc "Initialize elm_dependencies.json in working directory"
         ]
 
 library :: Parser RawLibrary
