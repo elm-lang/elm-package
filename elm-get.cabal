@@ -64,6 +64,7 @@ Executable elm-get
                        Utils.Paths
   Build-depends:       aeson,
                        aeson-pretty,
+                       ansi-wl-pprint,
                        base >=4.2 && <5,
                        binary,
                        bytestring,

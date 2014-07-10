@@ -5,6 +5,7 @@ import Control.Applicative
 import Data.Monoid
 import Data.Version (showVersion)
 import Options.Applicative as Opt
+import Text.PrettyPrint.ANSI.Leijen (text, vcat, Doc)
 
 import Get.Library
 import qualified Paths_elm_get as This
@@ -21,6 +22,9 @@ parse = customExecParser prefs parser
   where
     prefs = Opt.prefs $ mempty <> showHelpOnError
 
+linesDoc :: [String] -> Doc
+linesDoc = vcat . map text
+
 parser :: ParserInfo Command
 parser = info (helper <*> commands) infoMod
   where
@@ -28,7 +32,7 @@ parser = info (helper <*> commands) infoMod
         [ fullDesc
         , header top
         , progDesc "install and publish elm libraries"
-        , footer moreHelp
+        , footerDoc (Just moreHelp)
         ]
 
     top = unwords
@@ -36,7 +40,7 @@ parser = info (helper <*> commands) infoMod
         , "The Elm Package Manager (c) Evan Czaplicki 2013-2014\n"
         ]
 
-    moreHelp = unlines
+    moreHelp = linesDoc
         [ "To learn more about a command called COMMAND, just do:"
         , "  elm-get COMMAND --help"
         ]
@@ -56,10 +60,10 @@ installOpts = info (Install <$> optional library) infoMod
     infoMod = mconcat
         [ fullDesc
         , progDesc "Install libraries in the local project."
-        , footer examples
+        , footerDoc (Just examples)
         ]
 
-    examples = unlines
+    examples = linesDoc
         [ "Examples:"
         , "  elm-get install                # install everything needed by elm_dependencies.json"
         , "  elm-get install tom/Array      # install a specific github repo"
@@ -89,9 +93,9 @@ library = Library <$> lib <*> optional ver
 --   (Update <$> many (argument str (metavar "LIBRARY" <> help "Library to update")))
 --   ( fullDesc
 --   <> progDesc "Check for updates to any local libraries, ask to upgrade."
---   <> footer   examples
+--   <> footerDoc   examples
 --   )
---   where examples = unlines
+--   where examples = linesDoc
 --           [ "Examples:"
 --           , "  elm-get update             # check for updates to local libraries"
 --           , "  elm-get update tom/Array   # update from a specific github repo" ]
