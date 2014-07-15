@@ -39,9 +39,9 @@ publish =
        R.register name version Path.combinedJson
      Cmd.out "Success!"
 
-getDeps :: ErrorT String IO D.Deps
-getDeps =
-  do either <- liftIO $ runErrorT $ D.depsAt EPath.dependencyFile
+exitAtFail :: ErrorT String IO a -> ErrorT String IO a
+exitAtFail action =
+  do either <- liftIO $ runErrorT $ action
      case either of
        Right deps -> return deps
        Left err ->
@@ -49,15 +49,11 @@ getDeps =
              hPutStrLn stderr $ "\nError: " ++ err
              exitFailure
 
+getDeps :: ErrorT String IO D.Deps
+getDeps = exitAtFail $ D.depsAt EPath.dependencyFile
+
 getVersions :: ErrorT String IO [(N.Name, V.Version)]
-getVersions =
-  do either <- liftIO $ runErrorT $ L.getVersions EPath.librariesFile
-     case either of
-       Right versions -> return versions
-       Left err ->
-         liftIO $ do
-           hPutStrLn stderr $ "\nError: " ++ err
-           exitFailure
+getVersions = exitAtFail $ L.getVersions EPath.librariesFile
 
 withCleanup :: ErrorT String IO () -> ErrorT String IO ()
 withCleanup action =
