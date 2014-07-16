@@ -24,6 +24,7 @@ import qualified Get.Library as Lib
 import qualified Get.Registry as R
 import qualified Utils.Commands as Cmd
 import qualified Utils.Paths as Path
+import Utils.ResolveDeps
 
 -- | Builds up the final transformation on the dependency file using
 --   WriterT
@@ -60,8 +61,7 @@ data InstallFlag = Create
 installMay :: Maybe Library -> ErrorT String IO ()
 installMay mlib =
   do (shouldCreate, deps) <- getDeps `catchError` askCreate
-     installedLibs <- L.getVersions EPath.librariesFile
-     libs <- toInstall installedLibs
+     libs <- toInstall deps
      ups <- execInstallM $ do
               when (shouldCreate == Create) $ tell (update id)
               forM_ libs $ install1 (shouldCreate /= NoCreate) $ D.dependencies deps
@@ -74,15 +74,11 @@ installMay mlib =
       do deps <- D.depsAt EPath.dependencyFile
          return (Unknown, deps)
 
-    -- START HERE
-    -- Yeah, so now this function should be completely rewritten to
-    -- incorporate dependency resolution
+    toInstall :: D.Deps -> ErrorT String IO [Library]
     toInstall deps =
       case mlib of
-        Just lib -> return [lib]
-        Nothing ->
-            do liftIO $ putStrLn "Installing all declared dependencies..."
-               return $ map (\(n, v) -> Lib.Library n (Just v)) deps
+        Nothing -> fmap (map $ \(n, v) -> Lib.Library n (Just v)) $ solveConstraints deps
+        Just _ -> throwError "TODO: implement me"
     
     askCreate _errorMessage =
       do yes <- liftIO $ do
