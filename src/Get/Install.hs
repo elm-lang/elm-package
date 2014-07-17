@@ -1,10 +1,9 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Get.Install (install, installAll) where
 
-import Control.Applicative ((<$>))
 import Control.Monad.Error
-import Control.Monad.Writer
 import Data.Aeson.Encode.Pretty (encodePretty)
+import Data.Maybe (mapMaybe)
 import qualified Data.ByteString.Lazy as BS
 import qualified Data.Map as Map
 import System.Directory
@@ -15,9 +14,7 @@ import qualified Elm.Internal.Libraries as L
 import qualified Elm.Internal.Name as N
 import qualified Elm.Internal.Paths as EPath
 import qualified Elm.Internal.Version as V
-import qualified Elm.Internal.Constraint as C
 
-import Get.Dependencies (defaultDeps)
 import Get.Library (Library)
 import qualified Utils.Commands as Cmd
 import qualified Utils.Paths as Path
@@ -25,53 +22,57 @@ import Utils.ResolveDeps
 
 -- | Builds up the final transformation on the dependency file using
 --   WriterT
-type InstallM =
-   (WriterT Update -- ^ The updates that need to be run on the deps
-    (ErrorT String IO))
-
-execInstallM :: InstallM a -> ErrorT String IO Update
-execInstallM = fmap snd . runWriterT
-
--- | updates to the dependencies
-type DepsMap = Map.Map N.Name C.Constraint
-
--- | Nothing means don't update the file
--- | Just f means apply f to the old dependencies and replace the user's deps file.
-newtype Update = Update (Maybe (Endo DepsMap))
-                 deriving Monoid
-
-update :: (DepsMap -> DepsMap) -> Update
-update = Update . Just . Endo
+type InstallM = ErrorT String IO
 
 -- | External Interface
 installAll :: ErrorT String IO ()
 installAll =
-  do (shouldCreate, deps) <- getDeps `catchError` askCreate
+  do deps <- D.depsAt EPath.dependencyFile
      libs <- solveConstraints deps
-     ups <- execInstallM $ do
-              when (shouldCreate == Create) $ tell (update id)
-              forM_ libs install1
-     liftIO $ do
-       writeUpdates deps ups
-       writeLibraries libs
-       putStrLn "Success!"
-  where
-    getDeps =
-      do deps <- D.depsAt EPath.dependencyFile
-         return (Unknown, deps)
-    
-    askCreate _errorMessage =
-      do liftIO $ putStrLn _errorMessage
-         yes <- liftIO $ do
-                  putStr createMsg
-                  Cmd.yesOrNo
-         unless yes . liftIO . putStr $ didntUpdateMsg
-         let create = if yes then Create else NoCreate
-         return (create, defaultDeps)
+     currVersions <- L.getVersionsSafe EPath.librariesFile
+     let (diffList, libsToInstall) = computeDiff currVersions libs
+     confirmed <- liftIO $ offerInstallPlan diffList
+     case confirmed of
+       False -> liftIO $ putStrLn "Bye."
+       True ->
+         do forM_ libsToInstall install1
+            liftIO $ do
+              writeLibraries libs
+              putStrLn "Success!"
 
-    createMsg =
-      "Your project does not have a " ++ EPath.dependencyFile ++ " file, which the Elm\n" ++
-      "compiler needs to detect dependencies. Should I create it? (y/n): "
+type Lib = (N.Name, V.Version)
+data LibChange = LibFresh N.Name V.Version
+               | LibUpdate N.Name V.Version V.Version -- name, old, new
+
+instance Show LibChange where
+  show change = case change of
+    LibFresh name version -> concat ["new: ", show name, " (", show version, ")"]
+    LibUpdate name old new -> concat ["upd: ", show name, " (", show old, " -> ", show new, ")"]
+
+libFresh = uncurry LibFresh
+
+computeDiff :: Maybe [Lib] -> [Lib] -> ([LibChange], [Lib])
+computeDiff old new =
+  case old of
+    Nothing -> (map libFresh new, new)
+    Just libs ->
+      let libsMap = Map.fromList libs
+          change lib@(name, version) = case Map.lookup name libsMap of
+            Just oldVersion ->
+              if oldVersion == version
+              then Nothing
+              else Just $ (LibUpdate name oldVersion version, lib)
+            Nothing -> Just $ (libFresh lib, lib)
+      in unzip $ mapMaybe change new
+
+offerInstallPlan :: [LibChange] -> IO Bool
+offerInstallPlan ls = case ls of
+  [] -> do putStrLn "Nothing to install"
+           return False
+  _ -> do putStrLn "The following libraries will be installed:"
+          mapM_ print ls
+          putStr "Proceed? (y/n) "
+          Cmd.yesOrNo
 
 install :: Library -> ErrorT String IO ()
 install _ = throwError "TODO: implement me"
@@ -81,11 +82,6 @@ data InstallFlag = Create
                  | Unknown
                  deriving (Show, Read, Eq, Ord)
 
-writeUpdates :: D.Deps -> Update -> IO ()
-writeUpdates deps ups = case applyUpdates deps ups of
-  Nothing      -> return ()
-  Just newDeps -> BS.writeFile EPath.dependencyFile (D.prettyJSON newDeps)
-
 -- | Write installed libraries to elm_dependencies/elm_libraries.json, which is used by compiler
 writeLibraries :: [(N.Name, V.Version)] -> IO ()
 writeLibraries pairs =
@@ -94,25 +90,10 @@ writeLibraries pairs =
      createDirectoryIfMissing True EPath.dependencyDirectory
      BS.writeFile EPath.librariesFile (encodePretty $ L.Libraries libraries)
 
-applyUpdates :: D.Deps -> Update -> Maybe D.Deps
-applyUpdates d up = (updateDeps . wrapAssoc) (unwrap up) d
-  where
-    updateDeps upper d = case d of
-      D.Deps { D.dependencies = deps } ->
-        (\deps' -> d { D.dependencies = deps'}) <$> upper deps
-
-    wrapAssoc :: (Ord k, Functor f) => (Map.Map k v -> f (Map.Map k v)) -> [(k,v)] -> f [(k,v)]
-    wrapAssoc upper = fmap Map.toList . upper . Map.fromList
-
-    unwrap :: Update -> DepsMap -> Maybe DepsMap
-    unwrap (Update m) d =
-      do (Endo f) <- m
-         return $ f d
-
 install1 :: (N.Name, V.Version) -> InstallM ()
 install1 (name, version) =
   Cmd.inDir EPath.dependencyDirectory $
-  do repo <- lift $ Cmd.inDir Path.internals $ getRepoPath name version
+  do repo <- Cmd.inDir Path.internals $ getRepoPath name version
      liftIO $ createDirectoryIfMissing True repo
      Cmd.copyDir (Path.internals </> repo) (repo </> show version)
 
@@ -139,8 +120,3 @@ getRepoPath name version =
       do let tag = show version
          Cmd.out $ "Checking out version " ++ tag
          Cmd.git [ "checkout", "tags/" ++ tag ]
-
-didntUpdateMsg :: String
-didntUpdateMsg =
-    "Okay, but if you decide to make this library visible to the compiler later, add\n\
-    \the dependency to your " ++ EPath.dependencyFile ++ " file."
