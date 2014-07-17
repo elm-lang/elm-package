@@ -45,20 +45,9 @@ update = Update . Just . Endo
 
 -- | External Interface
 installAll :: ErrorT String IO ()
-installAll = installMay Nothing
-
-install :: Library -> ErrorT String IO ()
-install = installMay . Just
-
-data InstallFlag = Create
-                 | NoCreate
-                 | Unknown
-                 deriving (Show, Read, Eq, Ord)
-
-installMay :: Maybe Library -> ErrorT String IO ()
-installMay mlib =
+installAll =
   do (shouldCreate, deps) <- getDeps `catchError` askCreate
-     libs <- toInstall deps
+     libs <- solveConstraints deps
      ups <- execInstallM $ do
               when (shouldCreate == Create) $ tell (update id)
               forM_ libs $ install1 (shouldCreate /= NoCreate) $ D.dependencies deps
@@ -70,24 +59,27 @@ installMay mlib =
     getDeps =
       do deps <- D.depsAt EPath.dependencyFile
          return (Unknown, deps)
-
-    toInstall :: D.Deps -> ErrorT String IO [(N.Name, V.Version)]
-    toInstall deps =
-      case mlib of
-        Nothing -> solveConstraints deps
-        Just _ -> throwError "TODO: implement me"
     
     askCreate _errorMessage =
-      do yes <- liftIO $ do
+      do liftIO $ putStrLn _errorMessage
+         yes <- liftIO $ do
                   putStr createMsg
                   Cmd.yesOrNo
          unless yes . liftIO . putStr $ didntUpdateMsg
          let create = if yes then Create else NoCreate
          return (create, defaultDeps)
-      where
-        createMsg =
-            "Your project does not have a " ++ EPath.dependencyFile ++ " file, which the Elm\n" ++
-            "compiler needs to detect dependencies. Should I create it? (y/n): "
+
+    createMsg =
+      "Your project does not have a " ++ EPath.dependencyFile ++ " file, which the Elm\n" ++
+      "compiler needs to detect dependencies. Should I create it? (y/n): "
+
+install :: Library -> ErrorT String IO ()
+install lib = throwError "TODO: implement me"
+
+data InstallFlag = Create
+                 | NoCreate
+                 | Unknown
+                 deriving (Show, Read, Eq, Ord)
 
 writeUpdates :: D.Deps -> Update -> IO ()
 writeUpdates deps ups = case applyUpdates deps ups of
