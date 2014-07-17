@@ -4,10 +4,9 @@ module Get.Install (install, installAll) where
 import Control.Applicative ((<$>))
 import Control.Monad.Error
 import Control.Monad.Writer
-import Data.Aeson (encode)
+import Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy as BS
 import qualified Data.Map as Map
-import qualified Data.Maybe as Maybe
 import System.Directory
 import System.FilePath
 
@@ -20,8 +19,6 @@ import qualified Elm.Internal.Constraint as C
 
 import Get.Dependencies (defaultDeps)
 import Get.Library (Library)
-import qualified Get.Library as Lib
-import qualified Get.Registry as R
 import qualified Utils.Commands as Cmd
 import qualified Utils.Paths as Path
 import Utils.ResolveDeps
@@ -74,10 +71,10 @@ installMay mlib =
       do deps <- D.depsAt EPath.dependencyFile
          return (Unknown, deps)
 
-    toInstall :: D.Deps -> ErrorT String IO [Library]
+    toInstall :: D.Deps -> ErrorT String IO [(N.Name, V.Version)]
     toInstall deps =
       case mlib of
-        Nothing -> fmap (map $ \(n, v) -> Lib.Library n (Just v)) $ solveConstraints deps
+        Nothing -> solveConstraints deps
         Just _ -> throwError "TODO: implement me"
     
     askCreate _errorMessage =
@@ -97,15 +94,13 @@ writeUpdates deps ups = case applyUpdates deps ups of
   Nothing      -> return ()
   Just newDeps -> BS.writeFile EPath.dependencyFile (D.prettyJSON newDeps)
 
--- TODO: this Library -> tuple and tuple -> Library conversion should be eliminated
-writeLibraries :: [Lib.Library] -> IO ()
-writeLibraries libs =
-  let libFromTuple (Lib.Library name (Just version)) = Just $ L.Library name version
-      libFromTuple _ = Nothing
-      libraries = L.Libraries $ Maybe.mapMaybe libFromTuple libs
-      json = encode libraries
-  in do createDirectoryIfMissing True EPath.dependencyDirectory
-        BS.writeFile EPath.librariesFile json
+-- | Write installed libraries to elm_dependencies/elm_libraries.json, which is used by compiler
+writeLibraries :: [(N.Name, V.Version)] -> IO ()
+writeLibraries pairs =
+  do let fromPair (n, v) = L.Library n v
+         libraries = map fromPair pairs
+     createDirectoryIfMissing True EPath.dependencyDirectory
+     BS.writeFile EPath.librariesFile (encodePretty $ L.Libraries libraries)
 
 applyUpdates :: D.Deps -> Update -> Maybe D.Deps
 applyUpdates d up = (updateDeps . wrapAssoc) (unwrap up) d
@@ -122,10 +117,10 @@ applyUpdates d up = (updateDeps . wrapAssoc) (unwrap up) d
       do (Endo f) <- m
          return $ f d
 
-install1 :: Bool -> [(N.Name, C.Constraint)] -> Library -> InstallM ()
-install1 shouldAsk oldDeps l@(Lib.Library name _) =
+install1 :: Bool -> [(N.Name, C.Constraint)] -> (N.Name, V.Version) -> InstallM ()
+install1 shouldAsk oldDeps (name, vsn) =
   do finalVsn <- Cmd.inDir EPath.dependencyDirectory $
-                 do (repo,version) <- lift $ Cmd.inDir Path.internals $ getRepo l
+                 do (repo,version) <- lift $ Cmd.inDir Path.internals $ getRepo name vsn
                     liftIO $ createDirectoryIfMissing True repo
                     Cmd.copyDir (Path.internals </> repo) (repo </> show version)
                     return version
@@ -151,13 +146,11 @@ mkUpdate oldDeps n v = case Map.lookup n oldDeps of
     depsFile = EPath.dependencyFile
     mismatchMsg = "Version of library you're installed don't fit into existing range.\n"
 
-      
-getRepo :: Library -> ErrorT String IO (FilePath, V.Version)
-getRepo l =
-  do let directory = N.toFilePath . Lib.lib $ l
+getRepo :: N.Name -> V.Version -> ErrorT String IO (FilePath, V.Version)
+getRepo name version =
+  do let directory = N.toFilePath name
      exists  <- liftIO $ doesDirectoryExist directory
-     (if exists then update else clone) (Lib.lib l) directory
-     version <- getVersion directory l
+     (if exists then update else clone) name directory
      Cmd.inDir directory (checkout version)
      return (directory, version)
   where
@@ -176,43 +169,6 @@ getRepo l =
         do let tag = show version
            Cmd.out $ "Checking out version " ++ tag
            Cmd.git [ "checkout", "tags/" ++ tag ]
-
-{-| Check to see that the requested version number exists. In the case that no
-version number is requested, use the latest tagless version number in the registry.
-If the repo is not in the registry, warn the user and check on github.
--}
-getVersion :: FilePath -> Library -> ErrorT String IO V.Version
-getVersion dir (Lib.Library name mayVsn) =
-  do versions <- getVersions name
-     case mayVsn of
-       Nothing ->
-         case filter V.tagless versions of
-           [] -> errorNoTags
-           vs -> return $ maximum vs
-       Just version
-         | version `notElem` versions -> errorNoMatch version
-         | otherwise                  -> return version
-  where
-    getVersions :: N.Name -> ErrorT String IO [V.Version]
-    getVersions name =
-      do registryVersions <- R.versions name
-         case registryVersions of
-           Just vs -> return vs
-           Nothing ->
-             do Cmd.out $ "Warning: library " ++ show name ++ " is not registered publicly. Checking github..."
-                tags <- lines <$> (Cmd.inDir dir . Cmd.git $ [ "tag", "--list" ])
-                Cmd.out $ unlines tags
-                return $ Maybe.mapMaybe V.fromString tags
-
-    errorNoTags =
-      throwError $ unlines
-        [ "did not find any properly tagged releases of this library."
-        , "Libraries have at least one tag (like 0.1.2 or 1.0) to ensure that your build"
-        , "process is stable and repeatable. These tags should follow Semantic Versioning."
-        ]
-
-    errorNoMatch version =
-      throwError $ "could not find version " ++ show version ++ " on github."
 
 didntUpdateMsg :: String
 didntUpdateMsg =
