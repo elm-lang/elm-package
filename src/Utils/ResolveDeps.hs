@@ -149,10 +149,10 @@ tryFromJust msg value = case value of
   Nothing -> throwError msg
 
 solveConstraintsByName :: N.Name -> C.Constraint -> SolverContext Bool
-solveConstraintsByName name constraint =
+solveConstraintsByName name constr =
   do pinnedVersions <- gets ssPinnedVersions
      case M.lookup name pinnedVersions of
-       Just currV -> return (C.satisfyConstraint constraint currV)
+       Just currV -> return (C.satisfyConstraint constr currV)
        Nothing ->
          do maybeVersions <- asks (fmap versions . M.lookup (show name))
             let msg = "Haven't found versions of " ++ show name ++ ", halting"
@@ -161,7 +161,7 @@ solveConstraintsByName name constraint =
                 tryOne version =
                   do deps <- getDependencies name version
                      solveConstraintsByDeps deps
-            tryAny restore $ map tryOne versions
+            tryAny restore $ map tryOne $ filter (C.satisfyConstraint constr) versions
 
 solveConstraintsByDeps :: D.Deps -> SolverContext Bool
 solveConstraintsByDeps deps =
@@ -179,5 +179,5 @@ solveConstraints deps =
      case solved of
        False -> throwError "Failed to satisfy all the constraints :-("
        True ->
-         let map = M.delete (D.name deps) $ ssPinnedVersions state
-         in return (M.toList map)
+         let result = M.delete (D.name deps) $ ssPinnedVersions state
+         in return (M.toList result)

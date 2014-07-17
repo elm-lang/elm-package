@@ -50,7 +50,7 @@ installAll =
      libs <- solveConstraints deps
      ups <- execInstallM $ do
               when (shouldCreate == Create) $ tell (update id)
-              forM_ libs $ install1 (shouldCreate /= NoCreate) $ D.dependencies deps
+              forM_ libs install1
      liftIO $ do
        writeUpdates deps ups
        writeLibraries libs
@@ -74,7 +74,7 @@ installAll =
       "compiler needs to detect dependencies. Should I create it? (y/n): "
 
 install :: Library -> ErrorT String IO ()
-install lib = throwError "TODO: implement me"
+install _ = throwError "TODO: implement me"
 
 data InstallFlag = Create
                  | NoCreate
@@ -109,42 +109,20 @@ applyUpdates d up = (updateDeps . wrapAssoc) (unwrap up) d
       do (Endo f) <- m
          return $ f d
 
-install1 :: Bool -> [(N.Name, C.Constraint)] -> (N.Name, V.Version) -> InstallM ()
-install1 shouldAsk oldDeps (name, vsn) =
-  do finalVsn <- Cmd.inDir EPath.dependencyDirectory $
-                 do (repo,version) <- lift $ Cmd.inDir Path.internals $ getRepo name vsn
-                    liftIO $ createDirectoryIfMissing True repo
-                    Cmd.copyDir (Path.internals </> repo) (repo </> show version)
-                    return version
+install1 :: (N.Name, V.Version) -> InstallM ()
+install1 (name, version) =
+  Cmd.inDir EPath.dependencyDirectory $
+  do repo <- lift $ Cmd.inDir Path.internals $ getRepoPath name version
+     liftIO $ createDirectoryIfMissing True repo
+     Cmd.copyDir (Path.internals </> repo) (repo </> show version)
 
-     when shouldAsk $ mkUpdate (Map.fromList oldDeps) name finalVsn
-  
-mkUpdate :: DepsMap -> N.Name -> V.Version -> InstallM ()
-mkUpdate oldDeps n v = case Map.lookup n oldDeps of
-  Just c -> case C.satisfyConstraint c v of
-    True -> return ()
-    False -> liftIO $ putStrLn mismatchMsg
-  Nothing ->
-    do yes <- shouldI notInstalledAsk
-       if yes
-         then tell $ update $ Map.insert n (C.Exact v)
-         else liftIO $ putStr didntUpdateMsg
-
-  where
-    shouldI msg = liftIO $ do putStr msg
-                              Cmd.yesOrNo
-
-    notInstalledAsk = "Should I add this library to your " ++ depsFile ++ " file? (y/n): "
-    depsFile = EPath.dependencyFile
-    mismatchMsg = "Version of library you're installed don't fit into existing range.\n"
-
-getRepo :: N.Name -> V.Version -> ErrorT String IO (FilePath, V.Version)
-getRepo name version =
+getRepoPath :: N.Name -> V.Version -> ErrorT String IO FilePath
+getRepoPath name version =
   do let directory = N.toFilePath name
-     exists  <- liftIO $ doesDirectoryExist directory
+     exists <- liftIO $ doesDirectoryExist directory
      (if exists then update else clone) name directory
      Cmd.inDir directory (checkout version)
-     return (directory, version)
+     return directory
   where
     update name directory =
       do Cmd.out $ "Getting updates for repo " ++ show name
@@ -158,9 +136,9 @@ getRepo name version =
          liftIO $ renameDirectory (N.project name) directory
 
     checkout version =
-        do let tag = show version
-           Cmd.out $ "Checking out version " ++ tag
-           Cmd.git [ "checkout", "tags/" ++ tag ]
+      do let tag = show version
+         Cmd.out $ "Checking out version " ++ tag
+         Cmd.git [ "checkout", "tags/" ++ tag ]
 
 didntUpdateMsg :: String
 didntUpdateMsg =
