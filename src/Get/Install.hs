@@ -122,6 +122,8 @@ replaceBS needle replacement haystack =
 writeDependencies :: D.Deps -> IO ()
 writeDependencies deps =
   let jsonOrig = BS.toStrict $ encodePretty deps
+      -- this ugly replace is a workaround for aeson-pretty UTF8-escaping
+      -- '<' and '>' characters, which doesn't seem to be configurable
       json = replaceBS "\\u003e" ">" $ replaceBS "\\u003c" "<" $ jsonOrig
   in B.writeFile EPath.dependencyFile json
 
