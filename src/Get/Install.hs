@@ -1,21 +1,24 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Get.Install (install, installAll) where
 
 import Control.Monad.Error
 import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.Maybe (mapMaybe)
+import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BS
 import qualified Data.Map as Map
 import System.Directory
 import System.FilePath
 
+import qualified Elm.Internal.Constraint as C
 import qualified Elm.Internal.Dependencies as D
 import qualified Elm.Internal.Libraries as L
 import qualified Elm.Internal.Name as N
 import qualified Elm.Internal.Paths as EPath
 import qualified Elm.Internal.Version as V
 
-import Get.Library (Library)
+import qualified Get.Library as GL
 import qualified Utils.Commands as Cmd
 import qualified Utils.Paths as Path
 import Utils.ResolveDeps
@@ -76,10 +79,54 @@ offerInstallPlan ls = case ls of
           putStr "Proceed? (y/n) "
           Cmd.yesOrNo
 
-install :: Library -> ErrorT String IO ()
-install _ = throwError "TODO: implement me"
+install :: GL.Library -> ErrorT String IO ()
+install (GL.Library name v) =
+  do version <- case v of
+       Nothing ->
+         do liftIO $ putStrLn "Version isn't specified, going to request latest available"
+            libDb <- readLibraries
+            case Map.lookup (show name) libDb of
+              Nothing ->
+                throwError $ "Library " ++ show name ++ " wasn't found!"
+              Just lib -> return $ maximum $ versions lib
+       Just vsn -> return vsn
+     deps <- D.depsAt EPath.dependencyFile
+     case lookup name (D.dependencies deps) of
+       Just{} -> throwError $ "You already have " ++ show name ++ " in your dependencies!"
+       Nothing -> updateVersion deps name version
 
--- | Write installed libraries to elm_dependencies/elm_libraries.json, which is used by compiler
+insertVersion :: N.Name -> V.Version -> D.Deps -> D.Deps
+insertVersion name version deps =
+  deps { D.dependencies = (name, C.exact version) : D.dependencies deps }
+
+updateVersion :: D.Deps -> N.Name -> V.Version -> ErrorT String IO ()
+updateVersion deps name version =
+  do confirm <-
+       liftIO $
+       do putStrLn $ "Going to add dependency " ++ show name ++ " of version " ++ show version
+          putStr "Proceed? (y/n) "
+          Cmd.yesOrNo
+     when confirm $
+       do liftIO $ writeDependencies $ insertVersion name version deps
+          installAll
+
+replaceBS :: B.ByteString -> B.ByteString -> B.ByteString -> B.ByteString
+replaceBS needle replacement haystack =
+  let buildList hs =
+        let (before, after) = B.breakSubstring needle hs
+        in case B.null after of
+          True -> [hs]
+          False -> before : replacement : buildList (B.drop (B.length needle) after)
+  in B.concat $ buildList haystack
+
+writeDependencies :: D.Deps -> IO ()
+writeDependencies deps =
+  let jsonOrig = BS.toStrict $ encodePretty deps
+      json = replaceBS "\\u003e" ">" $ replaceBS "\\u003c" "<" $ jsonOrig
+  in B.writeFile EPath.dependencyFile json
+
+-- | Write list of installed libraries to elm_dependencies/elm_libraries.json,
+--   which is used by compiler to find them
 writeLibraries :: [Lib] -> IO ()
 writeLibraries pairs =
   do let fromPair (n, v) = L.Library n v
