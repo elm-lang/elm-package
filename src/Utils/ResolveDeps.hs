@@ -67,10 +67,11 @@ decodeFromUrl url =
        Nothing -> throwError $ "Can't read value from " ++ url
 
 -- | Library description as used in library.elm-lang.org/libraries.json
-data LibraryInfo = LibraryInfo { name :: String
-                               , summary :: String
-                               , versions :: [V.Version]
-                               } deriving (Show, Generic)
+data LibraryInfo = LibraryInfo
+    { name :: String
+    , summary :: String
+    , versions :: [V.Version]
+    } deriving (Show, Generic)
 
 instance FromJSON LibraryInfo
 instance ToJSON LibraryInfo
@@ -100,9 +101,10 @@ readDependencies name version =
       downloadAction = decodeFromUrl fullUrl
   in cacheWrapper downloadAction dir fileName
 
-data SolverState = SolverState { ssLibrariesMap :: Map (N.Name, V.Version) D.Deps
-                               , ssPinnedVersions :: Map N.Name V.Version
-                               }
+data SolverState = SolverState
+    { ssLibrariesMap :: Map (N.Name, V.Version) D.Deps
+    , ssPinnedVersions :: Map N.Name V.Version
+    }
 
 type SolverContext =
   ReaderT LibraryDB    -- information about libraries, stays constant

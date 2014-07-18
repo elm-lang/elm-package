@@ -45,8 +45,9 @@ type Lib = (N.Name, V.Version)
 
 -- | Datatype describing whether a particular library will be installed first time,
 --   or is updated from previous version
-data LibChange = LibFresh
-               | LibUpdate V.Version
+data LibChange
+  = LibFresh
+  | LibUpdate V.Version
 
 -- | Human-readable representation of previous datatype. Used to show "install plan"
 showUpdate :: (LibChange, Lib) -> String
@@ -65,19 +66,21 @@ computeDiff old new =
             Just oldVersion ->
               if oldVersion == version
               then Nothing
-              else Just $ (LibUpdate oldVersion, lib)
-            Nothing -> Just $ (LibFresh, lib)
+              else Just (LibUpdate oldVersion, lib)
+            Nothing -> Just (LibFresh, lib)
       in mapMaybe change new
 
 -- | Print "install plan" to a used, ask to proceed
 offerInstallPlan :: [(LibChange, Lib)] -> IO Bool
 offerInstallPlan ls = case ls of
-  [] -> do putStrLn "Nothing to install"
-           return False
-  _ -> do putStrLn "The following libraries will be installed:"
-          mapM_ (putStrLn . showUpdate) ls
-          putStr "Proceed? (y/n) "
-          Cmd.yesOrNo
+  [] ->
+    do putStrLn "Nothing to install"
+       return False
+  _ ->
+    do putStrLn "The following libraries will be installed:"
+       mapM_ (putStrLn . showUpdate) ls
+       putStr "Proceed? (y/n) "
+       Cmd.yesOrNo
 
 install :: GL.Library -> ErrorT String IO ()
 install (GL.Library name v) =
