@@ -1,154 +1,160 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Get.Install (install, installAll) where
 
-import Control.Applicative ((<$>))
 import Control.Monad.Error
-import Control.Monad.Writer
+import Data.Aeson.Encode.Pretty (encodePretty)
+import Data.Maybe (mapMaybe)
+import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BS
 import qualified Data.Map as Map
-import qualified Data.Maybe as Maybe
 import System.Directory
 import System.FilePath
 
+import qualified Elm.Internal.Constraint as C
 import qualified Elm.Internal.Dependencies as D
+import qualified Elm.Internal.Libraries as L
 import qualified Elm.Internal.Name as N
 import qualified Elm.Internal.Paths as EPath
 import qualified Elm.Internal.Version as V
 
-import Get.Dependencies (defaultDeps)
-import Get.Library (Library)
-import qualified Get.Library as Lib
-import qualified Get.Registry as R
+import qualified Get.Library as GL
 import qualified Utils.Commands as Cmd
 import qualified Utils.Paths as Path
-
--- | Builds up the final transformation on the dependency file using
---   WriterT
-type InstallM =
-   (WriterT Update -- ^ The updates that need to be run on the deps
-    (ErrorT String IO))
-
-execInstallM :: InstallM a -> ErrorT String IO Update
-execInstallM = fmap snd . runWriterT
-
--- | updates to the dependencies
-type DepsMap = Map.Map N.Name V.Version
-
--- | Nothing means don't update the file
--- | Just f means apply f to the old dependencies and replace the user's deps file.
-newtype Update = Update (Maybe (Endo DepsMap))
-                 deriving Monoid
-
-update :: (DepsMap -> DepsMap) -> Update
-update = Update . Just . Endo
+import Utils.ResolveDeps
 
 -- | External Interface
 installAll :: ErrorT String IO ()
-installAll = installMay Nothing
+installAll =
+  do deps <- D.depsAt EPath.dependencyFile
+     libs <- solveConstraints deps
+     currVersions <- L.getVersionsSafe EPath.librariesFile
+     let diffList = computeDiff currVersions libs
+     let (_, libsToInstall) = unzip diffList
+     confirmed <- liftIO $ offerInstallPlan diffList
+     case confirmed of
+       False -> liftIO $ putStrLn "Bye."
+       True ->
+         do forM_ libsToInstall install1
+            liftIO $ do
+              writeLibraries libs
+              putStrLn "Success!"
 
-install :: Library -> ErrorT String IO ()
-install = installMay . Just
+-- | Just a synonym to tuple type which is used a lot in this module
+type Lib = (N.Name, V.Version)
 
-data InstallFlag = Create
-                 | NoCreate
-                 | Unknown
-                 deriving (Show, Read, Eq, Ord)
+-- | Datatype describing whether a particular library will be installed first time,
+--   or is updated from previous version
+data LibChange
+  = LibFresh
+  | LibUpdate V.Version
 
-installMay :: Maybe Library -> ErrorT String IO ()
-installMay mlib =
-  do (shouldCreate, deps) <- getDeps `catchError` askCreate
-     ups <- execInstallM $ do
-              when (shouldCreate == Create) $ tell (update id)
-              libs <- toInstall deps
-              forM_ libs $ install1 (shouldCreate /= NoCreate) deps
-     liftIO $ do
-       writeUpdates deps ups
-       putStrLn "Success!"
-  where
-    getDeps =
-      do deps <- D.depsAt EPath.dependencyFile
-         return (Unknown, deps)
+-- | Human-readable representation of previous datatype. Used to show "install plan"
+showUpdate :: (LibChange, Lib) -> String
+showUpdate (change, (name, new)) = case change of
+  LibFresh -> concat ["new: ", show name, " (", show new, ")"]
+  LibUpdate old -> concat ["upd: ", show name, " (", show old, " -> ", show new, ")"]
 
-    toInstall deps =
-      case mlib of
-        Just lib -> return [lib]
-        Nothing ->
-            do liftIO $ putStrLn "Installing all declared dependencies..."
-               return $ map (\(n, v) -> Lib.Library n (Just v)) . D.dependencies $ deps
-    
-    askCreate _errorMessage =
-      do yes <- liftIO $ do
-                  putStr createMsg
-                  Cmd.yesOrNo
-         unless yes . liftIO . putStr $ didntUpdateMsg
-         let create = if yes then Create else NoCreate
-         return (create, defaultDeps)
-      where
-        createMsg =
-            "Your project does not have a " ++ EPath.dependencyFile ++ " file, which the Elm\n" ++
-            "compiler needs to detect dependencies. Should I create it? (y/n): "
+-- | Compute differences between currently installed libraries and new constraint solver result
+computeDiff :: Maybe [Lib] -> [Lib] -> [(LibChange, Lib)]
+computeDiff old new =
+  case old of
+    Nothing -> map (\x -> (LibFresh, x)) new
+    Just libs ->
+      let libsMap = Map.fromList libs
+          change lib@(name, version) = case Map.lookup name libsMap of
+            Just oldVersion ->
+              if oldVersion == version
+              then Nothing
+              else Just (LibUpdate oldVersion, lib)
+            Nothing -> Just (LibFresh, lib)
+      in mapMaybe change new
 
-writeUpdates :: D.Deps -> Update -> IO ()
-writeUpdates deps ups = case applyUpdates deps ups of
-  Nothing      -> return ()
-  Just newDeps -> BS.writeFile EPath.dependencyFile (D.prettyJSON newDeps)
+-- | Print "install plan" to a used, ask to proceed
+offerInstallPlan :: [(LibChange, Lib)] -> IO Bool
+offerInstallPlan ls = case ls of
+  [] ->
+    do putStrLn "Nothing to install"
+       return False
+  _ ->
+    do putStrLn "The following libraries will be installed:"
+       mapM_ (putStrLn . showUpdate) ls
+       putStr "Proceed? (y/n) "
+       Cmd.yesOrNo
 
-applyUpdates :: D.Deps -> Update -> Maybe D.Deps
-applyUpdates d up = (updateDeps . wrapAssoc) (unwrap up) d
-  where
-    updateDeps :: Functor f => ([(N.Name, V.Version)] -> f [(N.Name, V.Version)]) -> D.Deps -> f D.Deps
-    updateDeps upper d = case d of
-      D.Deps { D.dependencies = deps } ->
-        (\deps' -> d { D.dependencies = deps'}) <$> upper deps
+install :: GL.Library -> ErrorT String IO ()
+install (GL.Library name v) =
+  do version <- case v of
+       Nothing ->
+         do liftIO $ putStrLn "Version isn't specified, going to request latest available"
+            libDb <- readLibraries
+            case Map.lookup (show name) libDb of
+              Nothing ->
+                throwError $ "Library " ++ show name ++ " wasn't found!"
+              Just lib -> return $ maximum $ versions lib
+       Just vsn -> return vsn
+     deps <- D.depsAt EPath.dependencyFile
+     case lookup name (D.dependencies deps) of
+       Just{} -> throwError $ "You already have " ++ show name ++ " in your dependencies!"
+       Nothing -> updateVersion deps name version
 
-    wrapAssoc :: (Ord k, Functor f) => (Map.Map k v -> f (Map.Map k v)) -> [(k,v)] -> f [(k,v)]
-    wrapAssoc upper = fmap Map.toList . upper . Map.fromList
+insertVersion :: N.Name -> V.Version -> D.Deps -> D.Deps
+insertVersion name version deps =
+  deps { D.dependencies = (name, C.exact version) : D.dependencies deps }
 
-    unwrap :: Update -> DepsMap -> Maybe DepsMap
-    unwrap (Update m) d =
-      do (Endo f) <- m
-         return $ f d
+updateVersion :: D.Deps -> N.Name -> V.Version -> ErrorT String IO ()
+updateVersion deps name version =
+  do confirm <-
+       liftIO $
+       do putStrLn $ "Going to add dependency " ++ show name ++ " of version " ++ show version
+          putStr "Proceed? (y/n) "
+          Cmd.yesOrNo
+     when confirm $
+       do liftIO $ writeDependencies $ insertVersion name version deps
+          installAll
 
-install1 :: Bool -> D.Deps -> Library -> InstallM ()
-install1 shouldAsk oldDeps l@(Lib.Library name _) =
-  do finalVsn <- Cmd.inDir EPath.dependencyDirectory $
-                 do (repo,version) <- lift $ Cmd.inDir Path.internals $ getRepo l
-                    liftIO $ createDirectoryIfMissing True repo
-                    Cmd.copyDir (Path.internals </> repo) (repo </> show version)
-                    return version
+replaceBS :: B.ByteString -> B.ByteString -> B.ByteString -> B.ByteString
+replaceBS needle replacement haystack =
+  let buildList hs =
+        let (before, after) = B.breakSubstring needle hs
+        in case B.null after of
+          True -> [hs]
+          False -> before : replacement : buildList (B.drop (B.length needle) after)
+  in B.concat $ buildList haystack
 
-     when shouldAsk $ mkUpdate (Map.fromList . D.dependencies $ oldDeps) name finalVsn
-  
-mkUpdate :: DepsMap -> N.Name -> V.Version -> InstallM ()
-mkUpdate oldDeps n v = case Map.lookup n oldDeps of
-  Just v' | v == v' -> return ()
-  m ->
-    do let (askMsg, noMsg) = case m of
-             Nothing -> (notInstalledAsk, didntUpdateMsg)
-             Just v'  -> (updateAsk v' v, updateNo)
-       yes <- shouldI askMsg
-       if yes
-         then tell $ update $ Map.insert n v
-         else liftIO $ putStr noMsg
+writeDependencies :: D.Deps -> IO ()
+writeDependencies deps =
+  let jsonOrig = BS.toStrict $ encodePretty deps
+      -- this ugly replace is a workaround for aeson-pretty UTF8-escaping
+      -- '<' and '>' characters, which doesn't seem to be configurable
+      json = replaceBS "\\u003e" ">" $ replaceBS "\\u003c" "<" $ jsonOrig
+  in B.writeFile EPath.dependencyFile json
 
-  where
-    shouldI msg = liftIO $ do putStr msg
-                              Cmd.yesOrNo
+-- | Write list of installed libraries to elm_dependencies/elm_libraries.json,
+--   which is used by compiler to find them
+writeLibraries :: [Lib] -> IO ()
+writeLibraries pairs =
+  do let fromPair (n, v) = L.Library n v
+         libraries = map fromPair pairs
+     createDirectoryIfMissing True EPath.dependencyDirectory
+     BS.writeFile EPath.librariesFile (encodePretty $ L.Libraries libraries)
 
-    notInstalledAsk = "Should I add this library to your " ++ depsFile ++ " file? (y/n): "
-    updateAsk old new = show old ++ " is already in " ++ depsFile ++ ".\nDo you want to replace it " ++ "with version " ++ show new ++ "? (y/n): "
-    updateNo = "Okay, but be sure to change the version number if\nyou want to use the library you just installed."
-    depsFile = EPath.dependencyFile
+install1 :: Lib -> ErrorT String IO ()
+install1 (name, version) =
+  Cmd.inDir EPath.dependencyDirectory $
+  do repo <- Cmd.inDir Path.internals $ getRepoPath name version
+     liftIO $ createDirectoryIfMissing True repo
+     Cmd.copyDir (Path.internals </> repo) (repo </> show version)
 
-      
-getRepo :: Library -> ErrorT String IO (FilePath, V.Version)
-getRepo l =
-  do let directory = N.toFilePath . Lib.lib $ l
-     exists  <- liftIO $ doesDirectoryExist directory
-     (if exists then update else clone) (Lib.lib l) directory
-     version <- getVersion directory l
+-- | Fetch (or update) a repository with given name, check out requested version,
+--   return a folder with package contents
+getRepoPath :: N.Name -> V.Version -> ErrorT String IO FilePath
+getRepoPath name version =
+  do let directory = N.toFilePath name
+     exists <- liftIO $ doesDirectoryExist directory
+     (if exists then update else clone) name directory
      Cmd.inDir directory (checkout version)
-     return (directory, version)
+     return directory
   where
     update name directory =
       do Cmd.out $ "Getting updates for repo " ++ show name
@@ -162,48 +168,6 @@ getRepo l =
          liftIO $ renameDirectory (N.project name) directory
 
     checkout version =
-        do let tag = show version
-           Cmd.out $ "Checking out version " ++ tag
-           Cmd.git [ "checkout", "tags/" ++ tag ]
-
-{-| Check to see that the requested version number exists. In the case that no
-version number is requested, use the latest tagless version number in the registry.
-If the repo is not in the registry, warn the user and check on github.
--}
-getVersion :: FilePath -> Library -> ErrorT String IO V.Version
-getVersion dir (Lib.Library name mayVsn) =
-  do versions <- getVersions name
-     case mayVsn of
-       Nothing ->
-         case filter V.tagless versions of
-           [] -> errorNoTags
-           vs -> return $ maximum vs
-       Just version
-         | version `notElem` versions -> errorNoMatch version
-         | otherwise                  -> return version
-  where
-    getVersions :: N.Name -> ErrorT String IO [V.Version]
-    getVersions name =
-      do registryVersions <- R.versions name
-         case registryVersions of
-           Just vs -> return vs
-           Nothing ->
-             do Cmd.out $ "Warning: library " ++ show name ++ " is not registered publicly. Checking github..."
-                tags <- lines <$> (Cmd.inDir dir . Cmd.git $ [ "tag", "--list" ])
-                Cmd.out $ unlines tags
-                return $ Maybe.mapMaybe V.fromString tags
-
-    errorNoTags =
-      throwError $ unlines
-        [ "did not find any properly tagged releases of this library."
-        , "Libraries have at least one tag (like 0.1.2 or 1.0) to ensure that your build"
-        , "process is stable and repeatable. These tags should follow Semantic Versioning."
-        ]
-
-    errorNoMatch version =
-      throwError $ "could not find version " ++ show version ++ " on github."
-
-didntUpdateMsg :: String
-didntUpdateMsg =
-    "Okay, but if you decide to make this library visible to the compiler later, add\n\
-    \the dependency to your " ++ EPath.dependencyFile ++ " file."
+      do let tag = show version
+         Cmd.out $ "Checking out version " ++ tag
+         Cmd.git [ "checkout", "tags/" ++ tag ]
