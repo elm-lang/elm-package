@@ -1,7 +1,6 @@
 module Get.Init where
 
 import System.IO (hFlush, stdout)
-import Control.Applicative ((<$>))
 
 import Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Elm.Internal.Name as N
