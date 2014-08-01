@@ -11,6 +11,7 @@ import System.Exit
 import System.IO
 
 import qualified Elm.Internal.Dependencies as D
+import qualified Elm.Internal.Libraries as L
 import qualified Elm.Internal.Name as N
 import qualified Elm.Internal.Paths as EPath
 import qualified Elm.Internal.Version as V
@@ -23,11 +24,12 @@ import qualified Utils.Paths as Path
 publish :: ErrorT String IO ()
 publish =
   do deps <- getDeps
+     versions <- getVersions
      let name = D.name deps
          version = D.version deps
          exposedModules = D.exposed deps
      Cmd.out $ unwords [ "Verifying", show name, show version, "..." ]
-     verifyNoDependencies (D.dependencies deps)
+     verifyNoDependencies versions
      verifyElmVersion (D.elmVersion deps)
      verifyMetadata deps
      verifyExposedModulesExist exposedModules
@@ -37,15 +39,21 @@ publish =
        R.register name version Path.combinedJson
      Cmd.out "Success!"
 
-getDeps :: ErrorT String IO D.Deps
-getDeps =
-  do either <- liftIO $ runErrorT $ D.depsAt EPath.dependencyFile
+exitAtFail :: ErrorT String IO a -> ErrorT String IO a
+exitAtFail action =
+  do either <- liftIO $ runErrorT $ action
      case either of
        Right deps -> return deps
        Left err ->
            liftIO $ do
              hPutStrLn stderr $ "\nError: " ++ err
              exitFailure
+
+getDeps :: ErrorT String IO D.Deps
+getDeps = exitAtFail $ D.depsAt EPath.dependencyFile
+
+getVersions :: ErrorT String IO [(N.Name, V.Version)]
+getVersions = exitAtFail $ L.getVersions EPath.librariesFile
 
 withCleanup :: ErrorT String IO () -> ErrorT String IO ()
 withCleanup action =
