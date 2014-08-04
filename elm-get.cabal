@@ -27,7 +27,8 @@ Library
   exposed-modules:     Utils.Commands,
                        Utils.Http,
                        Utils.Paths
-  Build-depends:       aeson,
+  Build-depends:       aeson-pretty,
+                       aeson,
                        base >=4.2 && <5,
                        binary,
                        bytestring,

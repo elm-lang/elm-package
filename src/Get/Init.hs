@@ -6,7 +6,7 @@ import Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Elm.Internal.Name as N
 import qualified Elm.Internal.Version as V
 import qualified Elm.Internal.Dependencies as D
-import qualified Elm.Internal.Paths as EPaths
+import qualified Elm.Internal.Assets as A
 import qualified Data.ByteString.Lazy as BS
 
 askForChecked :: (String -> Either String a) -> String -> IO a
@@ -63,4 +63,4 @@ readDeps = do
 initialize :: IO ()
 initialize = do
   dependencies <- readDeps
-  BS.writeFile EPaths.dependencyFile (encodePretty dependencies)
+  BS.writeFile A.dependencyFile (encodePretty dependencies)

@@ -11,7 +11,7 @@ import Network.HTTP.Client.MultipartFormData
 
 import qualified Elm.Internal.Dependencies as D
 import qualified Elm.Internal.Name as N
-import qualified Elm.Internal.Paths as Path
+import qualified Elm.Internal.Assets as A
 import qualified Elm.Internal.Version as V
 import qualified Paths_elm_get as This
 
@@ -51,5 +51,5 @@ register name version path =
       url = libraryUrl "register" vars
       vars = [ ("library", show name), ("version", show version) ]
       files = [ partFileSource "docs" path
-              , partFileSource "deps" Path.dependencyFile
+              , partFileSource "deps" A.dependencyFile
               ]
