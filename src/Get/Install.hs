@@ -13,9 +13,9 @@ import System.FilePath
 
 import qualified Elm.Internal.Constraint as C
 import qualified Elm.Internal.Dependencies as D
-import qualified Elm.Internal.Libraries as L
+import qualified Elm.Internal.SolvedDependencies as SD
 import qualified Elm.Internal.Name as N
-import qualified Elm.Internal.Paths as EPath
+import qualified Elm.Internal.Assets as A
 import qualified Elm.Internal.Version as V
 
 import qualified Get.Library as GL
@@ -26,9 +26,9 @@ import Utils.ResolveDeps
 -- | External Interface
 installAll :: ErrorT String IO ()
 installAll =
-  do deps <- D.depsAt EPath.dependencyFile
+  do deps <- D.depsAt A.dependencyFile
      libs <- solveConstraints deps
-     currVersions <- L.getVersionsSafe EPath.librariesFile
+     currVersions <- liftIO $ SD.readMaybe A.solvedDependencies
      let diffList = computeDiff currVersions libs
      let (_, libsToInstall) = unzip diffList
      confirmed <- liftIO $ offerInstallPlan diffList
@@ -93,7 +93,7 @@ install (GL.Library name v) =
                 throwError $ "Library " ++ show name ++ " wasn't found!"
               Just lib -> return $ maximum $ versions lib
        Just vsn -> return vsn
-     deps <- D.depsAt EPath.dependencyFile
+     deps <- D.depsAt A.dependencyFile
      case lookup name (D.dependencies deps) of
        Just{} -> throwError $ "You already have " ++ show name ++ " in your dependencies!"
        Nothing -> updateVersion deps name version
@@ -128,20 +128,18 @@ writeDependencies deps =
       -- this ugly replace is a workaround for aeson-pretty UTF8-escaping
       -- '<' and '>' characters, which doesn't seem to be configurable
       json = replaceBS "\\u003e" ">" $ replaceBS "\\u003c" "<" $ jsonOrig
-  in B.writeFile EPath.dependencyFile json
+  in B.writeFile A.dependencyFile json
 
 -- | Write list of installed libraries to elm_dependencies/elm_libraries.json,
 --   which is used by compiler to find them
 writeLibraries :: [Lib] -> IO ()
-writeLibraries pairs =
-  do let fromPair (n, v) = L.Library n v
-         libraries = map fromPair pairs
-     createDirectoryIfMissing True EPath.dependencyDirectory
-     BS.writeFile EPath.librariesFile (encodePretty $ L.Libraries libraries)
+writeLibraries libraries =
+  do createDirectoryIfMissing True A.packagesDirectory
+     SD.write A.solvedDependencies libraries
 
 install1 :: Lib -> ErrorT String IO ()
 install1 (name, version) =
-  Cmd.inDir EPath.dependencyDirectory $
+  Cmd.inDir A.packagesDirectory $
   do repo <- Cmd.inDir Path.internals $ getRepoPath name version
      liftIO $ createDirectoryIfMissing True repo
      Cmd.copyDir (Path.internals </> repo) (repo </> show version)

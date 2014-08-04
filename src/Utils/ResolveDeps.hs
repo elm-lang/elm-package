@@ -18,7 +18,7 @@ import qualified System.Directory as Dir
 import qualified Elm.Internal.Constraint as C
 import qualified Elm.Internal.Dependencies as D
 import qualified Elm.Internal.Name as N
-import qualified Elm.Internal.Paths as EPaths
+import qualified Elm.Internal.Assets as A
 import qualified Elm.Internal.Version as V
 import qualified Get.Registry as Reg
 import qualified Utils.Http as Http
@@ -84,7 +84,7 @@ buildMap key values = foldl' (\map v -> M.insert (key v) v map) M.empty values
 -- | Read information about libraries, probably from local cache
 readLibraries :: ErrorT String IO LibraryDB
 readLibraries =
-  let dir = EPaths.dependencyDirectory </> "_elm_get_cache"
+  let dir = A.packagesDirectory </> "_elm_get_cache"
       fileName = "libraries.json"
       downloadAction = decodeFromUrl $ Reg.domain ++ "/libraries.json"
   in fmap (buildMap name) $ cacheWrapper downloadAction dir fileName
@@ -94,9 +94,9 @@ readDependencies name version =
   let fullUrl = concat [ Reg.domain , "/catalog/"
                        , name
                        , "/", show version
-                       , "/", EPaths.dependencyFile
+                       , "/", A.dependencyFile
                        ]
-      dir = EPaths.dependencyDirectory </> "_elm_get_cache" </> name
+      dir = A.packagesDirectory </> "_elm_get_cache" </> name
       fileName = show version ++ ".json"
       downloadAction = decodeFromUrl fullUrl
   in cacheWrapper downloadAction dir fileName

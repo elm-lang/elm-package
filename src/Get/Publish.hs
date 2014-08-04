@@ -11,9 +11,9 @@ import System.Exit
 import System.IO
 
 import qualified Elm.Internal.Dependencies as D
-import qualified Elm.Internal.Libraries as L
+import qualified Elm.Internal.SolvedDependencies as SD
 import qualified Elm.Internal.Name as N
-import qualified Elm.Internal.Paths as EPath
+import qualified Elm.Internal.Assets as A
 import qualified Elm.Internal.Version as V
 
 import Get.Dependencies (defaultDeps)
@@ -50,10 +50,10 @@ exitAtFail action =
              exitFailure
 
 getDeps :: ErrorT String IO D.Deps
-getDeps = exitAtFail $ D.depsAt EPath.dependencyFile
+getDeps = exitAtFail $ D.depsAt A.dependencyFile
 
 getVersions :: ErrorT String IO [(N.Name, V.Version)]
-getVersions = exitAtFail $ L.getVersions EPath.librariesFile
+getVersions = exitAtFail $ SD.read A.solvedDependencies
 
 withCleanup :: ErrorT String IO () -> ErrorT String IO ()
 withCleanup action =
@@ -96,7 +96,7 @@ verifyMetadata :: D.Deps -> ErrorT String IO ()
 verifyMetadata deps =
     case problems of
       [] -> return ()
-      _  -> throwError $ "Some of the fields in " ++ EPath.dependencyFile ++
+      _  -> throwError $ "Some of the fields in " ++ A.dependencyFile ++
                          " have not been filled in yet:\n\n" ++ unlines problems ++
                          "\nFill these in and try to publish again!"
     where
