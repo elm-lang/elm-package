@@ -81,13 +81,24 @@ type LibraryDB = Map String LibraryInfo
 buildMap :: Ord k => (v -> k) -> [v] -> Map k v
 buildMap key values = foldl' (\map v -> M.insert (key v) v map) M.empty values
 
+-- | For every minor version remove all patch versions but last
+onlyLastPatches :: LibraryInfo -> LibraryInfo
+onlyLastPatches info = info { versions = process $ versions info }
+  where
+    process ls =
+      let insert v@(V.V parts _) = M.insertWith (++) (take 2 parts) [v]
+          allByMinor = foldr insert M.empty ls
+      in map maximum $ M.elems allByMinor
+
 -- | Read information about libraries, probably from local cache
 readLibraries :: ErrorT String IO LibraryDB
 readLibraries =
   let dir = A.packagesDirectory </> "_elm_get_cache"
       fileName = "libraries.json"
       downloadAction = decodeFromUrl $ Reg.domain ++ "/libraries.json"
-  in fmap (buildMap name) $ cacheWrapper downloadAction dir fileName
+  in
+  do ls <- cacheWrapper downloadAction dir fileName
+     return $ buildMap name $ map onlyLastPatches ls
 
 readDependencies :: String -> V.Version -> ErrorT String IO D.Deps
 readDependencies name version =
