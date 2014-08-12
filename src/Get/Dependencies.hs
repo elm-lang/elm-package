@@ -15,5 +15,6 @@ defaultDeps = Deps
     , exposed = []
     , native = []
     , elmVersion = V.elmVersion
+    , sourceDirs = []
     , dependencies = []
     }

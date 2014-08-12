@@ -58,7 +58,7 @@ readDeps = do
   license <- askForWithDefault "BSD3" "License? [default: BSD3]"
   repo <- askFor "Repository address?"
   elmVersion <- askForVersion Nothing "Elm version?"
-  return $ D.Deps (N.Name userName projectName) version summary description license repo [] [] elmVersion []
+  return $ D.Deps (N.Name userName projectName) version summary description license repo [] [] elmVersion [] []
 
 initialize :: IO ()
 initialize = do
