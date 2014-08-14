@@ -1,8 +1,5 @@
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 
 module Utils.SemverCheck where
 
@@ -287,7 +284,7 @@ buildModuleComparison (v1, v2) =
               Nothing -> return (Added, Nothing)
               Just (raw, typ2) ->
                 do compat <- runErrorT $ buildRenaming Map.empty (typ, typ2)
-                   return $ (,Just raw) $
+                   return $ (\ x -> (x, Just raw)) $
                      case compat of
                        Left _ -> Existing Incompatible
                        Right env -> Existing (compatibility env)
@@ -318,13 +315,28 @@ buildRenaming env (v1, v2) =
       let extract :: FromJSON a => Text -> RenameContext (a, a)
           extract = lift . generalExtract o1 o2
 
+          extractString :: Text -> RenameContext (String, String)
+          extractString = extract
+
+          extractValue :: Text -> RenameContext (Value, Value)
+          extractValue = extract
+
+          extractOptionalValue :: Text -> RenameContext (Maybe Value, Maybe Value)
+          extractOptionalValue = extract
+
+          extractValues :: Text -> RenameContext ([Value], [Value])
+          extractValues = extract
+
+          extractPairs :: Text -> RenameContext ([(String, Value)], [(String, Value)])
+          extractPairs = extract
+
           assert cond = when (not cond) $ throwError DifferentTypes
       in
-      do (tag1 :: String, tag2) <- extract "tag"
+      do (tag1, tag2) <- extractString "tag"
          assert (tag1 == tag2)
          case tag1 of
            "var" ->
-             do (var1, var2) <- extract "name"
+             do (var1, var2) <- extractString "name"
                 case Map.lookup var1 env of
                   Just rvar ->
                     case (rvar == var2) of
@@ -334,35 +346,35 @@ buildRenaming env (v1, v2) =
                     return (Map.insert var1 var2 env)
 
            "function" ->
-             do (ts1, ts2) <- extract "args"
-                (r1, r2) <- extract "result"
+             do (ts1, ts2) <- extractValues "args"
+                (r1, r2) <- extractValue "result"
 
                 assert (length ts1 == length ts2)
                 env1 <- foldM buildRenaming env (zip ts1 ts2)
                 buildRenaming env1 (r1, r2)
 
            "adt" ->
-             do (n1 :: String, n2) <- extract "name"
+             do (n1, n2) <- extractString "name"
                 assert (n1 == n2)
 
-                (a1, a2) <- extract "args"
+                (a1, a2) <- extractValues "args"
                 assert (length a1 == length a2)
                 foldM buildRenaming env (zip a1 a2)
 
            "alias" ->
-             do (n1 :: String, n2) <- extract "alias"
+             do (n1, n2) <- extractString "alias"
                 assert (n1 == n2)
                 return env
 
            "record" ->
-             do (ext1, ext2) <- extract "extensions"
+             do (ext1, ext2) <- extractOptionalValue "extensions"
                 env1 <-
                   case (ext1, ext2) of
                     (Nothing, Nothing) -> return env
                     (Just v1, Just v2) -> buildRenaming env (v1, v2)
                     _ -> throwError DifferentTypes
 
-                (fs1 :: [(String, Value)], fs2) <- extract "field"
+                (fs1, fs2) <- extractPairs "field"
                 assert (length fs1 == length fs2)
                 let map2 = Map.fromList fs2
                     f e (name, val) =
