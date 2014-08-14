@@ -17,7 +17,8 @@ import qualified Data.Vector as V
 -- DATATYPE DEFINITIONS
 
 {-| A type for all possible reasons why one version isn't an
-immediate successor to another version -}
+immediate successor to another version
+-}
 data VersionError
   = NotSuccessor Int Int
   | NotZero Int
@@ -26,7 +27,8 @@ data VersionError
   deriving (Show)
 
 {-| Datatype of all possible parts of version number
-according to semantic versioning -}
+according to semantic versioning
+-}
 data IndexPos
   = Major
   | Minor
@@ -50,7 +52,8 @@ data NonCorrespondence
 
 {-| There are special type variables in Elm, like "comparable''", which could
 be instantiated only to a particular concrete types. This datatype enumerates
-all type variable sorts -}
+all type variable sorts
+-}
 data VariableType
   = Comparable
   | Appendable
@@ -59,14 +62,15 @@ data VariableType
   deriving (Eq, Show)
 
 {-| An information about how particular definition in module changed
-with respect to the previous version of the same module -}
+with respect to the previous version of the same module
+-}
 data BindingState
   = Added
   | Existing Compatibility
   | Removed
   deriving (Eq, Show, Ord)
 
-{-| All information about particular bniding in a module -}
+-- | All information about particular binding in a module
 data ComparisonEntry = ComparisonEntry
     { name :: String
     , raw :: String
@@ -94,7 +98,8 @@ showIntAsIndex x =
 {-| Check two version numbers to see whether one of them follows another.
 If that's the case, return an index in version number when increment
 takes place. If that's not the case, return an error with position
-where that error happened -}
+where that error happened
+-}
 immediateNext :: [Int] -> [Int] -> Either (Int, VersionError) IndexPos
 immediateNext prev next = check 0 $ zip (prev ++ repeat 0) next
   where check i ls =
@@ -147,7 +152,8 @@ instance Error NonCorrespondence where
   strMsg = StringError
 
 {-| Check whether second argument consists of first argument and
-zero or more ticks -}
+zero or more ticks
+-}
 isSpecial :: String -> String -> Bool
 isSpecial prefix str =
   let n = length prefix
@@ -177,7 +183,8 @@ showEntry (ComparisonEntry _ r mr2 s) =
     _ -> ["    " ++ r]
 
 {-| Add an (indented) top line for non-empty list of strings.
-Leave empty list of strings as it is -}
+Leave empty list of strings as it is
+-}
 addPrefix :: Int -> String -> [String] -> [String]
 addPrefix len pref ls =
   case ls of
@@ -307,7 +314,8 @@ buildModuleComparison (v1, v2) =
 {-| Function to build a renaming of variables application of which
 transforms first type to another. Type signature represented as JSON values,
 as serialized by Elm.Internal.Documentation in "Elm" library.
-First value is of newer module, second is of older. -}
+First value is of newer module, second is of older.
+-}
 buildRenaming :: VarRenaming -> (Value, Value) -> RenameContext VarRenaming
 buildRenaming env (v1, v2) =
   case (v1, v2) of
