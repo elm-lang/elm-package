@@ -175,7 +175,8 @@ showEntry (ComparisonEntry _ r mr2 s) =
     (Existing _, Just r2) ->
       [ "  - " ++ r2
       , "  + " ++ r
-      , ""]
+      , ""
+      ]
     _ -> ["    " ++ r]
 
 {-| Add an (indented) top line for non-empty list of strings.
@@ -192,7 +193,8 @@ renderEntries entries =
   concat [ addPrefix 2 "Added:" $ getDocs Added
          , addPrefix 2 "Changed:" $
            getManyDocs [Existing Compatible, Existing Incompatible]
-         , addPrefix 2 "Removed:" $ getDocs Removed ]
+         , addPrefix 2 "Removed:" $ getDocs Removed
+         ]
   where
     sortedEntries = foldr insertItem Map.empty entries
 
