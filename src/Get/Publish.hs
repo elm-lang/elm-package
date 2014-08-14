@@ -20,6 +20,7 @@ import Get.Dependencies (defaultDeps)
 import qualified Get.Registry as R
 import qualified Utils.Commands as Cmd
 import qualified Utils.Paths as Path
+import qualified Utils.SemverCheck as Semver
 
 publish :: ErrorT String IO ()
 publish =
@@ -110,6 +111,44 @@ verifyMetadata deps =
           if what deps == what defaultDeps
             then Just msg
             else Nothing
+
+{-| Check whether new version number will be valid for current publish.
+More specifically, it checks how it compares to largest existing version
+number - whether new version is a (syntactically) valid successor according to
+semantic versioning specification -}
+checkSuccessorVersion pv@(V.V prev _) cv@(V.V curr _) =
+  case Semver.immediateNext prev curr of
+    Right pos -> return pos
+    Left (pos, err) ->
+      throwError $ case err of
+        Semver.TooLongVersion -> tooLongMessage
+        Semver.NotZero nz -> foundNonZero pv cv pos nz
+        Semver.NotSuccessor v1 v2 -> notSuccessor pos v1 v2
+        Semver.SameVersions -> alreadyReleased
+
+  where
+    tooLongMessage =
+      "You should use no more than three indices in your version number"
+
+    foundNonZero pv cv pos nz =
+      concat
+      [ "Increasing version from ", show pv, " to ", show cv, " is incorrect!\n"
+      , "Only zeros can follow increased part of version number\n"
+      , "Expected zero at ", Semver.showIntAsIndex pos, " got ", show nz
+      ]
+
+    notSuccessor pos v1 v2 =
+      concat
+      [ "Version at ", show pos, " changed from ", show v1
+      , " to ", show v2, ", which is incorrect - you must "
+      , "increase version number at most by one"
+      ]
+
+    alreadyReleased =
+      unlines
+      [ "This version has already been released!"
+      , "Increase patch number from latest version to release in current minor branch"
+      ]
 
 verifyVersion :: N.Name -> V.Version -> ErrorT String IO ()
 verifyVersion name version =
