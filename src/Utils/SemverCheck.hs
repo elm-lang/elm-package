@@ -173,14 +173,14 @@ type RenameContext = ErrorT NonCorrespondence Parser
 
 -- | Pretty-printing function for module comparison entries
 showEntry :: ComparisonEntry -> [String]
-showEntry (ComparisonEntry _ r mr2 s) =
-  case (s, mr2) of
-    (Existing _, Just r2) ->
-      [ "  - " ++ r2
-      , "  + " ++ r
+showEntry (ComparisonEntry _ raw1 raw2 s) =
+  case (s, raw2) of
+    (Existing _, Just doc2) ->
+      [ "  - " ++ doc2
+      , "  + " ++ raw1
       , ""
       ]
-    _ -> ["    " ++ r]
+    _ -> ["    " ++ raw1]
 
 {-| Add an (indented) top line for non-empty list of strings.
 Leave empty list of strings as it is
