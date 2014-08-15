@@ -208,10 +208,3 @@ solveConstraints deps =
        True ->
          let result = M.delete (D.name deps) $ ssPinnedVersions state
          in return (M.toList result)
-
-getDependenciesPure :: Map (String, V.Version) D.Deps -> String -> V.Version
-                    -> ErrorT String IO D.Deps
-getDependenciesPure env name version =
-  case M.lookup (name, version) env of
-    Just result -> return result
-    Nothing -> throwError $ "Haven't found dependencies for " ++ name ++ " (" ++ show version ++ ")"
