@@ -117,8 +117,20 @@ data SolverState = SolverState
     , ssPinnedVersions :: Map N.Name V.Version
     }
 
+{-| Configuration of solver, which stays constant for every launch.
+
+Constists of:
+* information about all available libraries and their versions
+* function to read dependencies and their constraints for particular
+  version of particular library
+-}
+data SolverEnv = SolverEnv
+    { libraryDb :: LibraryDB
+    , readDepsFunction :: String -> V.Version -> ErrorT String IO D.Deps
+    }
+
 type SolverContext =
-  ReaderT LibraryDB    -- information about libraries, stays constant
+  ReaderT SolverEnv    -- information about libraries, deps-fetching function
   (StateT SolverState  -- solver current state, also RAM-cached dependencies info
    (ErrorT String IO)) -- underlying effects for IO and errors
 
@@ -152,7 +164,8 @@ getDependencies name version =
      case M.lookup (name, version) libsMap of
        Just deps -> return deps
        Nothing ->
-         do deps <- lift . lift $ readDependencies (resolvableName name) version
+         do readDeps <- asks readDepsFunction
+            deps <- lift . lift $ readDeps (resolvableName name) version
             modify (\s -> s { ssLibrariesMap = M.insert (name, version) deps libsMap })
             return deps
 
@@ -167,7 +180,7 @@ solveConstraintsByName name constr =
      case M.lookup name pinnedVersions of
        Just currV -> return (C.satisfyConstraint constr currV)
        Nothing ->
-         do maybeVersions <- asks (fmap versions . M.lookup (show name))
+         do maybeVersions <- asks (fmap versions . M.lookup (show name) . libraryDb)
             let msg = "Haven't found versions of " ++ show name ++ ", halting"
             versions <- tryFromJust msg maybeVersions
             let restore = restorePinned pinnedVersions
@@ -186,7 +199,8 @@ solveConstraintsByDeps deps =
 solveConstraints :: D.Deps -> ErrorT String IO [(N.Name, V.Version)]
 solveConstraints deps =
   do libraryDb <- readLibraries
-     let unreader = runReaderT (solveConstraintsByDeps deps) libraryDb
+     let unreader = runReaderT (solveConstraintsByDeps deps) $
+                    SolverEnv libraryDb readDependencies
          initialState = SolverState M.empty M.empty
      (solved, state) <- runStateT unreader initialState
      case solved of
@@ -194,3 +208,10 @@ solveConstraints deps =
        True ->
          let result = M.delete (D.name deps) $ ssPinnedVersions state
          in return (M.toList result)
+
+getDependenciesPure :: Map (String, V.Version) D.Deps -> String -> V.Version
+                    -> ErrorT String IO D.Deps
+getDependenciesPure env name version =
+  case M.lookup (name, version) env of
+    Just result -> return result
+    Nothing -> throwError $ "Haven't found dependencies for " ++ name ++ " (" ++ show version ++ ")"
