@@ -6,6 +6,7 @@ import Control.Monad.Error
 import Control.Monad.State
 import Control.Monad.Reader
 import Data.Aeson (decode, FromJSON, ToJSON, encode)
+import Data.Functor ((<$>))
 import Data.List (foldl')
 import Data.Map (Map)
 import GHC.Generics (Generic)
@@ -77,6 +78,7 @@ instance FromJSON LibraryInfo
 instance ToJSON LibraryInfo
 
 type LibraryDB = Map String LibraryInfo
+type Constraints = [(N.Name, C.Constraint)]
 
 buildMap :: Ord k => (v -> k) -> [v] -> Map k v
 buildMap key values = foldl' (\map v -> M.insert (key v) v map) M.empty values
@@ -100,7 +102,7 @@ readLibraries =
   do ls <- cacheWrapper downloadAction dir fileName
      return $ buildMap name $ map onlyLastPatches ls
 
-readDependencies :: String -> V.Version -> ErrorT String IO D.Deps
+readDependencies :: String -> V.Version -> ErrorT String IO Constraints
 readDependencies name version =
   let fullUrl = concat [ Reg.domain , "/catalog/"
                        , name
@@ -110,10 +112,10 @@ readDependencies name version =
       dir = A.packagesDirectory </> "_elm_get_cache" </> name
       fileName = show version ++ ".json"
       downloadAction = decodeFromUrl fullUrl
-  in cacheWrapper downloadAction dir fileName
+  in D.dependencies <$> cacheWrapper downloadAction dir fileName
 
 data SolverState = SolverState
-    { ssLibrariesMap :: Map (N.Name, V.Version) D.Deps
+    { ssLibrariesMap :: Map (N.Name, V.Version) Constraints
     , ssPinnedVersions :: Map N.Name V.Version
     }
 
@@ -126,7 +128,7 @@ Constists of:
 -}
 data SolverEnv = SolverEnv
     { libraryDb :: LibraryDB
-    , readDepsFunction :: String -> V.Version -> ErrorT String IO D.Deps
+    , readDepsFunction :: String -> V.Version -> ErrorT String IO Constraints
     }
 
 type SolverContext =
@@ -158,8 +160,8 @@ replace c1 c2 = map (\x -> if x == c1 then c2 else x)
 resolvableName :: N.Name -> String
 resolvableName = replace '/' '-' . show
 
-getDependencies :: N.Name -> V.Version -> SolverContext D.Deps
-getDependencies name version =
+getConstraints :: N.Name -> V.Version -> SolverContext Constraints
+getConstraints name version =
   do libsMap <- gets ssLibrariesMap
      case M.lookup (name, version) libsMap of
        Just deps -> return deps
@@ -185,21 +187,24 @@ solveConstraintsByName name constr =
             versions <- tryFromJust msg maybeVersions
             let restore = restorePinned pinnedVersions
                 tryOne version =
-                  do deps <- getDependencies name version
-                     solveConstraintsByDeps deps
+                  do deps <- getConstraints name version
+                     solveConstraintsByDeps name version deps
             tryAny restore $ map tryOne $ filter (C.satisfyConstraint constr) versions
 
-solveConstraintsByDeps :: D.Deps -> SolverContext Bool
-solveConstraintsByDeps deps =
-  do pinned <- fmap (M.insert (D.name deps) (D.version deps)) $ gets ssPinnedVersions
+solveConstraintsByDeps :: N.Name -> V.Version -> Constraints -> SolverContext Bool
+solveConstraintsByDeps name version constrs =
+  do pinned <- fmap (M.insert name version) $ gets ssPinnedVersions
      let tryOne (name, constr) = solveConstraintsByName name constr
      modify (restorePinned pinned)
-     tryAll $ map tryOne $ D.dependencies deps
+     tryAll $ map tryOne constrs
 
 solveConstraints :: D.Deps -> ErrorT String IO [(N.Name, V.Version)]
 solveConstraints deps =
   do libraryDb <- readLibraries
-     let unreader = runReaderT (solveConstraintsByDeps deps) $
+     let name = D.name deps
+         version = D.version deps
+         constraints = D.dependencies deps
+         unreader = runReaderT (solveConstraintsByDeps name version constraints) $
                     SolverEnv libraryDb readDependencies
          initialState = SolverState M.empty M.empty
      (solved, state) <- runStateT unreader initialState
