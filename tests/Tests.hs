@@ -60,15 +60,12 @@ readConstraints db name version =
 -- | Run dependency solver using stub data
 solveFake :: FakeDB -> N.Name -> V.Version -> ErrorT String IO [(N.Name, V.Version)]
 solveFake db name version =
-  do constraints <- readConstraints db name version
-     let libraryDb = fakeLibraryDb db
-         unreader = runReaderT (solveConstraintsByDeps name version constraints) $
+  do let libraryDb = fakeLibraryDb db
+         unreader = runReaderT (solveForVersion name version) $
                     SolverEnv libraryDb (readConstraints db)
-         initialState = SolverState Map.empty Map.empty
-     (solved, state) <- runStateT unreader initialState
-     case solved of
-       False -> throwError "Failed to satisfy all the constraints :-("
-       True -> return $ Map.toList $ ssPinnedVersions state
+         initialState = SolverState Map.empty
+     (solved, _) <- runStateT unreader initialState
+     return $ Map.toList solved
 
 {-| Check whether given solution is really a solution. Supposed to use as
 a sanity check for existing tests and solver solutions
