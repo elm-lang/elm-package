@@ -33,9 +33,9 @@ db1 :: FakeDB
 db1 = Map.fromList
   [ (n "base", [(v "0.1", []), (v "0.2", []), (v "1.0", [])])
   , (n "transformers", [(v "1.0", [(n "base", c ">=1.0 <2.0")])])
-  , (n "mtl", [(v "1.0", [(n "base", c ">=0.2 <1.0")]),
-               (v "2.0", [(n "base", c ">=0.2 <2.0"),
-                          (n "transformers", c ">=1.0 <2.0")])])
+  , (n "mtl", [ (v "1.0", [(n "base", c ">=0.2 <1.0")])
+              , (v "2.0", [ (n "base", c ">=0.2 <2.0")
+                          , (n "transformers", c ">=1.0 <2.0")])])
   ]
 
 {-| Extract from stub data list of libraries and their version in
