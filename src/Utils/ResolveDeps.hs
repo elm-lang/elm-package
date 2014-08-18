@@ -154,17 +154,17 @@ addConstraints constrained constraints = foldM addConstraint (Just constrained) 
       case curr of
         Nothing -> return Nothing
         Just values ->
-          case M.lookup name values of
-            Just versions ->
-              let newVersions = filter (C.satisfyConstraint constraint) versions
-              in if null newVersions
-                 then return Nothing
-                 else return $ Just $ M.insert name newVersions values
-            Nothing ->
-              do lib <- asks libraryDb
-                 case (filter $ C.satisfyConstraint constraint) . versions <$> M.lookup (N.toString name) lib of
-                   Just (versions@(_ : _)) -> return $ Just $ M.insert name versions values
-                   _ -> return Nothing
+          do versions <-
+               case M.lookup name values of
+                 Just vs -> return vs
+                 Nothing ->
+                   do libs <- asks libraryDb
+                      case versions <$> M.lookup (N.toString name) libs of
+                        Nothing -> throwError $ "Versions of library " ++ N.toString name ++ " weren't found"
+                        Just vs -> return vs
+             case filter (C.satisfyConstraint constraint) versions of
+               [] -> return Nothing
+               ls -> return $ Just $ M.insert name ls values
 
 solve :: Map N.Name V.Version -> Map N.Name [V.Version] -> SolverContext (Maybe (Map N.Name V.Version))
 solve fixed constrained =
