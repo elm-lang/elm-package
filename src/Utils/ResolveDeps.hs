@@ -146,10 +146,9 @@ getConstraints name version =
             modify (\s -> s { ssLibrariesMap = M.insert (name, version) deps libsMap })
             return deps
 
-addConstraints :: Map N.Name [V.Version] -> [(N.Name, C.Constraint)] -> SolverContext (Maybe (Map N.Name [V.Version]))
+addConstraints :: Map N.Name [V.Version] -> Constraints -> SolverContext (Maybe (Map N.Name [V.Version]))
 addConstraints constrained constraints = foldM addConstraint (Just constrained) constraints
   where
-    addConstraint :: Maybe (Map N.Name [V.Version]) -> (N.Name, C.Constraint) -> SolverContext (Maybe (Map N.Name [V.Version]))
     addConstraint curr (name, constraint) =
       case curr of
         Nothing -> return Nothing
@@ -160,11 +159,13 @@ addConstraints constrained constraints = foldM addConstraint (Just constrained) 
                  Nothing ->
                    do libs <- asks libraryDb
                       case versions <$> M.lookup (N.toString name) libs of
-                        Nothing -> throwError $ "Versions of library " ++ N.toString name ++ " weren't found"
+                        Nothing -> throwError (notFound name)
                         Just vs -> return vs
              case filter (C.satisfyConstraint constraint) versions of
                [] -> return Nothing
                ls -> return $ Just $ M.insert name ls values
+
+    notFound name = "Versions of library " ++ N.toString name ++ " weren't found"
 
 solve :: Map N.Name V.Version -> Map N.Name [V.Version] -> SolverContext (Maybe (Map N.Name V.Version))
 solve fixed constrained =
