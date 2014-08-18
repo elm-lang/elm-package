@@ -102,14 +102,14 @@ readLibraries =
   do ls <- cacheWrapper downloadAction dir fileName
      return $ buildMap name $ map onlyLastPatches ls
 
-readDependencies :: String -> V.Version -> ErrorT String IO Constraints
+readDependencies :: N.Name -> V.Version -> ErrorT String IO Constraints
 readDependencies name version =
   let fullUrl = concat [ Reg.domain , "/catalog/"
-                       , name
+                       , N.toFilePath name
                        , "/", show version
                        , "/", A.dependencyFile
                        ]
-      dir = A.packagesDirectory </> "_elm_get_cache" </> name
+      dir = A.packagesDirectory </> "_elm_get_cache" </> N.toFilePath name
       fileName = show version ++ ".json"
       downloadAction = decodeFromUrl fullUrl
   in D.dependencies <$> cacheWrapper downloadAction dir fileName
@@ -128,7 +128,7 @@ Constists of:
 -}
 data SolverEnv = SolverEnv
     { libraryDb :: LibraryDB
-    , readDepsFunction :: String -> V.Version -> ErrorT String IO Constraints
+    , readDepsFunction :: N.Name -> V.Version -> ErrorT String IO Constraints
     }
 
 type SolverContext =
@@ -153,13 +153,6 @@ tryAll solutions =
 restorePinned :: Map N.Name V.Version -> (SolverState -> SolverState)
 restorePinned pinned s = s { ssPinnedVersions = pinned }
 
--- | Change all occurrences of first element to second in a list
-replace :: Eq a => a -> a -> [a] -> [a]
-replace c1 c2 = map (\x -> if x == c1 then c2 else x)
-
-resolvableName :: N.Name -> String
-resolvableName = replace '/' '-' . show
-
 getConstraints :: N.Name -> V.Version -> SolverContext Constraints
 getConstraints name version =
   do libsMap <- gets ssLibrariesMap
@@ -167,7 +160,7 @@ getConstraints name version =
        Just deps -> return deps
        Nothing ->
          do readDeps <- asks readDepsFunction
-            deps <- lift . lift $ readDeps (resolvableName name) version
+            deps <- lift . lift $ readDeps name version
             modify (\s -> s { ssLibrariesMap = M.insert (name, version) deps libsMap })
             return deps
 

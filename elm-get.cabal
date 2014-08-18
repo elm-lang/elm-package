@@ -26,7 +26,10 @@ Library
   Hs-Source-Dirs:      src
   exposed-modules:     Utils.Commands,
                        Utils.Http,
-                       Utils.Paths
+                       Utils.Paths,
+                       Utils.ResolveDeps,
+                       Get.Registry,
+                       Paths_elm_get
   Build-depends:       aeson-pretty,
                        aeson,
                        base >=4.2 && <5,
@@ -62,7 +65,8 @@ Executable elm-get
                        Get.Registry,
                        Utils.Commands,
                        Utils.Http,
-                       Utils.Paths
+                       Utils.Paths,
+                       Utils.ResolveDeps
   Build-depends:       aeson,
                        aeson-pretty,
                        ansi-wl-pprint,
@@ -86,3 +90,14 @@ Executable elm-get
                        resourcet,
                        text,
                        vector
+
+Test-suite unit-test
+  Type:                exitcode-stdio-1.0
+  Hs-Source-Dirs:      tests
+  Main-is:             Tests.hs
+  Build-depends:       base,
+                       containers,
+                       Elm,
+                       elm-get,
+                       mtl,
+                       aeson
