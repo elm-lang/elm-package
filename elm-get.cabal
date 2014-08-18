@@ -93,11 +93,28 @@ Executable elm-get
 
 Test-suite unit-test
   Type:                exitcode-stdio-1.0
-  Hs-Source-Dirs:      tests
+  Hs-Source-Dirs:      tests, src
   Main-is:             Tests.hs
-  Build-depends:       base,
+  Build-depends:       aeson,
+                       aeson-pretty,
+                       ansi-wl-pprint,
+                       base >=4.2 && <5,
+                       binary,
+                       bytestring,
                        containers,
-                       Elm,
-                       elm-get,
+                       directory,
+                       Elm >= 0.12.2,
+                       filepath,
+                       HTTP,
+                       http-client >= 0.3,
+                       http-client-tls,
+                       http-types,
+                       json,
                        mtl,
-                       aeson
+                       network,
+                       optparse-applicative,
+                       pretty,
+                       process,
+                       resourcet,
+                       text,
+                       vector

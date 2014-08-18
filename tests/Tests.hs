@@ -3,7 +3,7 @@ module Main where
 import Control.Monad.Error
 import Control.Monad.Reader
 import Control.Monad.State
-import Utils.ResolveDeps
+import qualified Utils.ResolveDeps as Deps
 import Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Elm.Internal.Constraint as C
@@ -13,7 +13,7 @@ import qualified Elm.Internal.Name as N
 
 -- SETUP
 
-type FakeDB = Map N.Name [(V.Version, Constraints)]
+type FakeDB = Map N.Name [(V.Version, Deps.Constraints)]
 
 db1 :: FakeDB
 db1 = Map.fromList [ base, transformers, mtl ]
@@ -56,7 +56,7 @@ isValidSolution db solution =
   where
     isConsistent (name, version) =
       maybe False id $ do
-        versions <- Map.lookup name db of
+        versions <- Map.lookup name db
         constraints <- lookup version versions
         return (all isSatisfied constraints)
 
@@ -73,16 +73,16 @@ solveFake :: FakeDB -> N.Name -> V.Version -> ErrorT String IO [(N.Name, V.Versi
 solveFake db name version =
   do constraints <- readConstraints db name version
      let libraryDb = toLibraryDb db
-         unreader = runReaderT (solveConstraintsByDeps name version constraints) $
-                    SolverEnv libraryDb (readConstraints db)
-         initialState = SolverState Map.empty Map.empty
+         unreader = runReaderT (Deps.solveConstraintsByDeps name version constraints) $
+                    Deps.SolverEnv libraryDb (readConstraints db)
+         initialState = Deps.SolverState Map.empty Map.empty
      (solved, state) <- runStateT unreader initialState
      case solved of
        False -> throwError "Failed to satisfy all the constraints :-("
-       True -> return $ Map.toList $ ssPinnedVersions state
+       True -> return $ Map.toList $ Deps.ssPinnedVersions state
 
 -- | A function passed to solver which "reads" constraints by name and version
-readConstraints :: FakeDB -> N.Name -> V.Version -> ErrorT String IO Constraints
+readConstraints :: FakeDB -> N.Name -> V.Version -> ErrorT String IO Deps.Constraints
 readConstraints db name version =
     maybe notFound return $ do
       versions <- Map.lookup name db
@@ -94,13 +94,13 @@ readConstraints db name version =
 {-| Extract from stub data list of libraries and their version in
 format solver expects
 -}
-toLibraryDb :: FakeDB -> LibraryDB
+toLibraryDb :: FakeDB -> Deps.LibraryDB
 toLibraryDb fakeDb =
     Map.fromList (map toLibraryEntry (Map.toList fakeDb))
   where
     toLibraryEntry (name, details) =
       ( N.toString name
-      , LibraryInfo (N.toString name) "" (map fst details)
+      , Deps.LibraryInfo (N.toString name) "" (map fst details)
       )
 
 
