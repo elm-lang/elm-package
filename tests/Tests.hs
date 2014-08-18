@@ -31,14 +31,20 @@ db1 = Map.fromList [ base, transformers, mtl ]
                             ])
                 ])
 
-test1 = fromError $ solveFake db1 (n "mtl") (v "1.0")
-test2 = fromError $ solveFake db1 (n "mtl") (v "2.0")
-test2sol = [(n "base", v "1.0"), (n "transformers", v "1.0"), (n "mtl", v "2.0")]
+expectSolution :: FakeDB -> N.Name -> V.Version -> IO ()
+expectSolution db name version =
+  do solution <- fromError $ solveFake db name version
+     if isValidSolution db solution
+       then print solution
+       else fail $ "Invalid solution for " ++ N.toString name
+
+test1 = expectSolution db1 (n "mtl") (v "1.0")
+test2 = expectSolution db1 (n "mtl") (v "2.0")
 
 main :: IO ()
 main =
-  do test1 >>= print
-     test2 >>= print
+  do test1
+     test2
 
 fromError :: ErrorT String IO a -> IO a
 fromError action =
