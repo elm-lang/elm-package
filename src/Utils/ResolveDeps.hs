@@ -150,7 +150,8 @@ type PinnedLibs = Map N.Name V.Version
 type ConstrainedLibs = Map N.Name [V.Version]
 
 addConstraints :: Monad m => ConstrainedLibs -> Constraints -> SolverContext m (Maybe ConstrainedLibs)
-addConstraints constrained constraints = foldM addConstraint (Just constrained) constraints
+addConstraints constrained constraints =
+    foldM addConstraint (Just constrained) constraints
   where
     addConstraint curr (name, constraint) =
       case curr of
