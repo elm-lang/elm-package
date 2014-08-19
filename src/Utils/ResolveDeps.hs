@@ -181,12 +181,14 @@ solve fixed constrained =
         tryEvery currSolution version =
           case currSolution of
             Just _ -> return currSolution
-            Nothing ->
-              do constraints <- getConstraints name version
-                 newConstrained <- addConstraints rest constraints
-                 case newConstrained of
-                   Nothing -> return Nothing
-                   Just value -> solve (M.insert name version fixed) value
+            Nothing -> tryNext version
+
+        tryNext version =
+          do constraints <- getConstraints name version
+             newConstrained <- addConstraints rest constraints
+             case newConstrained of
+               Nothing -> return Nothing
+               Just value -> solve (M.insert name version fixed) value
 
 solveForVersion :: N.Name -> V.Version -> SolverContext (Map N.Name V.Version)
 solveForVersion name version =
