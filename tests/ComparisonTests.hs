@@ -19,10 +19,18 @@ import qualified Utils.SemverCheck as SC
 type_const1 = function [var "a", var "b"] (var "a")
 type_const2 = function [var "b", var "a"] (var "b")
 
+const_renaming = Map.fromList [("a", "b"), ("b", "a")]
+
 type_int = adt "Int" []
 type_string = adt "String" []
 
-const_renaming = Map.fromList [("a", "b"), ("b", "a")]
+type_list ty_elem = adt "List" [ty_elem]
+
+type_map1 = function [fun1 (var "a") (var "b"), type_list (var "a")] (type_list (var "b"))
+type_map2 = function [fun1 (var "b") (var "c"), type_list (var "b")] (type_list (var "c"))
+type_map_wrong = function [fun1 (var "b") (var "c"), type_list (var "c")] (type_list (var "c"))
+
+map_renaming = Map.fromList [("a", "b"), ("b", "c")]
 
 yieldsRenaming :: Value -> Value -> Map String String -> Assertion
 yieldsRenaming v1 v2 renaming =
@@ -54,6 +62,9 @@ function args result =
          , "result" .= result
          ]
 
+fun1 :: Value -> Value -> Value
+fun1 arg result = function [arg] result
+
 adt :: Text -> [Value] -> Value
 adt name args =
   object [ "tag" .= ("adt" :: Text)
@@ -67,4 +78,6 @@ comparisonTests =
   [ TH.testCase "a -> b -> a == b -> a -> b" (yieldsRenaming type_const1 type_const2 const_renaming)
   , TH.testCase "Int /= String" (nonCompatible type_int type_string)
   , TH.testCase "String /= Int" (nonCompatible type_string type_int)
+  , TH.testCase "Renaming typevars in (a -> b) -> [a] -> [b]" (yieldsRenaming type_map1 type_map2 map_renaming)
+  , TH.testCase "Map type /= wrong map type" (nonCompatible type_map1 type_map_wrong)
   ]
