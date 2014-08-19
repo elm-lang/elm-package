@@ -116,7 +116,6 @@ readDependencies name version =
 
 data SolverState = SolverState
     { ssLibrariesMap :: Map (N.Name, V.Version) Constraints
-    , ssPinnedVersions :: Map N.Name V.Version
     }
 
 {-| Configuration of solver, which stays constant for every launch.
@@ -136,23 +135,6 @@ type SolverContext =
   (StateT SolverState  -- solver current state, also RAM-cached dependencies info
    (ErrorT String IO)) -- underlying effects for IO and errors
 
-tryAny :: MonadState s m => (s -> s) -> [m Bool] -> m Bool
-tryAny restore solutions =
-  foldM processOne False solutions
-    where processOne False action =
-            do modify restore
-               action
-          processOne True _ = return True
-
-tryAll :: MonadState s m => [m Bool] -> m Bool
-tryAll solutions =
-  foldM processOne True solutions
-    where processOne True action = action
-          processOne False _ = return False
-
-restorePinned :: Map N.Name V.Version -> (SolverState -> SolverState)
-restorePinned pinned s = s { ssPinnedVersions = pinned }
-
 getConstraints :: N.Name -> V.Version -> SolverContext Constraints
 getConstraints name version =
   do libsMap <- gets ssLibrariesMap
@@ -164,45 +146,65 @@ getConstraints name version =
             modify (\s -> s { ssLibrariesMap = M.insert (name, version) deps libsMap })
             return deps
 
-tryFromJust :: MonadError String m => String -> Maybe a -> m a
-tryFromJust msg value = case value of
-  Just x -> return x
-  Nothing -> throwError msg
+type PinnedLibs = Map N.Name V.Version
+type ConstrainedLibs = Map N.Name [V.Version]
 
-solveConstraintsByName :: N.Name -> C.Constraint -> SolverContext Bool
-solveConstraintsByName name constr =
-  do pinnedVersions <- gets ssPinnedVersions
-     case M.lookup name pinnedVersions of
-       Just currV -> return (C.satisfyConstraint constr currV)
-       Nothing ->
-         do maybeVersions <- asks (fmap versions . M.lookup (show name) . libraryDb)
-            let msg = "Haven't found versions of " ++ show name ++ ", halting"
-            versions <- tryFromJust msg maybeVersions
-            let restore = restorePinned pinnedVersions
-                tryOne version =
-                  do deps <- getConstraints name version
-                     solveConstraintsByDeps name version deps
-            tryAny restore $ map tryOne $ filter (C.satisfyConstraint constr) versions
+addConstraints :: ConstrainedLibs -> Constraints -> SolverContext (Maybe ConstrainedLibs)
+addConstraints constrained constraints = foldM addConstraint (Just constrained) constraints
+  where
+    addConstraint curr (name, constraint) =
+      case curr of
+        Nothing -> return Nothing
+        Just values ->
+          do versions <- getValidVersions name values
+             case filter (C.satisfyConstraint constraint) versions of
+               [] -> return Nothing
+               ls -> return $ Just $ M.insert name ls values
 
-solveConstraintsByDeps :: N.Name -> V.Version -> Constraints -> SolverContext Bool
-solveConstraintsByDeps name version constrs =
-  do pinned <- fmap (M.insert name version) $ gets ssPinnedVersions
-     let tryOne (name, constr) = solveConstraintsByName name constr
-     modify (restorePinned pinned)
-     tryAll $ map tryOne constrs
+    getValidVersions name constrained =
+      case M.lookup name constrained of
+        Just vs -> return vs
+        Nothing ->
+          do libs <- asks libraryDb
+             case versions <$> M.lookup (N.toString name) libs of
+               Nothing -> throwError (notFound name)
+               Just vs -> return vs
+
+    notFound name = "Versions of library " ++ N.toString name ++ " weren't found"
+
+solve :: PinnedLibs -> ConstrainedLibs -> SolverContext (Maybe PinnedLibs)
+solve fixed constrained =
+  case M.minViewWithKey constrained of
+    Nothing -> return $ Just fixed
+    Just ((name, versions), rest) -> foldM tryEvery Nothing versions
+      where
+        tryEvery currSolution version =
+          case currSolution of
+            Just _ -> return currSolution
+            Nothing -> tryNext version
+
+        tryNext version =
+          do constraints <- getConstraints name version
+             newConstrained <- addConstraints rest constraints
+             case newConstrained of
+               Nothing -> return Nothing
+               Just value -> solve (M.insert name version fixed) value
+
+solveForVersion :: N.Name -> V.Version -> SolverContext (Map N.Name V.Version)
+solveForVersion name version =
+  do solution <- solve M.empty (M.singleton name [version])
+     case solution of
+       Just value -> return value
+       Nothing -> throwError "Solving dependencies failed"
 
 solveConstraints :: D.Deps -> ErrorT String IO [(N.Name, V.Version)]
 solveConstraints deps =
   do libraryDb <- readLibraries
      let name = D.name deps
          version = D.version deps
-         constraints = D.dependencies deps
-         unreader = runReaderT (solveConstraintsByDeps name version constraints) $
+         unreader = runReaderT (solveForVersion name version) $
                     SolverEnv libraryDb readDependencies
-         initialState = SolverState M.empty M.empty
-     (solved, state) <- runStateT unreader initialState
-     case solved of
-       False -> throwError "Failed to satisfy all the constraints :-("
-       True ->
-         let result = M.delete (D.name deps) $ ssPinnedVersions state
-         in return (M.toList result)
+         initialState = SolverState M.empty
+     (solved, _) <- runStateT unreader initialState
+     let result = M.delete (D.name deps) solved
+     return (M.toList result)

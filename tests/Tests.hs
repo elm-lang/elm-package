@@ -77,15 +77,12 @@ isValidSolution db solution =
 -- | Run dependency solver using stub data
 solveFake :: FakeDB -> N.Name -> V.Version -> ErrorT String IO [(N.Name, V.Version)]
 solveFake db name version =
-  do constraints <- readConstraints db name version
-     let libraryDb = toLibraryDb db
-         unreader = runReaderT (Deps.solveConstraintsByDeps name version constraints) $
+  do let libraryDb = toLibraryDb db
+         unreader = runReaderT (Deps.solveForVersion name version) $
                     Deps.SolverEnv libraryDb (readConstraints db)
-         initialState = Deps.SolverState Map.empty Map.empty
-     (solved, state) <- runStateT unreader initialState
-     case solved of
-       False -> throwError "Failed to satisfy all the constraints :-("
-       True -> return $ Map.toList $ Deps.ssPinnedVersions state
+         initialState = Deps.SolverState Map.empty
+     (solved, _) <- runStateT unreader initialState
+     return $ Map.toList solved
 
 -- | A function passed to solver which "reads" constraints by name and version
 readConstraints :: FakeDB -> N.Name -> V.Version -> ErrorT String IO Deps.Constraints
