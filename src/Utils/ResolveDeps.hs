@@ -195,7 +195,7 @@ solveForVersion name version =
   do solution <- solve M.empty (M.singleton name [version])
      case solution of
        Just value -> return value
-       Nothing -> throwError "Can't solve a thing :-("
+       Nothing -> throwError "Solving dependencies failed"
 
 solveConstraints :: D.Deps -> ErrorT String IO [(N.Name, V.Version)]
 solveConstraints deps =
