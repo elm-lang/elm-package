@@ -146,31 +146,36 @@ getConstraints name version =
             modify (\s -> s { ssLibrariesMap = M.insert (name, version) deps libsMap })
             return deps
 
-addConstraints :: Map N.Name [V.Version] -> Constraints -> SolverContext (Maybe (Map N.Name [V.Version]))
+type PinnedLibs = Map N.Name V.Version
+type ConstrainedLibs = Map N.Name [V.Version]
+
+addConstraints :: ConstrainedLibs -> Constraints -> SolverContext (Maybe ConstrainedLibs)
 addConstraints constrained constraints = foldM addConstraint (Just constrained) constraints
   where
     addConstraint curr (name, constraint) =
       case curr of
         Nothing -> return Nothing
         Just values ->
-          do versions <-
-               case M.lookup name values of
-                 Just vs -> return vs
-                 Nothing ->
-                   do libs <- asks libraryDb
-                      case versions <$> M.lookup (N.toString name) libs of
-                        Nothing -> throwError (notFound name)
-                        Just vs -> return vs
+          do versions <- getValidVersions name values
              case filter (C.satisfyConstraint constraint) versions of
                [] -> return Nothing
                ls -> return $ Just $ M.insert name ls values
 
+    getValidVersions name constrained =
+      case M.lookup name constrained of
+        Just vs -> return vs
+        Nothing ->
+          do libs <- asks libraryDb
+             case versions <$> M.lookup (N.toString name) libs of
+               Nothing -> throwError (notFound name)
+               Just vs -> return vs
+
     notFound name = "Versions of library " ++ N.toString name ++ " weren't found"
 
-solve :: Map N.Name V.Version -> Map N.Name [V.Version] -> SolverContext (Maybe (Map N.Name V.Version))
+solve :: PinnedLibs -> ConstrainedLibs -> SolverContext (Maybe PinnedLibs)
 solve fixed constrained =
   case M.minViewWithKey constrained of
-    Nothing -> return $ Just $ fixed
+    Nothing -> return $ Just fixed
     Just ((name, versions), rest) -> foldM tryEvery Nothing versions
       where
         tryEvery currSolution version =
