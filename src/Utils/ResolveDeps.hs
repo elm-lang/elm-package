@@ -125,17 +125,17 @@ Constists of:
 * function to read dependencies and their constraints for particular
   version of particular library
 -}
-data SolverEnv = SolverEnv
+data SolverEnv m = SolverEnv
     { libraryDb :: LibraryDB
-    , readDepsFunction :: N.Name -> V.Version -> ErrorT String IO Constraints
+    , readDepsFunction :: N.Name -> V.Version -> ErrorT String m Constraints
     }
 
-type SolverContext =
-  ReaderT SolverEnv    -- information about libraries, deps-fetching function
-  (StateT SolverState  -- solver current state, also RAM-cached dependencies info
-   (ErrorT String IO)) -- underlying effects for IO and errors
+type SolverContext m =
+  ReaderT (SolverEnv m) -- information about libraries, deps-fetching function
+  (StateT SolverState   -- solver current state, also RAM-cached dependencies info
+   (ErrorT String m))   -- underlying effects for IO and errors
 
-getConstraints :: N.Name -> V.Version -> SolverContext Constraints
+getConstraints :: Monad m => N.Name -> V.Version -> SolverContext m Constraints
 getConstraints name version =
   do libsMap <- gets ssLibrariesMap
      case M.lookup (name, version) libsMap of
@@ -149,7 +149,7 @@ getConstraints name version =
 type PinnedLibs = Map N.Name V.Version
 type ConstrainedLibs = Map N.Name [V.Version]
 
-addConstraints :: ConstrainedLibs -> Constraints -> SolverContext (Maybe ConstrainedLibs)
+addConstraints :: Monad m => ConstrainedLibs -> Constraints -> SolverContext m (Maybe ConstrainedLibs)
 addConstraints constrained constraints = foldM addConstraint (Just constrained) constraints
   where
     addConstraint curr (name, constraint) =
@@ -172,7 +172,7 @@ addConstraints constrained constraints = foldM addConstraint (Just constrained) 
 
     notFound name = "Versions of library " ++ N.toString name ++ " weren't found"
 
-solve :: PinnedLibs -> ConstrainedLibs -> SolverContext (Maybe PinnedLibs)
+solve :: Monad m => PinnedLibs -> ConstrainedLibs -> SolverContext m (Maybe PinnedLibs)
 solve fixed constrained =
   case M.minViewWithKey constrained of
     Nothing -> return $ Just fixed
@@ -190,7 +190,7 @@ solve fixed constrained =
                Nothing -> return Nothing
                Just value -> solve (M.insert name version fixed) value
 
-solveForVersion :: N.Name -> V.Version -> SolverContext (Map N.Name V.Version)
+solveForVersion :: Monad m => N.Name -> V.Version -> SolverContext m (Map N.Name V.Version)
 solveForVersion name version =
   do solution <- solve M.empty (M.singleton name [version])
      case solution of

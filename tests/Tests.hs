@@ -1,5 +1,6 @@
 module Main where
 
+import Control.Monad.Identity
 import Control.Monad.Error
 import Control.Monad.Reader
 import Control.Monad.State
@@ -46,10 +47,9 @@ main =
   do test1
      test2
 
-fromError :: ErrorT String IO a -> IO a
+fromError :: ErrorT String Identity a -> IO a
 fromError action =
-  either fail return =<< runErrorT action
-
+  either fail return $ runIdentity (runErrorT action)
 
 -- CHECK FOR VALIDITY OF SOLUTIONS
 
@@ -75,7 +75,7 @@ isValidSolution db solution =
 -- RUN SOLVER
 
 -- | Run dependency solver using stub data
-solveFake :: FakeDB -> N.Name -> V.Version -> ErrorT String IO [(N.Name, V.Version)]
+solveFake :: FakeDB -> N.Name -> V.Version -> ErrorT String Identity [(N.Name, V.Version)]
 solveFake db name version =
   do let libraryDb = toLibraryDb db
          unreader = runReaderT (Deps.solveForVersion name version) $
@@ -85,7 +85,7 @@ solveFake db name version =
      return $ Map.toList solved
 
 -- | A function passed to solver which "reads" constraints by name and version
-readConstraints :: FakeDB -> N.Name -> V.Version -> ErrorT String IO Deps.Constraints
+readConstraints :: FakeDB -> N.Name -> V.Version -> ErrorT String Identity Deps.Constraints
 readConstraints db name version =
     maybe notFound return $ do
       versions <- Map.lookup name db
