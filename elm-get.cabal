@@ -62,7 +62,36 @@ Executable elm-get
                        Get.Registry,
                        Utils.Commands,
                        Utils.Http,
-                       Utils.Paths
+                       Utils.Paths,
+                       Utils.ResolveDeps
+  Build-depends:       aeson,
+                       aeson-pretty,
+                       ansi-wl-pprint,
+                       base >=4.2 && <5,
+                       binary,
+                       bytestring,
+                       containers,
+                       directory,
+                       Elm >= 0.12.2,
+                       filepath,
+                       HTTP,
+                       http-client >= 0.3,
+                       http-client-tls,
+                       http-types,
+                       json,
+                       mtl,
+                       network,
+                       optparse-applicative,
+                       pretty,
+                       process,
+                       resourcet,
+                       text,
+                       vector
+
+Test-suite unit-test
+  Type:                exitcode-stdio-1.0
+  Hs-Source-Dirs:      tests, src
+  Main-is:             Tests.hs
   Build-depends:       aeson,
                        aeson-pretty,
                        ansi-wl-pprint,
