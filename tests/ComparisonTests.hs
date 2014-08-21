@@ -30,7 +30,34 @@ type_map1 = function [fun1 (var "a") (var "b"), type_list (var "a")] (type_list 
 type_map2 = function [fun1 (var "b") (var "c"), type_list (var "b")] (type_list (var "c"))
 type_map_wrong = function [fun1 (var "b") (var "c"), type_list (var "c")] (type_list (var "c"))
 
+module_1 =
+  modul [ value "map" type_map1
+        , value "counter" type_int
+        ]
+
+module_2 =
+  modul [ value "map" type_map2
+        , value "name" type_string
+        ]
+
+module_comparison =
+  Map.fromList [ ("map", SC.Existing SC.Same)
+               , ("counter", SC.Removed)
+               , ("name", SC.Added)
+               ]
+
 map_renaming = Map.fromList [("a", "b"), ("b", "c")]
+
+yieldsComparison :: Value -> Value -> Map String SC.BindingState -> Assertion
+yieldsComparison v1 v2 result =
+  case parseEither SC.buildModuleComparison (v1, v2) of
+    Left err -> False @? "Parsing JSON values should succeed"
+    Right ls -> mapM_ check ls
+  where
+    check entry =
+      case Map.lookup (SC.name entry) result of
+        Nothing -> False @? ("Unexpected entry " ++ SC.name entry)
+        Just value -> value @?= SC.state entry
 
 yieldsRenaming :: Value -> Value -> Map String String -> Assertion
 yieldsRenaming v1 v2 renaming =
@@ -72,12 +99,31 @@ adt name args =
          , "args" .= args
          ]
 
+value :: Text -> Value -> Value
+value name typ =
+  object [ "name" .= name
+         , "raw" .= ("" :: Text)
+         , "type" .= typ
+         ]
+
+modul :: [Value] -> Value
+modul values =
+  object [ "values" .= values
+         ]
+
 
 comparisonTests =
   TF.testGroup "Types comparison tests"
-  [ TH.testCase "a -> b -> a == b -> a -> b" (yieldsRenaming type_const1 type_const2 const_renaming)
-  , TH.testCase "Int /= String" (nonCompatible type_int type_string)
-  , TH.testCase "String /= Int" (nonCompatible type_string type_int)
-  , TH.testCase "Renaming typevars in (a -> b) -> [a] -> [b]" (yieldsRenaming type_map1 type_map2 map_renaming)
-  , TH.testCase "Map type /= wrong map type" (nonCompatible type_map1 type_map_wrong)
+  [ TH.testCase "a -> b -> a == b -> a -> b"
+    (yieldsRenaming type_const1 type_const2 const_renaming)
+  , TH.testCase "Int /= String"
+    (nonCompatible type_int type_string)
+  , TH.testCase "String /= Int"
+    (nonCompatible type_string type_int)
+  , TH.testCase "Renaming typevars in (a -> b) -> [a] -> [b]"
+    (yieldsRenaming type_map1 type_map2 map_renaming)
+  , TH.testCase "Map type /= wrong map type"
+    (nonCompatible type_map1 type_map_wrong)
+  , TH.testCase "Comparing two different modules"
+    (yieldsComparison module_2 module_1 module_comparison)
   ]
