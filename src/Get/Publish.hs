@@ -8,6 +8,7 @@ import Data.Aeson
 import GHC.Generics
 import qualified Data.Aeson.Types as AT
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BSL
 import qualified Data.List as List
 import qualified Data.Maybe as Maybe
 import System.Directory
@@ -36,6 +37,9 @@ data SavedMetadata = SavedMetadata
 instance ToJSON SavedMetadata
 instance FromJSON SavedMetadata
 
+savedMetadataFilename :: String
+savedMetadataFilename = "publish_in_progress.json"
+
 publish :: ErrorT String IO ()
 publish = prepublish
 
@@ -56,7 +60,12 @@ prepublish =
          bump = Semver.bumpByCompatibility compat
          newVersion = Semver.bumpVersion bump version
      continue <- lift $ proposeVersion compat bump newVersion
-     return ()
+     when continue $
+       do let metadata = SavedMetadata { baseVersion = version
+                                       , nextVersion = newVersion
+                                       , apiCompatibility = compat
+                                       }
+          liftIO $ BSL.writeFile savedMetadataFilename $ encode metadata
 
 exitAtFail :: ErrorT String IO a -> ErrorT String IO a
 exitAtFail action =
