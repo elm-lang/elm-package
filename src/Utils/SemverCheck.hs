@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -8,6 +9,7 @@ import Data.Aeson hiding (Number)
 import Data.Aeson.Types (Parser)
 import Data.Functor ((<$>))
 import Data.Text (Text)
+import GHC.Generics
 import qualified Data.Char as Char
 import qualified Data.List as List
 import qualified Data.Map as Map
@@ -42,7 +44,10 @@ data Compatibility
   = Incompatible
   | Compatible
   | Same
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Generic)
+
+instance ToJSON Compatibility
+instance FromJSON Compatibility
 
 bumpByCompatibility :: Compatibility -> IndexPos
 bumpByCompatibility compat =

@@ -1,9 +1,11 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Get.Publish where
 
 import Control.Applicative ((<$>))
 import Control.Monad.Error
-import Data.Aeson (decodeStrict)
+import Data.Aeson
+import GHC.Generics
 import qualified Data.Aeson.Types as AT
 import qualified Data.ByteString as BS
 import qualified Data.List as List
@@ -24,6 +26,15 @@ import qualified Utils.Commands as Cmd
 import qualified Utils.Http as Http
 import qualified Utils.Paths as Path
 import qualified Utils.SemverCheck as Semver
+
+data SavedMetadata = SavedMetadata
+  { baseVersion :: V.Version
+  , nextVersion :: V.Version
+  , apiCompatibility :: Semver.Compatibility
+  } deriving (Generic)
+
+instance ToJSON SavedMetadata
+instance FromJSON SavedMetadata
 
 publish :: ErrorT String IO ()
 publish = prepublish
