@@ -11,6 +11,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.List as List
 import qualified Data.Maybe as Maybe
+import qualified Data.Time.Clock as Clock
 import System.Directory
 import System.Exit
 import System.IO
@@ -40,11 +41,30 @@ instance FromJSON SavedMetadata
 savedMetadataFilename :: String
 savedMetadataFilename = "publish_in_progress.json"
 
-publish :: ErrorT String IO ()
-publish = prepublish
+savedMetadataDiffTime :: IO (Maybe Integer)
+savedMetadataDiffTime =
+  do exist <- doesFileExist savedMetadataFilename
+     case exist of
+       False -> return Nothing
+       True ->
+         do modTime <- getModificationTime savedMetadataFilename
+            currTime <- Clock.getCurrentTime
+            return $ Just $ floor (Clock.diffUTCTime currTime modTime)
 
-prepublish :: ErrorT String IO ()
-prepublish =
+publish :: ErrorT String IO ()
+publish =
+  do diffTime <- liftIO savedMetadataDiffTime
+     case diffTime of
+       Just seconds
+         | seconds < 0 -> throwError "Negative modification time!"
+         | seconds < 10 * 60 -> publishStep2
+         | otherwise ->
+           do liftIO $ putStrLn $ savedMetadataFilename ++ " is outdated!"
+              publishStep1
+       Nothing -> publishStep1
+
+publishStep1 :: ErrorT String IO ()
+publishStep1 =
   do deps <- getDeps
      let name = D.name deps
          version = D.version deps
@@ -66,6 +86,10 @@ prepublish =
                                        , apiCompatibility = compat
                                        }
           liftIO $ BSL.writeFile savedMetadataFilename $ encode metadata
+
+publishStep2 :: ErrorT String IO ()
+publishStep2 =
+  do liftIO $ putStrLn "Continuing publish process..."
 
 exitAtFail :: ErrorT String IO a -> ErrorT String IO a
 exitAtFail action =
