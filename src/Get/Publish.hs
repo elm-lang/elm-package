@@ -146,7 +146,7 @@ verifyVersion name version =
 
 generateDocs :: [String] -> ErrorT String IO ()
 generateDocs modules =
-    do forM elms $ \path -> Cmd.run "elm-doc" [path]
+    do Cmd.run "elm" ("--generate-docs" : "--make" : elms)
        liftIO $
          do let path = Path.combinedJson
             BS.writeFile path "[\n"
