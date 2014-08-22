@@ -31,7 +31,6 @@ publish = prepublish
 prepublish :: ErrorT String IO ()
 prepublish =
   do deps <- getDeps
-     versions <- getVersions
      let name = D.name deps
          version = D.version deps
          exposedModules = D.exposed deps
@@ -39,6 +38,7 @@ prepublish =
      verifyElmVersion (D.elmVersion deps)
      verifyMetadata deps
      verifyExposedModulesExist exposedModules
+     verifyVersionExist name version
      generateDocs exposedModules
      docsComparison <- compareDocs name version
      let compat = Semver.compatibility docsComparison
@@ -108,38 +108,17 @@ verifyMetadata deps =
             then Just msg
             else Nothing
 
-verifyVersion :: N.Name -> V.Version -> ErrorT String IO ()
-verifyVersion name version =
-    do response <- R.versions name
-       case response of
-         Nothing -> return ()
-         Just versions ->
-             do let maxVersion = maximum (version:versions)
-                when (version < maxVersion) $ throwError $ unlines
-                     [ "a later version has already been released."
-                     , "Use a version number higher than " ++ show maxVersion ]
-                checkSemanticVersioning maxVersion
-
-       checkTag version
-
-    where
-      checkSemanticVersioning _ = return ()
-
-      checkTag version =
-        do tags <- lines <$> Cmd.git [ "tag", "--list" ]
-           let v = show version
-           when (show version `notElem` tags) $
-             throwError (unlines (tagMessage v))
-
-      tagMessage v =
-          [ "Libraries must be tagged in git, but tag " ++ v ++ " was not found."
-          , "These tags make it possible to find this specific version on github."
-          , "To tag the most recent commit and push it to github, run this:"
-          , ""
-          , "    git tag -a " ++ v ++ " -m \"release version " ++ v ++ "\""
-          , "    git push origin " ++ v
-          , ""
-          ]
+verifyVersionExist :: N.Name -> V.Version -> ErrorT String IO ()
+verifyVersionExist name version =
+  do response <- R.versions name
+     case response of
+       Nothing -> return ()
+       Just versions ->
+          when (not $ version `elem` versions) $ throwError $ unlines
+            [ "base version doesn't exist"
+            , "Version number in your " ++ A.dependencyFile ++ " should be for base (previous) version"
+            , "not resulting version number"
+            ]
 
 generateDocs :: [String] -> ErrorT String IO ()
 generateDocs modules =
