@@ -36,7 +36,6 @@ prepublish =
          version = D.version deps
          exposedModules = D.exposed deps
      Cmd.out $ unwords [ "Verifying", show name, show version, "..." ]
-     verifyNoDependencies versions
      verifyElmVersion (D.elmVersion deps)
      verifyMetadata deps
      verifyExposedModulesExist exposedModules
@@ -68,14 +67,6 @@ withCleanup action =
        case either of
          Left err -> throwError err
          Right () -> return ()
-
-verifyNoDependencies :: [(N.Name,V.Version)] -> ErrorT String IO ()
-verifyNoDependencies [] = return ()
-verifyNoDependencies _ =
-    throwError
-        "elm-get is not able to publish projects with dependencies yet. This is a\n\
-        \very high proirity, we are working on it! For now, announce your library on the\n\
-        \mailing list: <https://groups.google.com/forum/#!forum/elm-discuss>"
 
 verifyElmVersion :: V.Version -> ErrorT String IO ()
 verifyElmVersion elmVersion@(V.V ns _)
