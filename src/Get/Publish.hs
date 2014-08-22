@@ -42,7 +42,10 @@ prepublish =
      generateDocs exposedModules
      docsComparison <- compareDocs name version
      let compat = Semver.compatibility docsComparison
-     lift $ proposeVersion version compat
+         bump = Semver.bumpByCompatibility compat
+         newVersion = Semver.bumpVersion bump version
+     continue <- lift $ proposeVersion compat bump newVersion
+     return ()
 
 exitAtFail :: ErrorT String IO a -> ErrorT String IO a
 exitAtFail action =
@@ -156,17 +159,12 @@ compareDocs name version =
        Left err -> throwError err
        Right result -> return result
 
-proposeVersion :: V.Version -> Semver.Compatibility -> IO ()
-proposeVersion version compat =
+proposeVersion :: Semver.Compatibility -> Semver.IndexPos -> V.Version -> IO Bool
+proposeVersion compat bump newVersion =
   do putStr compatMessage
      putStr "Proceed? [y/n]: "
-     proceed <- Cmd.yesOrNo
-     return ()
+     Cmd.yesOrNo
   where
-    bump = Semver.bumpByCompatibility compat
-
-    newVersion = Semver.bumpVersion bump version
-
     showCompatibility c =
       case c of
         Semver.Same -> "is the same as"
