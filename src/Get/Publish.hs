@@ -3,6 +3,8 @@ module Get.Publish where
 
 import Control.Applicative ((<$>))
 import Control.Monad.Error
+import Data.Aeson (decodeStrict)
+import qualified Data.Aeson.Types as AT
 import qualified Data.ByteString as BS
 import qualified Data.List as List
 import qualified Data.Maybe as Maybe
@@ -19,10 +21,15 @@ import qualified Elm.Internal.Version as V
 import Get.Dependencies (defaultDeps)
 import qualified Get.Registry as R
 import qualified Utils.Commands as Cmd
+import qualified Utils.Http as Http
 import qualified Utils.Paths as Path
+import qualified Utils.SemverCheck as Semver
 
 publish :: ErrorT String IO ()
-publish =
+publish = prepublish
+
+prepublish :: ErrorT String IO ()
+prepublish =
   do deps <- getDeps
      versions <- getVersions
      let name = D.name deps
@@ -33,11 +40,10 @@ publish =
      verifyElmVersion (D.elmVersion deps)
      verifyMetadata deps
      verifyExposedModulesExist exposedModules
-     verifyVersion name version
-     withCleanup $
-       do generateDocs exposedModules
-          R.register name version Path.combinedJson
-     Cmd.out "Success!"
+     generateDocs exposedModules
+     docsComparison <- compareDocs name version
+     let compat = Semver.compatibility docsComparison
+     lift $ proposeVersion version compat
 
 exitAtFail :: ErrorT String IO a -> ErrorT String IO a
 exitAtFail action =
@@ -163,3 +169,45 @@ generateDocs modules =
         do json <- BS.readFile path
            BS.length json `seq` return ()
            BS.appendFile Path.combinedJson json
+
+compareDocs :: N.Name -> V.Version -> ErrorT String IO Semver.DocsComparison
+compareDocs name version =
+  let url = concat [ R.domain, "/catalog/", N.toFilePath name, "/"
+                   , V.toString version, "/docs.json"]
+  in
+  do mv1 <- liftIO $ decodeStrict <$> BS.readFile Path.combinedJson
+     v1 <-
+       case mv1 of
+         Just result -> return result
+         Nothing -> throwError "Parse error while reading local docs.json"
+     v2 <- Http.decodeFromUrl url
+
+     case AT.parseEither Semver.buildDocsComparison (v1, v2) of
+       Left err -> throwError err
+       Right result -> return result
+
+proposeVersion :: V.Version -> Semver.Compatibility -> IO ()
+proposeVersion version compat =
+  do putStr compatMessage
+     putStr "Proceed? [y/n]: "
+     proceed <- Cmd.yesOrNo
+     return ()
+  where
+    bump = Semver.bumpByCompatibility compat
+
+    newVersion = Semver.bumpVersion bump version
+
+    showCompatibility c =
+      case c of
+        Semver.Same -> "is the same as"
+        Semver.Compatible -> "is compatible to"
+        Semver.Incompatible -> "isn't compatible to"
+
+    compatMessage =
+      unlines
+      [ "Based on automatic comparison, your current API " ++
+        showCompatibility compat ++ " API of base version"
+      , "Therefore, by semantic versioning, " ++ Semver.showIndexPos bump ++
+        " should be increased"
+      , "Proposed version: " ++ V.toString newVersion
+      ]

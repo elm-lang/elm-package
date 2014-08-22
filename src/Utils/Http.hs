@@ -63,3 +63,12 @@ instance FromJSON Tags where
           toTag _ = fail "expecting an object"
 
     parseJSON _ = fail "expecting an array"
+
+-- | Try to read a JSON-encoded value from an URL. Throws an error in case of parse error
+decodeFromUrl :: FromJSON a => String -> ErrorT String IO a
+decodeFromUrl url =
+  do result <- send url $ \request manager ->
+       fmap (Json.decode . responseBody) $ httpLbs request manager
+     case result of
+       Just v -> return v
+       Nothing -> throwError $ "Can't read value from " ++ url
