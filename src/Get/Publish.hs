@@ -187,16 +187,16 @@ generateDocs modules =
            BS.length json `seq` return ()
            BS.appendFile Path.combinedJson json
 
+errorFromMaybe :: String -> Maybe a -> ErrorT String IO a
+errorFromMaybe err = Maybe.maybe (throwError err) return
+
 compareDocs :: N.Name -> V.Version -> ErrorT String IO Semver.DocsComparison
 compareDocs name version =
   let url = concat [ R.domain, "/catalog/", N.toFilePath name, "/"
                    , V.toString version, "/docs.json"]
   in
   do mv1 <- liftIO $ decodeStrict <$> BS.readFile Path.combinedJson
-     v1 <-
-       case mv1 of
-         Just result -> return result
-         Nothing -> throwError "Parse error while reading local docs.json"
+     v1 <- errorFromMaybe "Parse error while reading local docs.json" mv1
      v2 <- Http.decodeFromUrl url
 
      case AT.parseEither Semver.buildDocsComparison (v1, v2) of
