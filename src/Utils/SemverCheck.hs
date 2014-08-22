@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -8,11 +9,14 @@ import Data.Aeson hiding (Number)
 import Data.Aeson.Types (Parser)
 import Data.Functor ((<$>))
 import Data.Text (Text)
+import GHC.Generics
 import qualified Data.Char as Char
 import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
-import qualified Data.Vector as V
+import qualified Data.Vector as Vector
+
+import qualified Elm.Internal.Version as V
 
 -- DATATYPE DEFINITIONS
 
@@ -40,7 +44,27 @@ data Compatibility
   = Incompatible
   | Compatible
   | Same
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Generic)
+
+instance ToJSON Compatibility
+instance FromJSON Compatibility
+
+bumpByCompatibility :: Compatibility -> IndexPos
+bumpByCompatibility compat =
+  case compat of
+    Incompatible -> Major
+    Compatible -> Minor
+    Same -> Patch
+
+bumpVersion :: IndexPos -> V.Version -> V.Version
+bumpVersion pos (V.V ls _) = V.V (take 3 $ go (ls ++ repeat 0)) ""
+  where
+    go (x : y : z : _) =
+      case pos of
+        Patch -> [x, y, z + 1]
+        Minor -> [x, y + 1, 0]
+        Major -> [x + 1, 0, 0]
+    go _ = error "Utils.SemverCheck.bumpVersion: shouldn't happen"
 
 -- | Datatype of all possible reasons why particular types are incompatible
 data NonCorrespondence
@@ -120,6 +144,9 @@ immediateNext prev next = check 0 $ zip (prev ++ repeat 0) next
 class Change a where
   compatibility :: a -> Compatibility
 
+instance Change Compatibility where
+  compatibility = id
+
 instance Change a => Change [a] where
   compatibility ls = minimum (Same : map compatibility ls)
 
@@ -143,6 +170,9 @@ instance Change BindingState where
 
 instance Change ComparisonEntry where
   compatibility = compatibility . state
+
+instance Change (Map.Map String [ComparisonEntry]) where
+  compatibility = compatibility . map (compatibility . snd) . Map.toList
 
 type Var = String
 
@@ -229,8 +259,10 @@ expectObject name val =
     Object o -> return o
     _ -> fail $ "Expected JSON object while parsing " ++ name
 
+type DocsComparison = Map.Map String [ComparisonEntry]
+
 -- | Build a map of differences between two "docs.json"
-buildDocsComparison :: (Value, Value) -> Parser (Map.Map String [ComparisonEntry])
+buildDocsComparison :: (Value, Value) -> Parser DocsComparison
 buildDocsComparison (v1, v2) =
   let moduleName :: Value -> Parser String
       moduleName v =
@@ -251,8 +283,8 @@ buildDocsComparison (v1, v2) =
   in
   case (v1, v2) of
     (Array a1, Array a2) ->
-      do env2 <- V.foldM addModule Map.empty a2
-         V.foldM (processModule env2) Map.empty a1
+      do env2 <- Vector.foldM addModule Map.empty a2
+         Vector.foldM (processModule env2) Map.empty a1
     _ -> fail "Trying to parse documents from non-array"
 
 -- | Build a list of differences between two versions of a module

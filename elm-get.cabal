@@ -48,6 +48,7 @@ Library
                        process,
                        resourcet,
                        text,
+                       time,
                        vector
 
 Executable elm-get
@@ -86,6 +87,7 @@ Executable elm-get
                        process,
                        resourcet,
                        text,
+                       time,
                        vector
 
 Test-suite unit-test
@@ -118,4 +120,5 @@ Test-suite unit-test
                        test-framework,
                        test-framework-hunit,
                        text,
+                       time,
                        vector
