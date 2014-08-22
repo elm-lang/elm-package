@@ -196,9 +196,9 @@ proposeVersion version compat =
 
     compatMessage =
       unlines
-      [ "Based on automatic comparison, your current API " ++
-        showCompatibility compat ++ " API of base version"
-      , "Therefore, by semantic versioning, " ++ Semver.showIndexPos bump ++
-        " should be increased"
+      [ "Based on automatic comparison, your current API " ++ showCompatibility compat
+      , "API of base version. Therefore, by semantic versioning, " ++ Semver.showIndexPos bump
+      , "should be increased."
+      , ""
       , "Proposed version: " ++ V.toString newVersion
       ]
