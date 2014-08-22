@@ -75,6 +75,7 @@ offerInstallPlan :: [(LibChange, Lib)] -> IO Bool
 offerInstallPlan ls = case ls of
   [] ->
     do putStrLn "Nothing to install"
+       writeLibraries []
        return False
   _ ->
     do putStrLn "The following libraries will be installed:"
