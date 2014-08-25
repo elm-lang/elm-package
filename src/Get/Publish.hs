@@ -86,6 +86,7 @@ publishStep1 =
                                        , apiCompatibility = compat
                                        }
           liftIO $ BSL.writeFile savedMetadataFilename $ encode metadata
+          liftIO $ BSL.writeFile A.dependencyFile $ D.prettyJSON (deps { D.version = newVersion })
 
 checkMetadata :: SavedMetadata -> D.Deps -> ErrorT String IO ()
 checkMetadata metadata deps =
