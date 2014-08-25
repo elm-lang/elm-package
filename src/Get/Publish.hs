@@ -32,7 +32,6 @@ import qualified Utils.SemverCheck as Semver
 data SavedMetadata = SavedMetadata
   { baseVersion :: V.Version
   , nextVersion :: V.Version
-  , apiCompatibility :: Semver.Compatibility
   } deriving (Generic)
 
 instance ToJSON SavedMetadata
@@ -83,7 +82,6 @@ publishStep1 =
      when continue $
        do let metadata = SavedMetadata { baseVersion = version
                                        , nextVersion = newVersion
-                                       , apiCompatibility = compat
                                        }
           liftIO $ BSL.writeFile savedMetadataFilename $ encode metadata
           liftIO $ BSL.writeFile A.dependencyFile $ D.prettyJSON (deps { D.version = newVersion })
@@ -119,7 +117,7 @@ publishStep2 =
      metadata <- errorFromMaybe (savedMetadataFilename ++ " is malformed!") maybeMetadata
      deps <- getDeps
      checkMetadata metadata deps
-     R.register name version Path.combinedJson
+     R.register (D.name deps) (D.version deps) Path.combinedJson
      Cmd.out "Success!"
 
 exitAtFail :: ErrorT String IO a -> ErrorT String IO a
