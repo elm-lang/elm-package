@@ -43,8 +43,9 @@ installAll =
 -- | Just a synonym to tuple type which is used a lot in this module
 type Lib = (N.Name, V.Version)
 
--- | Datatype describing whether a particular library will be installed first time,
---   or is updated from previous version
+{-| Datatype describing whether a particular library will be installed first time,
+or is updated from previous version
+-}
 data LibChange
   = LibFresh
   | LibUpdate V.Version
@@ -131,8 +132,9 @@ writeDependencies deps =
       json = replaceBS "\\u003e" ">" $ replaceBS "\\u003c" "<" $ jsonOrig
   in B.writeFile A.dependencyFile json
 
--- | Write list of installed libraries to elm_dependencies/elm_libraries.json,
---   which is used by compiler to find them
+{-| Write list of installed libraries to elm_dependencies/elm_libraries.json,
+which is used by compiler to find them
+-}
 writeLibraries :: [Lib] -> IO ()
 writeLibraries libraries =
   do createDirectoryIfMissing True A.packagesDirectory
@@ -145,8 +147,9 @@ install1 (name, version) =
      liftIO $ createDirectoryIfMissing True repo
      Cmd.copyDir (Path.internals </> repo) (repo </> show version)
 
--- | Fetch (or update) a repository with given name, check out requested version,
---   return a folder with package contents
+{-| Fetch (or update) a repository with given name, check out requested version,
+return a folder with package contents
+-}
 getRepoPath :: N.Name -> V.Version -> ErrorT String IO FilePath
 getRepoPath name version =
   do let directory = N.toFilePath name
