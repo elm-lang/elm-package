@@ -87,9 +87,37 @@ publishStep1 =
                                        }
           liftIO $ BSL.writeFile savedMetadataFilename $ encode metadata
 
+checkMetadata :: SavedMetadata -> D.Deps -> ErrorT String IO ()
+checkMetadata metadata deps =
+  do assert "Version wasn't modified between launches" $ D.version deps == nextVersion metadata
+     let version = baseVersion metadata
+         name = D.name deps
+     docsComparison <- compareDocs name version
+     let compat = Semver.compatibility docsComparison
+         bump = Semver.bumpByCompatibility compat
+         newVersion = Semver.bumpVersion bump version
+     assert "Version number wasn't compromised" $ newVersion == nextVersion metadata
+
+  where
+    assert msg assertion =
+      case assertion of
+        False -> throwError $
+                 unlines [ "Assertion failed:"
+                         , msg
+                         , ""
+                         , "It appears you made unallowed changes to " ++ A.dependencyFile
+                         , "Easiest way to continue publishing package is to remove"
+                         , savedMetadataFilename ++ " and restore base version in " ++ A.dependencyFile
+                         ]
+        True -> return ()
+
 publishStep2 :: ErrorT String IO ()
 publishStep2 =
   do liftIO $ putStrLn "Continuing publish process..."
+     maybeMetadata <- liftIO $ decode <$> BSL.readFile savedMetadataFilename
+     metadata <- errorFromMaybe (savedMetadataFilename ++ " is malformed!") maybeMetadata
+     deps <- getDeps
+     checkMetadata metadata deps
 
 exitAtFail :: ErrorT String IO a -> ErrorT String IO a
 exitAtFail action =
