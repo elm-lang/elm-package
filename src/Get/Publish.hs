@@ -119,6 +119,8 @@ publishStep2 =
      metadata <- errorFromMaybe (savedMetadataFilename ++ " is malformed!") maybeMetadata
      deps <- getDeps
      checkMetadata metadata deps
+     R.register name version Path.combinedJson
+     Cmd.out "Success!"
 
 exitAtFail :: ErrorT String IO a -> ErrorT String IO a
 exitAtFail action =
