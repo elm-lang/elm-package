@@ -20,10 +20,10 @@ import qualified Elm.Internal.Name as N
 type FakeDB = Map N.Name [(V.Version, Deps.Constraints)]
 
 db1 :: FakeDB
-db1 = Map.fromList [ base, transformers, mtl ]
+db1 = Map.fromList [ base, transformers, mtl, conduit, http ]
   where
     base =
-      (n "base", [ (v "0.1", []), (v "0.2", []), (v "1.0", []) ])
+      (n "base", [ (v "0.1", []), (v "0.2", []), (v "1.0", []), (v "1.1", []) ])
 
     transformers =
       (n "transformers", [ (v "1.0", [(n "base", c ">=1.0 <2.0")]) ])
@@ -35,18 +35,38 @@ db1 = Map.fromList [ base, transformers, mtl ]
                             ])
                 ])
 
+    conduit =
+      (n "conduit", [ (v "1.0", [ (n "base", c ">=1.0 <1.1")
+                                , (n "http", c ">=2.0 <3.0")
+                                ])
+                    ])
+
+    http =
+      (n "http", [ (v "2.1", [ (n "base", c ">=1.1 <2.0") ]) ])
+
 expectSolution :: FakeDB -> N.Name -> V.Version -> Assertion
 expectSolution db name version =
   do solution <- fromError $ solveFake db name version
      isValidSolution db solution @? "Solution should pass sanity check"
 
+expectNoSolution :: FakeDB -> N.Name -> V.Version -> Assertion
+expectNoSolution db name version =
+  let solution = runIdentity $ runErrorT $ solveFake db name version
+  in case solution of
+       Left err -> return ()
+       Right sol ->
+         do when (isValidSolution db sol) $ putStrLn "FAULTY TESTS: solution is valid!"
+            False @? ("Unexpected solution " ++ show sol)
+
 test1 = expectSolution db1 (n "mtl") (v "1.0")
 test2 = expectSolution db1 (n "mtl") (v "2.0")
+test3 = expectNoSolution db1 (n "conduit") (v "1.0")
 
 solverTests =
   TF.testGroup "Dependency solver tests"
   [ TH.testCase "test1" test1
   , TH.testCase "test2" test2
+  , TH.testCase "test3" test3
   ]
 
 
