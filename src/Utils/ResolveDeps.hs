@@ -184,12 +184,18 @@ solve fixed constrained =
             Just _ -> return currSolution
             Nothing -> tryNext version
 
+        satisfyFixed (n, c) =
+          case M.lookup n fixed of
+            Just v -> C.satisfyConstraint c v
+            Nothing -> False
+
         tryNext version =
           do constraints <- getConstraints name version
-             newConstrained <- addConstraints rest constraints
-             case newConstrained of
-               Nothing -> return Nothing
-               Just value -> solve (M.insert name version fixed) value
+             let (existCs, newCs) = span (\(n, _) -> M.member n fixed) constraints
+             newConstrained <- addConstraints rest newCs
+             case (all satisfyFixed existCs, newConstrained) of
+               (True, Just value) -> solve (M.insert name version fixed) value
+               _ -> return Nothing
 
 solveForVersion :: Monad m => N.Name -> V.Version -> SolverContext m (Map N.Name V.Version)
 solveForVersion name version =
