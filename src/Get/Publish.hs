@@ -32,7 +32,6 @@ import qualified Utils.SemverCheck as Semver
 data SavedMetadata = SavedMetadata
   { baseVersion :: V.Version
   , nextVersion :: V.Version
-  , apiCompatibility :: Semver.Compatibility
   } deriving (Generic)
 
 instance ToJSON SavedMetadata
@@ -83,13 +82,43 @@ publishStep1 =
      when continue $
        do let metadata = SavedMetadata { baseVersion = version
                                        , nextVersion = newVersion
-                                       , apiCompatibility = compat
                                        }
           liftIO $ BSL.writeFile savedMetadataFilename $ encode metadata
+          liftIO $ BSL.writeFile A.dependencyFile $ D.prettyJSON (deps { D.version = newVersion })
+
+checkMetadata :: SavedMetadata -> D.Deps -> ErrorT String IO ()
+checkMetadata metadata deps =
+  do assert "Version wasn't modified between launches" $ D.version deps == nextVersion metadata
+     let version = baseVersion metadata
+         name = D.name deps
+     docsComparison <- compareDocs name version
+     let compat = Semver.compatibility docsComparison
+         bump = Semver.bumpByCompatibility compat
+         newVersion = Semver.bumpVersion bump version
+     assert "Version number wasn't compromised" $ newVersion == nextVersion metadata
+
+  where
+    assert msg assertion =
+      case assertion of
+        False -> throwError $
+                 unlines [ "Assertion failed:"
+                         , msg
+                         , ""
+                         , "It appears you made unallowed changes to " ++ A.dependencyFile
+                         , "Easiest way to continue publishing package is to remove"
+                         , savedMetadataFilename ++ " and restore base version in " ++ A.dependencyFile
+                         ]
+        True -> return ()
 
 publishStep2 :: ErrorT String IO ()
 publishStep2 =
   do liftIO $ putStrLn "Continuing publish process..."
+     maybeMetadata <- liftIO $ decode <$> BSL.readFile savedMetadataFilename
+     metadata <- errorFromMaybe (savedMetadataFilename ++ " is malformed!") maybeMetadata
+     deps <- getDeps
+     checkMetadata metadata deps
+     R.register (D.name deps) (D.version deps) Path.combinedJson
+     Cmd.out "Success!"
 
 exitAtFail :: ErrorT String IO a -> ErrorT String IO a
 exitAtFail action =
@@ -187,16 +216,16 @@ generateDocs modules =
            BS.length json `seq` return ()
            BS.appendFile Path.combinedJson json
 
+errorFromMaybe :: String -> Maybe a -> ErrorT String IO a
+errorFromMaybe err = Maybe.maybe (throwError err) return
+
 compareDocs :: N.Name -> V.Version -> ErrorT String IO Semver.DocsComparison
 compareDocs name version =
   let url = concat [ R.domain, "/catalog/", N.toFilePath name, "/"
                    , V.toString version, "/docs.json"]
   in
   do mv1 <- liftIO $ decodeStrict <$> BS.readFile Path.combinedJson
-     v1 <-
-       case mv1 of
-         Just result -> return result
-         Nothing -> throwError "Parse error while reading local docs.json"
+     v1 <- errorFromMaybe "Parse error while reading local docs.json" mv1
      v2 <- Http.decodeFromUrl url
 
      case AT.parseEither Semver.buildDocsComparison (v1, v2) of
