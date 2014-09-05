@@ -1,18 +1,11 @@
-# elm-get
+# elm-package
 
-A command line tool to share Elm libraries.
-The full catalog of Elm libraries lives at
-[library.elm-lang.org](http://library.elm-lang.org/).
-
-## Install
-
-    cabal install elm-get
-
-This will install the `elm-get` executable in `/home/YOU/.cabal/bin`.
+The package manager for Elm libraries. The full catalog of community libraries
+is located at [library.elm-lang.org](http://library.elm-lang.org/).
 
 ## Use
 
-The next two sections will cover the basics of using `elm-get` to
+The next two sections will cover the basics of using `elm-package` to
 install libraries from [the catalog](http://library.elm-lang.org/) and
 publish your own.
 
@@ -21,17 +14,17 @@ publish your own.
 To install a library run:
 
 ```bash
-elm-get install user/project       # Install latest version
-elm-get install user/project 0.1   # Install version 0.1
+elm-package install user/project       # Install latest version
+elm-package install user/project 0.1   # Install version 0.1
 ```
 
 So if you are interested in the
 [evancz/automaton](http://library.elm-lang.org/catalog/evancz-automaton/0.1/)
 library for Arrowized FRP, you would install it with:
 
-    elm-get install evancz/automaton
+    elm-package install evancz/automaton
 
-`elm-get` is sandboxed by default, so these commands install the
+`elm-package` is sandboxed by default, so these commands install the
 library in the current working directory. This means it is easy for
 different projects to have different dependencies. To actually use the
 library in your project, you will need to add it to your
@@ -40,36 +33,18 @@ for extra libraries.
 
 ### Publish Libraries
 
-Before publishing, look through the
-[Library Design Guidelines](http://library.elm-lang.org/DesignGuidelines.html).
+Before publishing, look through the [library design guidelines][guidelines].
 Some key takeaways are:
 
-* Design for a concrete use case
-* Always give functions human readable names
-* Avoid gratuitous abstraction
-* Use [semantic versioning](http://semver.org/)
+[guidelines]: http://library.elm-lang.org/DesignGuidelines.html
 
-After looking through
-[the guidelines](http://library.elm-lang.org/DesignGuidelines.html)
-carefully, flesh out your `elm_dependencies.json` file to look
-something like this:
+  * Design for a concrete use case
+  * Always give functions human readable names
+  * Avoid gratuitous abstraction
+  * Use [semantic versioning](http://semver.org/)
 
-```json
-{ "version": "0.1"
-, "summary": "experimental library for structuring code, based on Arrowized FRP"
-, "description": "This is an experimental library for structuring code. It is based on Arrowized FRP, which aimed to provide an API for higher-order signal graphs. There are many ways to structure code though, and it is not yet clear when AFRP is a superior method. So this library is meant to explore the basics of AFRP and find cases where it is a really good fit."
-, "license": "BSD3"
-, "repository": "https://github.com/evancz/automaton.git"
-, "exposed-modules": ["Automaton"]
-, "elm-version": "0.10.1"
-, "dependencies":{}
-}
-```
-
-You can also use command `elm-get init` for initializing basic
-`elm_dependencies.json` in console interactively.
-
-A couple important notes for filling in these fields for your project are:
+Use command `elm-package init` for initializing basic `elm_dependencies.json`.
+Here are some hints for filling in that information:
 
   * Keep the `summary` under 80 characters.
   * Make the `description` a useful outline of the library. It should
@@ -93,4 +68,4 @@ release with an appropriate version number. This should match the
 `version` listed in `elm_dependencies.json`. Finally, you can publish
 your library with:
 
-    elm-get publish
+    elm-package publish
