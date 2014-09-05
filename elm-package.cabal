@@ -1,9 +1,10 @@
-Name:                elm-get
-Version:             0.1.2
-Synopsis:            Tool for sharing and using Elm libraries
-Description:         elm-get lets you install, update, and publish Elm libraries
+Name:                elm-package
+Version:             0.1
+Synopsis:            Package manager for Elm libraries
+Description:         elm-package is a package manager that lets you install,
+                     update, and publish Elm libraries.
 
-Homepage:            http://github.com/elm-lang/elm-get
+Homepage:            http://github.com/elm-lang/elm-package
 
 License:             BSD3
 License-file:        LICENSE
@@ -19,7 +20,7 @@ Cabal-version:       >=1.9
 
 source-repository head
   type:     git
-  location: git://github.com/elm-lang/elm-get.git
+  location: git://github.com/elm-lang/elm-package.git
 
 Library
   ghc-options:         -threaded -O2 -W
@@ -51,7 +52,7 @@ Library
                        time,
                        vector
 
-Executable elm-get
+Executable elm-package
   ghc-options:         -threaded -O2 -W
   Hs-Source-Dirs:      src
   Main-is:             Get/Main.hs
