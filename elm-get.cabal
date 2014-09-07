@@ -70,6 +70,6 @@ Executable elm-get
                        http-types >= 0.7 && < 0.9,
                        mtl >= 2 && < 3,
                        network >= 2.4 && < 2.7,
-                       optparse-applicative >= 0.8.1 && < 0.9,
+                       optparse-applicative >= 0.8.1 && < 0.11,
                        process >= 1 && < 2,
                        vector >= 0.10 && < 0.11
