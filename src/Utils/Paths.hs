@@ -12,7 +12,6 @@ libDir = "public" </> "catalog"
 json = "docs.json"
 index = "index.elm"
 listing = "public" </> "libraries.json"
-listingBits = "listing.bits"
 
 library name = libDir </> N.toFilePath name
 

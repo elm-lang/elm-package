@@ -10,18 +10,21 @@ import Data.Monoid ((<>))
 import qualified Data.Vector as Vector
 import Network
 import Network.HTTP.Client
+import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Network.HTTP.Types
 
 import qualified Elm.Internal.Name as N
 
-send :: String -> (Manager -> IO a) -> ErrorT String IO a
-send domain request =
-    do result <- liftIO $ E.catch (Right `fmap` mkRequest) handler
+send :: String -> (Request -> Manager -> IO a) -> ErrorT String IO a
+send url handler =
+    do result <- liftIO $ E.catch (Right `fmap` sendRequest) handleError
        either throwError return result
     where
-      mkRequest = withSocketsDo $ withManager defaultManagerSettings request
+      sendRequest = do
+        request <- parseUrl url
+        withSocketsDo $ withManager tlsManagerSettings (handler request)
 
-      handler exception =
+      handleError exception =
           case exception of
             StatusCodeException (Status _code err) headers _ ->
                 let details = case List.lookup "X-Response-Body-Start" headers of
@@ -30,13 +33,12 @@ send domain request =
                 in  return . Left $ BSC.unpack details
 
             _ -> return . Left $
-                 "probably unable to connect to <" ++ domain ++ "> (" ++
-                 show exception ++ ")"
+                 "failed with '" ++ show exception ++ "' when sending request to\n" ++
+                 "    <" ++ url ++ ">"
 
 githubTags :: N.Name -> ErrorT String IO Tags
 githubTags name =
-    do response <- send "https://api.github.com" $ \manager -> do
-                     request <- parseUrl url
+    do response <- send url $ \request manager ->
                      httpLbs (request {requestHeaders = headers}) manager
        case Json.eitherDecode $ responseBody response of
          Left err -> throwError err

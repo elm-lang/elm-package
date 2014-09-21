@@ -15,12 +15,10 @@ import System.Directory
 import System.Exit
 import System.IO
 
-import qualified Elm.Internal.Name as N
 import qualified Elm.Internal.Paths as Elm
-import qualified Elm.Internal.Version as V
-import qualified Registry.Generate.Docs as Docs
-import qualified Registry.Generate.Html as Html
-import qualified Registry.Routes as Route
+import qualified Generate.Docs as Docs
+import qualified Generate.Html as Html
+import qualified Routes as Route
 import qualified Utils.Paths as Path
 
 data Flags = Flags

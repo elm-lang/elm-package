@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE OverloadedStrings  #-}
-module Registry.Generate.Html where
+module Generate.Html where
 
 import Control.Monad.Error
 import qualified Data.ByteString.Char8 as BSC
@@ -15,14 +15,14 @@ import qualified Utils.Commands as Cmd
 
 generatePublic :: FilePath -> ErrorT String IO ()
 generatePublic path =
-  do Cmd.run "elm" ["--make","--runtime=/resources/elm-runtime.js"
+  do Cmd.run "elm" ["--make","--set-runtime=/resources/elm-runtime.js"
                    , "--build-dir=.", "--src-dir=src", path]
      liftIO $ removeFile path
      liftIO $ adjustHtmlFile $ FP.replaceExtension path "html"
 
 generateSrc :: FilePath -> ErrorT String IO ()
 generateSrc path =
-  do Cmd.run "elm" ["--make","--runtime=/resources/elm-runtime.js"
+  do Cmd.run "elm" ["--make","--set-runtime=/resources/elm-runtime.js"
                    , "--build-dir=.", "--src-dir=src", path]
      let old = FP.replaceExtension path "html"
          new = FP.replaceDirectory old "public"

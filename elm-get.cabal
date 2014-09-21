@@ -1,9 +1,9 @@
 Name:                elm-get
-Version:             0.1
+Version:             0.1.2
 Synopsis:            Tool for sharing and using Elm libraries
 Description:         elm-get lets you install, update, and publish Elm libraries
 
-Homepage:            http://elm-lang.org
+Homepage:            http://github.com/elm-lang/elm-get
 
 License:             BSD3
 License-file:        LICENSE
@@ -21,40 +21,55 @@ source-repository head
   type:     git
   location: git://github.com/elm-lang/elm-get.git
 
-Executable elm-get
-  Main-is:             Get/Main.hs
+Library
   ghc-options:         -threaded -O2 -W
   Hs-Source-Dirs:      src
+  exposed-modules:     Utils.Commands,
+                       Utils.Http,
+                       Utils.Paths
+  Build-depends:       aeson >= 0.7 && < 0.9,
+                       base >=4.2 && <5,
+                       bytestring >= 0.9 && < 0.11,
+                       directory >= 1.0 && < 2.0,
+                       Elm >= 0.13 && < 0.14,
+                       filepath >= 1 && < 2.0,
+                       http-client >= 0.3 && < 0.4,
+                       http-client-tls >= 0.2 && < 0.3,
+                       http-types >= 0.7 && < 0.9,
+                       mtl >= 2 && < 3,
+                       network >= 2.4 && < 2.7,
+                       process >= 1 && < 2,
+                       vector >= 0.10 && < 0.11
 
-  other-modules:       Get.Install,
+Executable elm-get
+  ghc-options:         -threaded -O2 -W
+  Hs-Source-Dirs:      src
+  Main-is:             Get/Main.hs
+  other-modules:       Get.Dependencies,
+                       Get.Install,
                        Get.Library,
                        Get.Options,
                        Get.Publish,
                        Get.Registry,
-                       Paths_elm_get,
                        Utils.Commands,
                        Utils.Http,
-                       Utils.Paths,
-                       Utils.PrettyJson
-
-  Build-depends:       aeson,
+                       Utils.Paths
+  Build-depends:       aeson >= 0.7 && < 0.9,
+                       aeson-pretty >= 0.7 && < 0.8,
+                       ansi-wl-pprint >= 0.6 && < 0.7,
                        base >=4.2 && <5,
-                       binary,
-                       bytestring,
-                       containers,
-                       directory,
-                       Elm >= 0.10.1,
-                       filepath,
-                       HTTP,
-                       http-client >= 0.2 && <0.3,
-                       http-client-multipart,
-                       http-types,
-                       json,
-                       mtl,
-                       network,
-                       optparse-applicative,
-                       pretty,
-                       process,
-                       resourcet,
-                       text,
-                       vector
+                       binary >= 0.7 && < 0.8,
+                       bytestring >= 0.9 && < 0.11,
+                       containers >= 0.3 && < 0.6,
+                       directory >= 1.0 && < 2.0,
+                       Elm >= 0.13 && < 0.14,
+                       filepath >= 1 && < 2.0,
+                       HTTP >= 4000.2.5 && < 4000.3,
+                       http-client >= 0.3 && < 0.4,
+                       http-client-tls >= 0.2 && < 0.3,
+                       http-types >= 0.7 && < 0.9,
+                       mtl >= 2 && < 3,
+                       network >= 2.4 && < 2.7,
+                       optparse-applicative >= 0.8.1 && < 0.11,
+                       process >= 1 && < 2,
+                       vector >= 0.10 && < 0.11

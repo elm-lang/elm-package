@@ -4,7 +4,7 @@ import System.Environment
 import System.Exit
 import System.IO
 
-import Registry.Generate.Listing
+import Generate.Listing
 
 main = do
   args <- getArgs

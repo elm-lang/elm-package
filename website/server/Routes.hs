@@ -1,5 +1,5 @@
-{-# LANGUAGE OverloadedStrings #-}
-module Registry.Routes where
+{-# LANGUAGE OverloadedStrings,DoAndIfThenElse #-}
+module Routes where
 
 import Control.Applicative
 import Control.Monad.Error
@@ -17,18 +17,21 @@ import System.FilePath
 import qualified Elm.Internal.Name as N
 import qualified Elm.Internal.Paths as EPath
 import qualified Elm.Internal.Version as V
-import qualified Registry.Generate.Docs as Docs
+import qualified Generate.Docs as Docs
+import qualified Generate.Listing as Listing
 import qualified Utils.Http as Http
 import qualified Utils.Paths as Path
+import qualified NativeWhitelist
 
 catalog :: Snap ()
 catalog =
     ifTop (serveFile "public/Catalog.html")
-    <|> routeLocal [ (":name/:version", serveLibrary) ]
+    <|> route [ (":name/:version", serveLibrary) ]
   where
     serveLibrary :: Snap ()
     serveLibrary = do
       request <- getRequest
+      redirectIfLatest request
       let directory = "public" ++ BSC.unpack (rqContextPath request)
       when (List.isInfixOf ".." directory) pass
       exists <- liftIO $ doesDirectoryExist directory
@@ -44,39 +47,68 @@ catalog =
       when (not exists) pass
       serveFile path
 
+    redirectIfLatest :: Request -> Snap ()
+    redirectIfLatest request =
+      case (,) <$> rqParam "name" request <*> rqParam "version" request of
+        Just ([name], ["latest"]) ->
+            let namePath = "catalog" </> BSC.unpack name in
+            do rawVersions <- liftIO (getDirectoryContents ("public" </> namePath))
+               case Maybe.catMaybes (map V.fromString rawVersions) of
+                 vs@(_:_) -> redirect path'
+                     where
+                       path' = BSC.concat [ "/", BSC.pack project, "/", rqPathInfo request ]
+                       project = namePath </> show version
+                       version = last (List.sort vs)
+
+                 _ -> return ()
+
+        _ -> return ()
+
+
 register :: Snap ()
 register =
   do nameAndVersion <- getNameAndVersion
-     case nameAndVersion of
-       Nothing -> error404 "Invalid library name or version number."
-       Just (name,version) -> do
-         let directory = Path.libraryVersion name version
+     withErrorT (verifyVersion nameAndVersion) $ \(name,version) -> do
+       let directory = Path.libraryVersion name version
+       uploadFiles directory
+       withErrorT (generateDocs directory) return
 
-         exists <- liftIO $ doesDirectoryExist directory
-         if exists then
-             error404' $ "Version " ++ show version ++ " has already been registered."
-         else do
-           result <- liftIO $ runErrorT (Http.githubTags name)
-           let v = show version
-               msg = "The tag " ++ v ++ " has not been pushed to GitHub.\n" ++
-                     "Push tag " ++ v ++ " with the following command:\n\n" ++
-                     "    git push origin 0.9\n\n"
-           case result of
-             Left err -> error404' err
-             Right (Http.Tags vs)
-                 | v `notElem` vs -> error404' msg
-                 | otherwise -> actuallyRegister directory
+  where
+    withErrorT :: ErrorT String IO a -> (a -> Snap ()) -> Snap ()
+    withErrorT errT callback = do
+      either <- liftIO $ runErrorT errT
+      case either of
+        Left err -> error404' err
+        Right result -> callback result
 
-actuallyRegister directory =
+    generateDocs :: FilePath -> ErrorT String IO ()
+    generateDocs directory = do
+      (docs,deps) <- Docs.readDocsAndDeps directory
+      NativeWhitelist.verify deps
+      Docs.generate docs deps directory
+
+verifyVersion :: Maybe (N.Name, V.Version) -> ErrorT String IO (N.Name, V.Version)
+verifyVersion nameAndVersion =
+  do let err = throwError "Invalid library name or version number."
+     (name,version) <- maybe err return nameAndVersion
+
+     listings <- liftIO $ Listing.readListings
+     let maybeListing = List.find (\lstng -> name == Listing.name lstng) listings
+         versions = maybe [] Listing.versions maybeListing
+     when (version `elem` versions) $
+          throwError ("Version " ++ show version ++ " has already been registered.")
+
+     (Http.Tags vs) <- Http.githubTags name
+     let v = show version
+     when (v `notElem` vs) $
+          throwError ("The tag " ++ v ++ " has not been pushed to GitHub.")
+
+     return (name,version)
+
+uploadFiles :: FilePath -> Snap ()
+uploadFiles directory =
   do liftIO $ createDirectoryIfMissing True directory
      handleFileUploads "/tmp" defaultUploadPolicy perPartPolicy (handler directory)
-     result <- liftIO $ runErrorT $ Docs.generate directory
-     case result of
-       Right () -> writeBS "Registered successfully!"
-       Left err ->
-           do liftIO $ removeDirectoryRecursive directory
-              writeBS $ BSC.pack err
-              httpError 500 "Internal Server Error"
   where
     perPartPolicy info
         | okayPart "docs" info || okayPart "deps" info = allowWithMaximumSize $ 2^(19::Int)
@@ -96,7 +128,7 @@ actuallyRegister directory =
             liftIO $ do
               BS.readFile temp2 >>= BS.writeFile (dir </> Path.json)
               BS.readFile temp1 >>= BS.writeFile (dir </> EPath.dependencyFile)
-    handler dir parts =
+    handler _ parts =
         do mapM (writeError . snd) parts
            error404' msg
 

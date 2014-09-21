@@ -9,8 +9,10 @@ import String
 
 -- Extract library info from JSON
 
-docs : Signal Doc
-docs = extract <~ Http.sendGet (constant "docs.json")
+docs : String -> String -> Signal Doc
+docs name version =
+    let path = "/catalog/" ++ name ++ "/" ++ version ++ "/docs.json"
+    in  extract <~ Http.sendGet (constant path)
 
 extract : Http.Response String -> Doc
 extract response =
@@ -18,7 +20,7 @@ extract response =
       Http.Success str ->
           case Json.fromString str of
             Just (Json.Array xs) ->
-                let rawModules = map (JSE.toRecord . Json.toJSObject) xs
+                let rawModules = map (JSE.toRecord . JSE.fromJson) xs
                 in  Doc (map .name rawModules) (concatMap toValues rawModules)
             _ -> Doc [] []
       _ -> Doc [] []
@@ -58,29 +60,31 @@ updater x maybe =
 
 -- Show the search results
 
-scene : String -> Doc -> Element
-scene term doc =
-    let results = flow down . map showModule . Dict.toList <| search doc term
+scene : String -> String -> String -> Doc -> Element
+scene project version term doc =
+    let path = "/catalog/" ++ project ++ "/" ++ version ++ "/"
+        results = flow down . map (showModule path) . Dict.toList <| search doc term
     in  spacer 20 4 `beside` results
 
-showModule : (String, [String]) -> Element
-showModule (name, values) =
-    let results = flow down <| map (valueLink name) values
+showModule : String -> (String, [String]) -> Element
+showModule path (name, values) =
+    let results = flow down <| map (valueLink path name) values
     in
-      flow down [ moduleLink name
+      flow down [ moduleLink path name
                 , results
                 , spacer 10 (if isEmpty values then 6 else 16) ]
 
-moduleLink : String -> Element
-moduleLink name =
-    text . Text.link (toPath name) <| toText name
+moduleLink : String -> String -> Element
+moduleLink path name =
+    leftAligned . Text.link (path ++ toPath name) <| toText name
 
-valueLink : String -> String -> Element
-valueLink modul name =
-    let address = toPath modul ++ "#" ++ name
-    in  flow down [ spacer 10 4
-                  , spacer 20 4 `beside` (text . monospace . Text.link address <| toText name)
-                  ]
+valueLink : String -> String -> String -> Element
+valueLink path modul name =
+    let address = path ++ toPath modul ++ "#" ++ name
+    in  flow down
+        [ spacer 10 4
+        , spacer 20 4 `beside` (leftAligned . monospace . Text.link address <| toText name)
+        ]
 
 toPath : String -> String
 toPath = String.map (\c -> if c == '.' then '-' else c)

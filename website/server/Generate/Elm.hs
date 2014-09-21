@@ -1,18 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Registry.Generate.Elm (generate) where
+module Generate.Elm (generate) where
 
 import Control.Applicative ((<$>), (<*>))
 import Control.Monad.Error
-import qualified Data.Aeson as Json
-import qualified Data.ByteString.Lazy.Char8 as BS
 import qualified Data.Char as Char
 import qualified Data.Either as Either
 import qualified Data.List as List
 import qualified Data.Map as Map
-import qualified Data.Maybe as Maybe
-import qualified System.Directory as Dir
 import System.FilePath ((<.>), (</>))
-import qualified System.FilePath as FP
 import Text.Parsec
 
 import Elm.Internal.Dependencies as Deps
@@ -32,26 +27,33 @@ generate docs deps directory = (++) <$> makeDocs <*> makeDeps
 
 depsToElm :: Deps -> String
 depsToElm deps =
+    let name = Deps.name deps
+        latest = "/catalog/" ++ N.toFilePath name ++ "/latest"
+        projectVersion =
+            "\"" ++ N.toFilePath name ++ "\" \"" ++ show (Deps.version deps) ++ "\""
+    in
     unlines [ "import Website.Skeleton (skeleton)"
             , "import Website.ColorScheme as C"
             , "import Website.Docs.Library as Library"
             , ""
             , "port title : String"
-            , "port title = \"" ++ show (Deps.name deps) ++ "\""
+            , "port title = \"" ++ show name ++ "\""
             , ""
-            , "links = [ (\"" ++ toLink deps "" ++ "\", toText \"" ++ N.project (Deps.name deps) ++ "\") ]"
+            , "links = [ (\"" ++ toLink deps "" ++ "\", toText \"" ++ N.project name ++ "\") ]"
             , ""
-            , "main = skeleton links scene Library.docs"
+            , "main = skeleton \"function search\" links scene (Library.docs " ++ projectVersion ++ ")"
             , ""
             , "scene term docs w ="
             , "  flow down"
             , "  [ color C.mediumGrey <| spacer w 1"
             , "  , width w [markdown|" ++ Deps.description deps ++ "|]"
-            , "  , Library.scene term docs"
+            , "  , Library.scene " ++ projectVersion ++ " term docs"
             , "  , width w [markdown|The [source code is on GitHub](" ++ Deps.repo deps ++ "),"
             , "so you can star projects, report issues, and follow great library designers."
             , ""
-            , "See all previous versions of this library [here](/catalog/" ++ N.toFilePath (Deps.name deps) ++ ").|]"
+            , "See all previous versions of this library [here](/catalog/" ++ N.toFilePath name ++ ")."
+            , ""
+            , "Link to the most recent release of this library with: [library.elm-lang.org" ++ latest ++ "](" ++ latest ++ ")|]"
             , "  ]"
             ]
 
@@ -83,7 +85,7 @@ docToElm deps doc =
                    , "links = [ (\"" ++ toLink deps "" ++ "\", toText \"" ++ N.project (Deps.name deps) ++ "\")"
                    , "        , (\"" ++ toLink deps name ++ "\", toText " ++ show name ++ ") ]"
                    , ""
-                   , "main = skeleton links scene (constant ())"
+                   , "main = skeleton \"function search\" links scene (constant ())"
                    , ""
                    , "scene term () w ="
                    , "    flow down . map snd . filter (String.contains (String.toLower term) . fst) <|"
@@ -95,7 +97,6 @@ docToElm deps doc =
            Left $ "In module " ++ name ++ ", could not find documentation for: " ++ List.intercalate ", " missing
   where
     name = moduleName doc
-    entries = getEntries doc
 
     parseDoc contents =
         choice [ eof >> return contents
