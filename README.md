@@ -6,9 +6,9 @@ The full catalog of Elm libraries lives at
 
 ## Install
 
-    cabal install elm-get
+Install [Elm Platform][platform] to get the `elm-get` executable.
 
-This will install the `elm-get` executable in `/home/YOU/.cabal/bin`.
+[platform]: https://github.com/elm-lang/elm-platform#elm-platform
 
 ## Use
 
