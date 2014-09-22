@@ -46,6 +46,7 @@ Executable elm-get
   Hs-Source-Dirs:      src
   Main-is:             Get/Main.hs
   other-modules:       Get.Dependencies,
+                       Get.Init,
                        Get.Install,
                        Get.Library,
                        Get.Options,
