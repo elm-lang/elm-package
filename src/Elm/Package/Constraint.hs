@@ -16,7 +16,6 @@ import qualified Elm.Package.Version as V
 data Endpoint
     = Included V.Version
     | Excluded V.Version
-    deriving (Show, Eq, Ord)
 
 
 satisfyUpper :: Endpoint -> V.Version -> Bool
@@ -51,7 +50,6 @@ renderLower endpoint =
 
 data Constraint
     = Range Endpoint Endpoint
-    deriving (Show, Eq)
 
 
 exactly :: V.Version -> Constraint
