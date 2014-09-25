@@ -11,12 +11,12 @@ import qualified Data.Map as Map
 import System.Directory
 import System.FilePath
 
-import qualified Package.Constraint as C
-import qualified Package.Description as Package
-import qualified Package.Dependencies as Dependencies
-import qualified Package.Name as N
-import qualified Package.Paths as Path
-import qualified Package.Version as V
+import qualified Elm.Package.Constraint as Constraint
+import qualified Elm.Package.Description as Package
+import qualified Elm.Package.Dependencies as Dependencies
+import qualified Elm.Package.Name as N
+import qualified Elm.Package.Paths as Path
+import qualified Elm.Package.Version as V
 
 import qualified Get.Library as GL
 import qualified Utils.Commands as Cmd
@@ -102,7 +102,7 @@ install (GL.Library name v) =
 
 insertVersion :: N.Name -> V.Version -> Package.Description -> Package.Description
 insertVersion name version deps =
-  deps { Package.dependencies = (name, C.exact version) : Package.dependencies deps }
+  deps { Package.dependencies = (name, Constraint.exactly version) : Package.dependencies deps }
 
 updateVersion :: Package.Description -> N.Name -> V.Version -> ErrorT String IO ()
 updateVersion deps name version =

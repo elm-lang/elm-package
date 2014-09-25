@@ -48,12 +48,12 @@ Executable elm-package
   ghc-options:         -threaded -O2 -W
   Hs-Source-Dirs:      src
   Main-is:             Get/Main.hs
-  other-modules:       Package.Constraint,
-                       Package.Dependencies,
-                       Package.Description,
-                       Package.Name,
-                       Package.Paths,
-                       Package.Version,
+  other-modules:       Elm.Package.Constraint,
+                       Elm.Package.Dependencies,
+                       Elm.Package.Description,
+                       Elm.Package.Name,
+                       Elm.Package.Paths,
+                       Elm.Package.Version,
                        Get.Install,
                        Get.Library,
                        Get.Options,

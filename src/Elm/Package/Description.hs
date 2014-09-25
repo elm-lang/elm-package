@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Package.Description where
+module Elm.Package.Description where
 
 import Control.Applicative
 import Control.Arrow (first)
@@ -14,10 +14,10 @@ import qualified Data.ByteString.Lazy as BS
 import qualified Data.HashMap.Strict as Map
 import qualified Data.Text as T
 
-import qualified Package.Name as N
-import qualified Package.Version as V
-import qualified Package.Constraint as C
-import qualified Package.Paths as Path
+import qualified Elm.Package.Name as N
+import qualified Elm.Package.Version as V
+import qualified Elm.Package.Constraint as C
+import qualified Elm.Package.Paths as Path
 
 
 data Description = Description

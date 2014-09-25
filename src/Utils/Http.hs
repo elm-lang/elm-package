@@ -13,7 +13,7 @@ import Network.HTTP.Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Network.HTTP.Types
 
-import qualified Package.Name as N
+import qualified Elm.Package.Name as Name
 
 send :: String -> (Request -> Manager -> IO a) -> ErrorT String IO a
 send url handler =
@@ -36,7 +36,7 @@ send url handler =
                  "failed with '" ++ show exception ++ "' when sending request to\n" ++
                  "    <" ++ url ++ ">"
 
-githubTags :: N.Name -> ErrorT String IO Tags
+githubTags :: Name.Name -> ErrorT String IO Tags
 githubTags name =
     do response <- send url $ \request manager ->
                      httpLbs (request {requestHeaders = headers}) manager
@@ -44,8 +44,8 @@ githubTags name =
          Left err -> throwError err
          Right tags -> return tags
     where
-      url = "https://api.github.com/repos/" ++ N.user name ++
-            "/" ++ N.project name ++ "/tags"
+      url = "https://api.github.com/repos/" ++ Name.user name ++
+            "/" ++ Name.project name ++ "/tags"
 
       headers = [("User-Agent", "elm-get")] <>
                 [("Accept", "application/json")]

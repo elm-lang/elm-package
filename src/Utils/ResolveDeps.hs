@@ -16,11 +16,11 @@ import qualified Data.ByteString.Lazy as BS
 import qualified Data.Map as M
 import qualified System.Directory as Dir
 
-import qualified Package.Constraint as C
-import qualified Package.Description as Package
-import qualified Package.Name as N
-import qualified Package.Paths as Path
-import qualified Package.Version as V
+import qualified Elm.Package.Constraint as Constraint
+import qualified Elm.Package.Description as Package
+import qualified Elm.Package.Name as N
+import qualified Elm.Package.Paths as Path
+import qualified Elm.Package.Version as V
 import qualified Get.Registry as Reg
 import qualified Utils.Http as Http
 import qualified Utils.Cache as Cache
@@ -78,7 +78,7 @@ instance FromJSON LibraryInfo
 instance ToJSON LibraryInfo
 
 type LibraryDB = Map String LibraryInfo
-type Constraints = [(N.Name, C.Constraint)]
+type Constraints = [(N.Name, Constraint.Constraint)]
 
 buildMap :: Ord k => (v -> k) -> [v] -> Map k v
 buildMap key values = foldl' (\map v -> M.insert (key v) v map) M.empty values
@@ -166,7 +166,7 @@ addConstraints constrained constraints =
         Nothing -> return Nothing
         Just values ->
           do versions <- getValidVersions name values
-             case filter (C.satisfyConstraint constraint) versions of
+             case filter (Constraint.isSatisfied constraint) versions of
                [] -> return Nothing
                ls -> return $ Just $ M.insert name ls values
 
@@ -194,7 +194,7 @@ solve fixed constrained =
 
         satisfyFixed (n, c) =
           case M.lookup n fixed of
-            Just v -> C.satisfyConstraint c v
+            Just v -> Constraint.isSatisfied c v
             Nothing -> False
 
         tryNext version =

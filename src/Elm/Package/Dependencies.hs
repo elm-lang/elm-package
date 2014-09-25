@@ -1,5 +1,5 @@
 {-# OPTIONS_GHC -Wall #-}
-module Package.Dependencies where
+module Elm.Package.Dependencies where
 
 import Prelude hiding (read)
 import Control.Monad (when)
@@ -11,8 +11,8 @@ import qualified Data.Text as Text
 import qualified Data.Map as Map
 import System.Directory (doesFileExist)
 
-import qualified Package.Name as N
-import qualified Package.Version as V
+import qualified Elm.Package.Name as N
+import qualified Elm.Package.Version as V
 
 
 -- CONVERSION TO JSON

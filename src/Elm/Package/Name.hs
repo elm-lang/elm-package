@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable #-}
-module Package.Name where
+module Elm.Package.Name where
 
 import Control.Applicative
 import Control.Monad.Error

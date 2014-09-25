@@ -3,10 +3,10 @@ module Get.Init where
 import System.IO (hFlush, stdout)
 
 import Data.Aeson.Encode.Pretty (encodePretty)
-import qualified Package.Name as N
-import qualified Package.Version as V
-import qualified Package.Description as D
-import qualified Package.Paths as Path
+import qualified Elm.Package.Name as N
+import qualified Elm.Package.Version as V
+import qualified Elm.Package.Description as D
+import qualified Elm.Package.Paths as Path
 import qualified Data.ByteString.Lazy as BS
 
 askForChecked :: (String -> Either String a) -> String -> IO a

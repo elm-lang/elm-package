@@ -9,10 +9,10 @@ import Network.HTTP
 import Network.HTTP.Client
 import Network.HTTP.Client.MultipartFormData
 
-import qualified Package.Description as Package
-import qualified Package.Name as N
-import qualified Package.Paths as P
-import qualified Package.Version as V
+import qualified Elm.Package.Description as Package
+import qualified Elm.Package.Name as N
+import qualified Elm.Package.Paths as P
+import qualified Elm.Package.Version as V
 import qualified Paths_elm_package as This
 
 import qualified Utils.Http as Http

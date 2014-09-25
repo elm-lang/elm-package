@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable, TemplateHaskell #-}
-module Package.Version where
+module Elm.Package.Version where
 
 import Control.Applicative ((<$>), (<*>))
 import Data.Aeson

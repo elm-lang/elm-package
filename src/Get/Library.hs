@@ -2,8 +2,8 @@ module Get.Library where
 
 import Control.Applicative ((<$>))
 
-import Package.Name as N
-import Package.Version as V
+import qualified Elm.Package.Name as N
+import qualified Elm.Package.Version as V
 
 type RawLibrary = Library' String (Maybe String)
 type Library    = Library' N.Name (Maybe V.Version)

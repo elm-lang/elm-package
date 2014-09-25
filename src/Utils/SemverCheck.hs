@@ -16,7 +16,7 @@ import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
 import qualified Data.Vector as Vector
 
-import qualified Package.Version as V
+import qualified Elm.Package.Version as V
 
 -- DATATYPE DEFINITIONS
 

@@ -1,5 +1,5 @@
 {-# OPTIONS_GHC -Wall #-}
-module Package.Paths where
+module Elm.Package.Paths where
 
 import System.FilePath ((</>))
 

@@ -2,8 +2,8 @@ module Utils.Paths where
 
 import System.FilePath
 
-import qualified Package.Name as N
-import qualified Package.Version as V
+import qualified Elm.Package.Name as N
+import qualified Elm.Package.Version as V
 
 internals = "_internals"
 
