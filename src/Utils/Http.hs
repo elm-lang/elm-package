@@ -13,7 +13,7 @@ import Network.HTTP.Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Network.HTTP.Types
 
-import qualified Elm.Internal.Name as N
+import qualified Package.Name as N
 
 send :: String -> (Request -> Manager -> IO a) -> ErrorT String IO a
 send url handler =

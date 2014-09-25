@@ -16,11 +16,11 @@ import qualified Data.ByteString.Lazy as BS
 import qualified Data.Map as M
 import qualified System.Directory as Dir
 
-import qualified Elm.Internal.Constraint as C
-import qualified Elm.Internal.Dependencies as D
-import qualified Elm.Internal.Name as N
-import qualified Elm.Internal.Assets as A
-import qualified Elm.Internal.Version as V
+import qualified Package.Constraint as C
+import qualified Package.Description as Package
+import qualified Package.Name as N
+import qualified Package.Paths as Path
+import qualified Package.Version as V
 import qualified Get.Registry as Reg
 import qualified Utils.Http as Http
 import qualified Utils.Cache as Cache
@@ -95,7 +95,7 @@ onlyLastPatches info = info { versions = process $ versions info }
 -- | Read information about libraries, probably from local cache
 readLibraries :: ErrorT String IO LibraryDB
 readLibraries =
-  let dir = A.packagesDirectory </> "_elm_get_cache"
+  let dir = Path.packagesDirectory </> "_elm_get_cache"
       fileName = "libraries.json"
       downloadAction = decodeFromUrl $ Reg.domain ++ "/libraries.json"
   in
@@ -104,15 +104,23 @@ readLibraries =
 
 readDependencies :: N.Name -> V.Version -> ErrorT String IO Constraints
 readDependencies name version =
-  let fullUrl = concat [ Reg.domain , "/catalog/"
-                       , N.toFilePath name
-                       , "/", show version
-                       , "/", A.dependencyFile
-                       ]
-      dir = A.packagesDirectory </> "_elm_get_cache" </> N.toFilePath name
-      fileName = show version ++ ".json"
-      downloadAction = decodeFromUrl fullUrl
-  in D.dependencies <$> cacheWrapper downloadAction dir fileName
+    Package.dependencies <$> cacheWrapper downloadAction dir fileName
+  where
+    fullUrl =
+        concat
+        [ Reg.domain , "/catalog/"
+        , N.toFilePath name
+        , "/", show version
+        , "/", Path.description
+        ]
+
+    dir =
+        Path.packagesDirectory </> "_elm_get_cache" </> N.toFilePath name
+    
+    fileName = show version ++ ".json"
+    
+    downloadAction = decodeFromUrl fullUrl
+
 
 data SolverState = SolverState
     { ssLibrariesMap :: Map (N.Name, V.Version) Constraints
@@ -204,14 +212,14 @@ solveForVersion name version =
        Just value -> return value
        Nothing -> throwError "Solving dependencies failed"
 
-solveConstraints :: D.Deps -> ErrorT String IO [(N.Name, V.Version)]
+solveConstraints :: Package.Description -> ErrorT String IO [(N.Name, V.Version)]
 solveConstraints deps =
   do libraryDb <- readLibraries
-     let name = D.name deps
-         version = D.version deps
+     let name = Package.name deps
+         version = Package.version deps
          unreader = runReaderT (solveForVersion name version) $
                     SolverEnv libraryDb readDependencies
          initialState = SolverState M.empty
      (solved, _) <- runStateT unreader initialState
-     let result = M.delete (D.name deps) solved
+     let result = M.delete (Package.name deps) solved
      return (M.toList result)

@@ -11,12 +11,12 @@ import qualified Data.Map as Map
 import System.Directory
 import System.FilePath
 
-import qualified Elm.Internal.Constraint as C
-import qualified Elm.Internal.Dependencies as D
-import qualified Elm.Internal.SolvedDependencies as SD
-import qualified Elm.Internal.Name as N
-import qualified Elm.Internal.Assets as A
-import qualified Elm.Internal.Version as V
+import qualified Package.Constraint as C
+import qualified Package.Description as Package
+import qualified Package.Dependencies as Dependencies
+import qualified Package.Name as N
+import qualified Package.Paths as Path
+import qualified Package.Version as V
 
 import qualified Get.Library as GL
 import qualified Utils.Commands as Cmd
@@ -26,9 +26,9 @@ import Utils.ResolveDeps
 -- | External Interface
 installAll :: ErrorT String IO ()
 installAll =
-  do deps <- D.depsAt A.dependencyFile
+  do deps <- Package.descriptionAt Path.description
      libs <- solveConstraints deps
-     currVersions <- liftIO $ SD.readMaybe A.solvedDependencies
+     currVersions <- liftIO $ Dependencies.readMaybe Path.dependencies
      let diffList = computeDiff currVersions libs
      let (_, libsToInstall) = unzip diffList
      confirmed <- liftIO $ offerInstallPlan diffList
@@ -95,16 +95,16 @@ install (GL.Library name v) =
                 throwError $ "Library " ++ show name ++ " wasn't found!"
               Just lib -> return $ maximum $ versions lib
        Just vsn -> return vsn
-     deps <- D.depsAt A.dependencyFile
-     case lookup name (D.dependencies deps) of
+     deps <- Package.descriptionAt Path.description
+     case lookup name (Package.dependencies deps) of
        Just{} -> throwError $ "You already have " ++ show name ++ " in your dependencies!"
        Nothing -> updateVersion deps name version
 
-insertVersion :: N.Name -> V.Version -> D.Deps -> D.Deps
+insertVersion :: N.Name -> V.Version -> Package.Description -> Package.Description
 insertVersion name version deps =
-  deps { D.dependencies = (name, C.exact version) : D.dependencies deps }
+  deps { Package.dependencies = (name, C.exact version) : Package.dependencies deps }
 
-updateVersion :: D.Deps -> N.Name -> V.Version -> ErrorT String IO ()
+updateVersion :: Package.Description -> N.Name -> V.Version -> ErrorT String IO ()
 updateVersion deps name version =
   do confirm <-
        liftIO $
@@ -124,25 +124,25 @@ replaceBS needle replacement haystack =
           False -> before : replacement : buildList (B.drop (B.length needle) after)
   in B.concat $ buildList haystack
 
-writeDependencies :: D.Deps -> IO ()
+writeDependencies :: Package.Description -> IO ()
 writeDependencies deps =
   let jsonOrig = BS.toStrict $ encodePretty deps
       -- this ugly replace is a workaround for aeson-pretty UTF8-escaping
       -- '<' and '>' characters, which doesn't seem to be configurable
       json = replaceBS "\\u003e" ">" $ replaceBS "\\u003c" "<" $ jsonOrig
-  in B.writeFile A.dependencyFile json
+  in B.writeFile Path.description json
 
 {-| Write list of installed libraries to elm_dependencies/elm_libraries.json,
 which is used by compiler to find them
 -}
 writeLibraries :: [Lib] -> IO ()
 writeLibraries libraries =
-  do createDirectoryIfMissing True A.packagesDirectory
-     SD.write A.solvedDependencies libraries
+  do createDirectoryIfMissing True Path.packagesDirectory
+     Dependencies.write Path.dependencies libraries
 
 install1 :: Lib -> ErrorT String IO ()
 install1 (name, version) =
-  Cmd.inDir A.packagesDirectory $
+  Cmd.inDir Path.packagesDirectory $
   do repo <- Cmd.inDir Path.internals $ getRepoPath name version
      liftIO $ createDirectoryIfMissing True repo
      Cmd.copyDir (Path.internals </> repo) (repo </> show version)

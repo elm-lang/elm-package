@@ -7,8 +7,8 @@ import System.Directory (findExecutable)
 import System.Exit
 import System.IO
 
-import qualified Elm.Internal.Name as N
-import qualified Elm.Internal.Version as V
+import qualified Package.Name as N
+import qualified Package.Version as V
 
 import qualified Get.Install as Install
 import Get.Library

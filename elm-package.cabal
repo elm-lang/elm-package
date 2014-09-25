@@ -30,6 +30,7 @@ Library
                        Utils.Paths
   Build-depends:       aeson >= 0.7 && < 0.9,
                        base >=4.2 && <5,
+                       binary >= 0.7 && < 0.8,
                        bytestring >= 0.9 && < 0.11,
                        directory >= 1.0 && < 2.0,
                        Elm >= 0.13 && < 0.14,
@@ -40,13 +41,19 @@ Library
                        mtl >= 2 && < 3,
                        network >= 2.4 && < 2.7,
                        process >= 1 && < 2,
+                       text,
                        vector >= 0.10 && < 0.11
 
 Executable elm-package
   ghc-options:         -threaded -O2 -W
   Hs-Source-Dirs:      src
   Main-is:             Get/Main.hs
-  other-modules:       Get.Dependencies,
+  other-modules:       Package.Constraint,
+                       Package.Dependencies,
+                       Package.Description,
+                       Package.Name,
+                       Package.Paths,
+                       Package.Version,
                        Get.Install,
                        Get.Library,
                        Get.Options,
@@ -74,6 +81,9 @@ Executable elm-package
                        network >= 2.4 && < 2.7,
                        optparse-applicative >= 0.8.1 && < 0.11,
                        process >= 1 && < 2,
+                       text,
+                       time,
+                       unordered-containers,
                        vector >= 0.10 && < 0.11
 
 Test-suite unit-test

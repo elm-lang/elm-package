@@ -9,11 +9,11 @@ import Network.HTTP
 import Network.HTTP.Client
 import Network.HTTP.Client.MultipartFormData
 
-import qualified Elm.Internal.Dependencies as D
-import qualified Elm.Internal.Name as N
-import qualified Elm.Internal.Assets as A
-import qualified Elm.Internal.Version as V
-import qualified Paths_elm_get as This
+import qualified Package.Description as Package
+import qualified Package.Name as N
+import qualified Package.Paths as P
+import qualified Package.Version as V
+import qualified Paths_elm_package as This
 
 import qualified Utils.Http as Http
 
@@ -24,7 +24,7 @@ libraryUrl path vars =
   where
     version = ("elm-get-version", showVersion This.version)
 
-metadata :: N.Name -> ErrorT String IO (Maybe D.Deps)
+metadata :: N.Name -> ErrorT String IO (Maybe Package.Description)
 metadata name =
     Http.send url $ \request manager ->
     do response <- httpLbs request manager
@@ -51,5 +51,5 @@ register name version path =
       url = libraryUrl "register" vars
       vars = [ ("library", show name), ("version", show version) ]
       files = [ partFileSource "docs" path
-              , partFileSource "deps" A.dependencyFile
+              , partFileSource "deps" P.description
               ]

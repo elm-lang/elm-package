@@ -8,7 +8,7 @@ import Options.Applicative as Opt
 import Text.PrettyPrint.ANSI.Leijen (text, vcat, Doc)
 
 import Get.Library
-import qualified Paths_elm_get as This
+import qualified Paths_elm_package as This
 
 data Command
     = Install (Maybe RawLibrary)

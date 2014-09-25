@@ -16,13 +16,12 @@ import System.Directory
 import System.Exit
 import System.IO
 
-import qualified Elm.Internal.Dependencies as D
-import qualified Elm.Internal.SolvedDependencies as SD
-import qualified Elm.Internal.Name as N
-import qualified Elm.Internal.Assets as A
-import qualified Elm.Internal.Version as V
+import qualified Package.Description as Package
+import qualified Package.Dependencies as Deps
+import qualified Package.Name as N
+import qualified Package.Paths as P
+import qualified Package.Version as V
 
-import Get.Dependencies (defaultDeps)
 import qualified Get.Registry as R
 import qualified Utils.Commands as Cmd
 import qualified Utils.Http as Http
@@ -65,11 +64,11 @@ publish =
 publishStep1 :: ErrorT String IO ()
 publishStep1 =
   do deps <- getDeps
-     let name = D.name deps
-         version = D.version deps
-         exposedModules = D.exposed deps
+     let name = Package.name deps
+         version = Package.version deps
+         exposedModules = Package.exposed deps
      Cmd.out $ unwords [ "Verifying", show name, show version, "..." ]
-     verifyElmVersion (D.elmVersion deps)
+     verifyElmVersion (Package.elmVersion deps)
      verifyMetadata deps
      verifyExposedModulesExist exposedModules
      verifyVersionExist name version
@@ -84,13 +83,13 @@ publishStep1 =
                                        , nextVersion = newVersion
                                        }
           liftIO $ BSL.writeFile savedMetadataFilename $ encode metadata
-          liftIO $ BSL.writeFile A.dependencyFile $ D.prettyJSON (deps { D.version = newVersion })
+          liftIO $ BSL.writeFile P.description $ Package.prettyJSON (deps { Package.version = newVersion })
 
-checkMetadata :: SavedMetadata -> D.Deps -> ErrorT String IO ()
+checkMetadata :: SavedMetadata -> Package.Description -> ErrorT String IO ()
 checkMetadata metadata deps =
-  do assert "Version wasn't modified between launches" $ D.version deps == nextVersion metadata
+  do assert "Version wasn't modified between launches" $ Package.version deps == nextVersion metadata
      let version = baseVersion metadata
-         name = D.name deps
+         name = Package.name deps
      docsComparison <- compareDocs name version
      let compat = Semver.compatibility docsComparison
          bump = Semver.bumpByCompatibility compat
@@ -104,9 +103,9 @@ checkMetadata metadata deps =
                  unlines [ "Assertion failed:"
                          , msg
                          , ""
-                         , "It appears you made unallowed changes to " ++ A.dependencyFile
+                         , "It appears you made unallowed changes to " ++ P.description
                          , "Easiest way to continue publishing package is to remove"
-                         , savedMetadataFilename ++ " and restore base version in " ++ A.dependencyFile
+                         , savedMetadataFilename ++ " and restore base version in " ++ P.description
                          ]
         True -> return ()
 
@@ -117,7 +116,7 @@ publishStep2 =
      metadata <- errorFromMaybe (savedMetadataFilename ++ " is malformed!") maybeMetadata
      deps <- getDeps
      checkMetadata metadata deps
-     R.register (D.name deps) (D.version deps) Path.combinedJson
+     R.register (Package.name deps) (Package.version deps) Path.combinedJson
      Cmd.out "Success!"
 
 exitAtFail :: ErrorT String IO a -> ErrorT String IO a
@@ -129,11 +128,13 @@ exitAtFail action =
            liftIO $ do hPutStrLn stderr $ "\nError: " ++ err
                        exitFailure
 
-getDeps :: ErrorT String IO D.Deps
-getDeps = exitAtFail $ D.depsAt A.dependencyFile
+getDeps :: ErrorT String IO Package.Description
+getDeps =
+    exitAtFail $ Package.descriptionAt P.description
 
 getVersions :: ErrorT String IO [(N.Name, V.Version)]
-getVersions = exitAtFail $ SD.read A.solvedDependencies
+getVersions =
+    exitAtFail $ Deps.read P.dependencies
 
 withCleanup :: ErrorT String IO () -> ErrorT String IO ()
 withCleanup action =
@@ -164,23 +165,23 @@ verifyExposedModulesExist modules =
              when (not exists) $ throwError $
                  "Cannot find module " ++ modul ++ " at " ++ path
 
-verifyMetadata :: D.Deps -> ErrorT String IO ()
+verifyMetadata :: Package.Description -> ErrorT String IO ()
 verifyMetadata deps =
     case problems of
       [] -> return ()
-      _  -> throwError $ "Some of the fields in " ++ A.dependencyFile ++
+      _  -> throwError $ "Some of the fields in " ++ P.description ++
                          " have not been filled in yet:\n\n" ++ unlines problems ++
                          "\nFill these in and try to publish again!"
     where
       problems = Maybe.catMaybes
-          [ verify D.repo        "  repository - must refer to a valid repo on GitHub"
-          , verify D.summary     "  summary - a quick summary of your project, 80 characters or less"
-          , verify D.description "  description - extended description, how to get started, any useful references"
-          , verify D.exposed     "  exposed-modules - list modules your project exposes to users"
+          [ verify Package.repo        "  repository - must refer to a valid repo on GitHub"
+          , verify Package.summary     "  summary - a quick summary of your project, 80 characters or less"
+          , verify Package.description "  description - extended description, how to get started, any useful references"
+          , verify Package.exposed     "  exposed-modules - list modules your project exposes to users"
           ]
 
       verify what msg =
-          if what deps == what defaultDeps
+          if what deps == what Package.defaultDescription
             then Just msg
             else Nothing
 
@@ -192,7 +193,7 @@ verifyVersionExist name version =
        Just versions ->
           when (not $ version `elem` versions) $ throwError $ unlines
             [ "base version doesn't exist"
-            , "Version number in your " ++ A.dependencyFile ++ " should be for base (previous) version"
+            , "Version number in your " ++ P.description ++ " should be for base (previous) version"
             , "not resulting version number"
             ]
 
