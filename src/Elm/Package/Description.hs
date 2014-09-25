@@ -40,7 +40,7 @@ defaultDescription =
     Description
     { name = N.Name "USER" "PROJECT"
     , version = V.V [0,1] ""
-    , summary = "concise, helpful summary of your project"
+    , summary = "helpful summary of your project, less than 80 characters"
     , description = "full description of this project, describe your use case"
     , license = "BSD3"
     , repo = "https://github.com/USER/PROJECT.git"
