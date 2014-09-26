@@ -65,7 +65,9 @@ Executable elm-package
     Main-is:
         Get/Main.hs
 
-    other-modules:       
+    other-modules:
+        Diff.Compare,
+        Diff.Display,
         Elm.Package.Constraint,
         Elm.Package.Dependencies,
         Elm.Package.Description,
