@@ -32,14 +32,14 @@ data Description = Description
     , elmVersion :: V.Version
     , sourceDirs :: [FilePath]
     , dependencies :: [(N.Name, C.Constraint)]
-    } deriving (Show, Eq)
+    }
 
 
 defaultDescription :: Description
 defaultDescription =
     Description
     { name = N.Name "USER" "PROJECT"
-    , version = V.V [0,1] ""
+    , version = V.Version 0 0 0
     , summary = "helpful summary of your project, less than 80 characters"
     , description = "full description of this project, describe your use case"
     , license = "BSD3"
@@ -65,13 +65,17 @@ instance ToJSON Description where
       , "dependencies"    .= (jsonDeps . dependencies $ d)
       ] ++ sourceDirectories ++ nativeModules
     where
-      jsonDeps = Map.fromList . map (first (T.pack . show))
+      jsonDeps deps =
+          Map.fromList $ map (first (T.pack . N.toString)) deps
+
       nativeModules
           | null (native d) = []
           | otherwise       = [ "native-modules" .= native d ]
+
       sourceDirectories
           | null (sourceDirs d) = []
           | otherwise = [ "source-directories" .= sourceDirs d ]
+
 
 instance FromJSON Description where
     parseJSON (Object obj) =

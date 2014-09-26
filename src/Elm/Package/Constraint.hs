@@ -35,15 +35,15 @@ satisfyLower endpoint version =
 renderUpper :: Endpoint -> String
 renderUpper endpoint =
     case endpoint of
-      Included v -> "<=" ++ show v
-      Excluded v -> "<" ++ show v
+      Included v -> "<=" ++ V.toString v
+      Excluded v -> "<" ++ V.toString v
 
 
 renderLower :: Endpoint -> String
 renderLower endpoint =
     case endpoint of
-      Included v -> ">=" ++ show v
-      Excluded v -> ">" ++ show v
+      Included v -> ">=" ++ V.toString v
+      Excluded v -> ">" ++ V.toString v
 
 
 -- CONSTRAINTS
@@ -102,7 +102,7 @@ toString constr =
     case constr of
       Range (Included v1) (Included v2)
           | v1 == v2 ->
-              "==" ++ show v1
+              "==" ++ V.toString v1
 
       Range lower upper ->
           concat [renderLower lower, " ", renderUpper upper]

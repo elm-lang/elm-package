@@ -10,9 +10,9 @@ import Network.HTTP.Client
 import Network.HTTP.Client.MultipartFormData
 
 import qualified Elm.Package.Description as Package
-import qualified Elm.Package.Name as N
+import qualified Elm.Package.Name as Name
 import qualified Elm.Package.Paths as P
-import qualified Elm.Package.Version as V
+import qualified Elm.Package.Version as Version
 import qualified Paths_elm_package as This
 
 import qualified Utils.Http as Http
@@ -24,23 +24,23 @@ libraryUrl path vars =
   where
     version = ("elm-get-version", showVersion This.version)
 
-metadata :: N.Name -> ErrorT String IO (Maybe Package.Description)
+metadata :: Name.Name -> ErrorT String IO (Maybe Package.Description)
 metadata name =
     Http.send url $ \request manager ->
     do response <- httpLbs request manager
        return $ Json.decode $ responseBody response
     where
-      url = libraryUrl "metadata" [("library", show name)]
+      url = libraryUrl "metadata" [("library", Name.toString name)]
 
-versions :: N.Name -> ErrorT String IO (Maybe [V.Version])
+versions :: Name.Name -> ErrorT String IO (Maybe [Version.Version])
 versions name =
     Http.send url $ \request manager ->
     do response <- httpLbs request manager
        return $ Binary.decode $ responseBody response
     where
-      url = libraryUrl "versions" [("library", show name)]
+      url = libraryUrl "versions" [("library", Name.toString name)]
 
-register :: N.Name -> V.Version -> FilePath -> ErrorT String IO ()
+register :: Name.Name -> Version.Version -> FilePath -> ErrorT String IO ()
 register name version path =
     Http.send url $ \request manager ->
     do request' <- formDataBody files request
@@ -49,7 +49,7 @@ register name version path =
        return ()
     where
       url = libraryUrl "register" vars
-      vars = [ ("library", show name), ("version", show version) ]
+      vars = [ ("library", Name.toString name), ("version", Version.toString version) ]
       files = [ partFileSource "docs" path
               , partFileSource "deps" P.description
               ]

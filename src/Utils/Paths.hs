@@ -3,7 +3,7 @@ module Utils.Paths where
 import System.FilePath
 
 import qualified Elm.Package.Name as N
-import qualified Elm.Package.Version as V
+import qualified Elm.Package.Version as Version
 
 internals = "_internals"
 
@@ -15,8 +15,8 @@ listing = "public" </> "libraries.json"
 
 library name = libDir </> N.toFilePath name
 
-libraryVersion :: N.Name -> V.Version -> FilePath
-libraryVersion name version = library name </> show version
+libraryVersion :: N.Name -> Version.Version -> FilePath
+libraryVersion name version = library name </> Version.toString version
 
 moduleToElmFile :: String -> FilePath
 moduleToElmFile moduleName = swapDots moduleName ++ ".elm"
