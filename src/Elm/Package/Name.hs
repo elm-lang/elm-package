@@ -19,6 +19,11 @@ toString name =
     user name ++ "/" ++ project name
 
 
+toUrl :: Name -> String
+toUrl name =
+    user name ++ "/" ++ project name
+
+
 toFilePath :: Name -> FilePath
 toFilePath name =
     user name ++ "-" ++ project name
