@@ -11,11 +11,20 @@ import qualified Data.Text as Text
 import qualified Data.Map as Map
 import System.Directory (doesFileExist)
 
+import qualified Elm.Package.Constraint as C
 import qualified Elm.Package.Name as N
 import qualified Elm.Package.Version as V
 
 
--- CONVERSION TO JSON
+type Solution =
+    Map.Map N.Name V.Version
+
+type Constraints =
+    Map.Map N.Name C.Constraint
+
+
+
+{-- CONVERSION TO JSON
 
 toJson :: [(N.Name, V.Version)] -> Value
 toJson deps =
@@ -26,21 +35,19 @@ toJson deps =
 
 fromJson :: Map.Map String String -> ErrorT String IO [(N.Name, V.Version)]
 fromJson pairs =
-    mapM convert (Map.toList pairs)
-  where
-    convert :: (String, String) -> ErrorT String IO (N.Name, V.Version)
-    convert (name, version) =
-        case N.fromString name of
-          Nothing ->
-              throwError $ "Could not parse package name " ++ name
+    mapM parseNameAndVersion (Map.toList pairs)
 
-          Just realName ->
-              case V.fromString version of
-                Nothing ->
-                    throwError $ "Could not parse version number for package " ++ name
 
-                Just realVersion ->
-                    return (realName, realVersion)
+parseNameAndVersion :: (String, String) -> ErrorT String IO (N.Name, V.Version)
+parseNameAndVersion (rawName, rawVersion) =
+    do  name <- parse rawName N.fromString ("package name " ++ rawName)
+        vrsn <- parse rawVersion V.fromString ("version number for package " ++ rawName)
+        return (name, vrsn)
+
+
+parse :: String -> (String -> Maybe a) -> String -> ErrorT String IO a
+parse string fromString msg =
+    maybe (throwError ("Could not parse " ++ msg)) return (fromString string)
 
 
 -- READING AND WRITING FILES
@@ -74,3 +81,4 @@ readMaybe path =
      case eitherPairs of
        Right pairs -> return (Just pairs)
        Left _ -> return Nothing
+-}
