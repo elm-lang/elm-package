@@ -14,8 +14,8 @@ data Plan = Plan
     }
 
 
-upgradePlan :: Dep.Solution -> Dep.Solution -> Plan
-upgradePlan old new =
+create :: Dep.Solution -> Dep.Solution -> Plan
+create old new =
     Plan
     { installs = Map.difference new old
     , upgrades = discardNoOps (Map.intersectionWith Upgrade old new)
