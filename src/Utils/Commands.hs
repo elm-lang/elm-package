@@ -1,5 +1,4 @@
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Utils.Commands where
 
 import Control.Monad.Error
