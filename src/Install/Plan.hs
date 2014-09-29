@@ -18,7 +18,7 @@ create :: Dep.Solution -> Dep.Solution -> Plan
 create old new =
     Plan
     { installs = Map.difference new old
-    , upgrades = discardNoOps (Map.intersectionWith Upgrade old new)
+    , upgrades = discardNoOps (Map.intersectionWith (,) old new)
     , removals = Map.difference old new
     }
   where
@@ -35,21 +35,21 @@ create old new =
 
 display :: Plan -> String
 display (Plan installs upgrades removals) =
-  displayCategory "Install" displayInstall installs
-  ++ displayCategory "Upgrade" displayUpgrade upgrades
-  ++ displayCategory "Remove" displayRemove removals
+    displayCategory "Install" displayInstall installs
+    ++ displayCategory "Upgrade" displayUpgrade upgrades
+    ++ displayCategory "Remove" displayRemove removals
   where
     displayCategory name render category =
-      if Map.null category then "" else
-        "  " ++ name ++ ":"
-        ++ concatMap (\entry -> "\n    " ++ render entry) (Map.toList category)
-        ++ "\n"
+        if Map.null category then "" else
+          "  " ++ name ++ ":"
+          ++ concatMap (\entry -> "\n    " ++ render entry) (Map.toList category)
+          ++ "\n"
 
-  displayInstall (name, version) =
-      N.toString name ++ " " ++ V.toString version
+    displayInstall (name, version) =
+        N.toString name ++ " " ++ V.toString version
 
     displayUpgrade (name, (old, new)) =
-    N.toString name ++ " (" ++ V.toString old ++ " -> " ++ V.toString new ++ ")"
+        N.toString name ++ " (" ++ V.toString old ++ " -> " ++ V.toString new ++ ")"
 
-  displayRemove (name, _version) =
-    N.toString name
+    displayRemove (name, _version) =
+        N.toString name
