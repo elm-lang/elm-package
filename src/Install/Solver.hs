@@ -11,16 +11,16 @@ import System.FilePath ((</>))
 import qualified System.Directory as Dir
 
 import qualified Elm.Package.Constraint as C
-import qualified Elm.Package.Dependencies as Dependencies
 import qualified Elm.Package.Name as N
 import qualified Elm.Package.Paths as Path
+import qualified Elm.Package.Solution as S
 import qualified Elm.Package.Version as V
 import qualified Get.Registry as Reg
 import qualified Utils.Http as Http
 import qualified Utils.Cache as Cache
 
 
-solve :: [(N.Name, C.Constraint)] -> ErrorT String IO Dependencies.Solution
+solve :: [(N.Name, C.Constraint)] -> ErrorT String IO S.Solution
 solve constraints =
     error "solveConstraints: not audited yet"
 {--

@@ -9,9 +9,9 @@ import System.FilePath ((</>))
 
 import qualified Elm.Package.Constraint as Constraint
 import qualified Elm.Package.Description as Desc
-import qualified Elm.Package.Dependencies as Dependencies
 import qualified Elm.Package.Name as N
 import qualified Elm.Package.Paths as Path
+import qualified Elm.Package.Solution as S
 import qualified Elm.Package.Version as V
 
 import qualified Install.Fetch as Fetch
@@ -61,7 +61,7 @@ upgrade =
   do  description <- Desc.read
 
       newSolution <- Solver.solve (Desc.dependencies description)
-      oldSolution <- Dependencies.readSolutionOr Path.solvedDependencies (return Map.empty)
+      oldSolution <- S.readSolutionOr Path.solvedDependencies (return Map.empty)
       let plan = Plan.create oldSolution newSolution
 
       approve <- liftIO $ getApproval plan
@@ -79,7 +79,7 @@ getApproval plan =
       Cmd.yesOrNo
 
 
-runPlan :: Dependencies.Solution -> Dependencies.Solution -> Plan.Plan -> ErrorT String IO ()
+runPlan :: S.Solution -> S.Solution -> Plan.Plan -> ErrorT String IO ()
 runPlan oldSolution newSolution plan =
   do  -- fetch new dependencies
       Cmd.inDir Path.packagesDirectory $
@@ -111,7 +111,7 @@ runPlan oldSolution newSolution plan =
         removeDirectoryRecursive (N.toFilePath name </> V.toString version)
 
     writeSolution =
-        Dependencies.writeSolution (Path.packagesDirectory </> Path.solvedDependencies)
+        S.writeSolution (Path.packagesDirectory </> Path.solvedDependencies)
 
     failureMsg =
         "I could not build the new packages, so I have reverted to your previous\n\

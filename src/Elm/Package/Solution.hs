@@ -1,5 +1,5 @@
 {-# OPTIONS_GHC -Wall #-}
-module Elm.Package.Dependencies where
+module Elm.Package.Solution where
 
 import Control.Applicative ((<$>))
 import Control.Monad.Error (throwError, ErrorT, liftIO)
@@ -10,7 +10,6 @@ import qualified Data.Text as Text
 import qualified Data.Map as Map
 import System.Directory (doesFileExist)
 
-import qualified Elm.Package.Constraint as C
 import qualified Elm.Package.Name as N
 import qualified Elm.Package.Version as V
 

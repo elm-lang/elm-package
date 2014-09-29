@@ -2,7 +2,7 @@ module Install.Plan where
 
 import qualified Data.Map as Map
 
-import qualified Elm.Package.Dependencies as Dep
+import qualified Elm.Package.Solution as S
 import qualified Elm.Package.Name as N
 import qualified Elm.Package.Version as V
 
@@ -14,7 +14,7 @@ data Plan = Plan
     }
 
 
-create :: Dep.Solution -> Dep.Solution -> Plan
+create :: S.Solution -> S.Solution -> Plan
 create old new =
     Plan
     { installs = Map.difference new old
