@@ -18,9 +18,6 @@ import qualified Elm.Package.Version as V
 type Solution =
     Map.Map N.Name V.Version
 
-type Constraints =
-    Map.Map N.Name C.Constraint
-
 
 -- READING AND WRITING SOLUTIONS
 

@@ -1,23 +1,17 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE DeriveGeneric #-}
-module Utils.ResolveDeps where
+module Install.Solver where
 
 import Control.Monad.Error
 import Control.Monad.State
 import Control.Monad.Reader
 import Data.Aeson (decode, FromJSON, ToJSON, encode)
-import Data.Functor ((<$>))
-import Data.List (foldl')
-import Data.Map (Map)
-import GHC.Generics (Generic)
+import qualified Data.ByteString.Lazy as BS
+import qualified Data.Map as Map
 import Network.HTTP.Client (responseBody, httpLbs)
 import System.FilePath ((</>))
-import qualified Data.ByteString.Lazy as BS
-import qualified Data.Map as M
 import qualified System.Directory as Dir
 
-import qualified Elm.Package.Constraint as Constraint
-import qualified Elm.Package.Description as Package
+import qualified Elm.Package.Constraint as C
+import qualified Elm.Package.Dependencies as Dependencies
 import qualified Elm.Package.Name as N
 import qualified Elm.Package.Paths as Path
 import qualified Elm.Package.Version as V
@@ -25,6 +19,22 @@ import qualified Get.Registry as Reg
 import qualified Utils.Http as Http
 import qualified Utils.Cache as Cache
 
+
+solve :: [(N.Name, C.Constraint)] -> ErrorT String IO Dependencies.Solution
+solve constraints =
+    error "solveConstraints: not audited yet"
+{--
+  do libraryDb <- readLibraries
+     let name = Package.name description
+         version = Package.version description
+         unreader = runReaderT (solveForVersion name version) $
+                    SolverEnv libraryDb readDependencies
+         initialState = SolverState M.empty
+     (solved, _) <- runStateT unreader initialState
+     let result = M.delete (Package.name description) solved
+     return (M.toList result)
+
+{--
 -- | Try to read a JSON-encoded value from a file
 decodeFromFile :: (MonadIO m, FromJSON a) => FilePath -> m (Maybe a)
 decodeFromFile fullPath =
@@ -66,16 +76,14 @@ decodeFromUrl url =
      case result of
        Just v -> return v
        Nothing -> throwError $ "Can't read value from " ++ url
+--}
 
--- | Library description as used in library.elm-lang.org/libraries.json
+
 data LibraryInfo = LibraryInfo
     { name :: String
-    , summary :: String
     , versions :: [V.Version]
-    } deriving (Show, Generic)
+    }
 
-instance FromJSON LibraryInfo
-instance ToJSON LibraryInfo
 
 type LibraryDB = Map String LibraryInfo
 type Constraints = [(N.Name, Constraint.Constraint)]
@@ -88,7 +96,7 @@ onlyLastPatches :: LibraryInfo -> LibraryInfo
 onlyLastPatches info = info { versions = process $ versions info }
   where
     process ls =
-      let insert v@(V.V parts _) = M.insertWith (++) (take 2 parts) [v]
+      let insert v@(V.Version _ _ _) = error "TODO" --M.insertWith (++) (take 2 parts) [v]
           allByMinor = foldr insert M.empty ls
       in map maximum $ M.elems allByMinor
 
@@ -110,14 +118,14 @@ readDependencies name version =
         concat
         [ Reg.domain , "/catalog/"
         , N.toFilePath name
-        , "/", show version
+        , "/", V.toString version
         , "/", Path.description
         ]
 
     dir =
         Path.packagesDirectory </> "_elm_get_cache" </> N.toFilePath name
     
-    fileName = show version ++ ".json"
+    fileName = V.toString version ++ ".json"
     
     downloadAction = decodeFromUrl fullUrl
 
@@ -157,6 +165,7 @@ getConstraints name version =
 type PinnedLibs = Map N.Name V.Version
 type ConstrainedLibs = Map N.Name [V.Version]
 
+
 addConstraints :: Monad m => ConstrainedLibs -> Constraints -> SolverContext m (Maybe ConstrainedLibs)
 addConstraints constrained constraints =
     foldM addConstraint (Just constrained) constraints
@@ -179,7 +188,9 @@ addConstraints constrained constraints =
                Nothing -> throwError (notFound name)
                Just vs -> return vs
 
-    notFound name = "Versions of library " ++ N.toString name ++ " weren't found"
+    notFound name =
+        "Versions of library " ++ N.toString name ++ " weren't found"
+
 
 solve :: Monad m => PinnedLibs -> ConstrainedLibs -> SolverContext m (Maybe PinnedLibs)
 solve fixed constrained =
@@ -212,14 +223,4 @@ solveForVersion name version =
        Just value -> return value
        Nothing -> throwError "Solving dependencies failed"
 
-solveConstraints :: Package.Description -> ErrorT String IO [(N.Name, V.Version)]
-solveConstraints deps =
-  do libraryDb <- readLibraries
-     let name = Package.name deps
-         version = Package.version deps
-         unreader = runReaderT (solveForVersion name version) $
-                    SolverEnv libraryDb readDependencies
-         initialState = SolverState M.empty
-     (solved, _) <- runStateT unreader initialState
-     let result = M.delete (Package.name deps) solved
-     return (M.toList result)
+--}

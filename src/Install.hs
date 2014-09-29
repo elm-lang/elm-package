@@ -16,6 +16,7 @@ import qualified Elm.Package.Version as V
 
 import qualified Install.Fetch as Fetch
 import qualified Install.Plan as Plan
+import qualified Install.Solver as Solver
 import qualified Utils.Commands as Cmd
 
 
@@ -59,7 +60,7 @@ upgrade :: ErrorT String IO ()
 upgrade =
   do  description <- Desc.read
 
-      newSolution <- (error "solveConstraints") (Desc.dependencies description)
+      newSolution <- Solver.solve (Desc.dependencies description)
       oldSolution <- Dependencies.readSolutionOr Path.solvedDependencies (return Map.empty)
       let plan = Plan.create oldSolution newSolution
 
