@@ -63,7 +63,7 @@ Executable elm-package
         src
 
     Main-is:
-        Get/Main.hs
+        Main.hs
 
     other-modules:
         Diff.Compare,
@@ -74,12 +74,12 @@ Executable elm-package
         Elm.Package.Name,
         Elm.Package.Paths,
         Elm.Package.Version,
-        Options,
-        Get.Publish,
         Get.Registry,
         Install,
         Install.Fetch,
         Install.Plan,
+        Options,
+        Publish,
         Utils.Commands,
         Utils.Http,
         Utils.Paths
