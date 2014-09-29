@@ -17,7 +17,7 @@ import qualified Elm.Package.Version as V
 import qualified Install.Fetch as Fetch
 import qualified Install.Plan as Plan
 import qualified Install.Solver as Solver
-import qualified Utils.Commands as Cmd
+import qualified CommandLine.Helpers as Cmd
 
 
 install :: Maybe (String, Maybe String) -> ErrorT String IO ()

@@ -8,7 +8,7 @@ import System.Directory (doesDirectoryExist, getDirectoryContents, renameDirecto
 
 import qualified Elm.Package.Name as N
 import qualified Elm.Package.Version as V
-import qualified Utils.Commands as Cmd
+import qualified CommandLine.Helpers as Cmd
 import qualified Utils.Http as Http
 
 

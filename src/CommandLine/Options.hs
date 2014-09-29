@@ -1,5 +1,5 @@
 {-# OPTIONS_GHC -W #-}
-module Options ( Command(..), parse ) where
+module CommandLine.Options ( Command(..), parse ) where
 
 import Control.Applicative (pure, (<$>), (<*>))
 import Data.Monoid ((<>), mconcat, mempty)

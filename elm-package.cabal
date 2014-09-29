@@ -34,7 +34,7 @@ Library
         src
 
     exposed-modules:
-        Utils.Commands,
+        CommandLine.Helpers,
         Utils.Http,
         Utils.Paths
 
@@ -66,6 +66,8 @@ Executable elm-package
         Main.hs
 
     other-modules:
+        CommandLine.Helpers,
+        CommandLine.Options,
         Diff.Compare,
         Diff.Display,
         Elm.Package.Constraint,
@@ -79,9 +81,7 @@ Executable elm-package
         Install.Fetch,
         Install.Plan,
         Install.Solver,
-        Options,
         Publish,
-        Utils.Commands,
         Utils.Http,
         Utils.Paths
 

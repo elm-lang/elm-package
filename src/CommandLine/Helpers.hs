@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
-module Utils.Commands where
+module CommandLine.Helpers where
 
 import Control.Monad.Error
 import System.Directory

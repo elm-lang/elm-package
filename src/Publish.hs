@@ -17,7 +17,7 @@ import qualified Elm.Package.Paths as P
 import qualified Elm.Package.Version as V
 
 import qualified Get.Registry as R
-import qualified Utils.Commands as Cmd
+import qualified CommandLine.Helpers as Cmd
 import qualified Utils.Paths as Path
 
 publish :: ErrorT String IO ()

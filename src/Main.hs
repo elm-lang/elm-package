@@ -5,8 +5,8 @@ import System.Directory (findExecutable)
 import System.Exit
 import System.IO
 
+import qualified CommandLine.Options as Options
 import qualified Install as Install
-import qualified Options as Options
 import qualified Publish as Publish
 
 
