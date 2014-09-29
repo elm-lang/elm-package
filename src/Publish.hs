@@ -7,8 +7,6 @@ import qualified Data.ByteString as BS
 import qualified Data.List as List
 import qualified Data.Maybe as Maybe
 import System.Directory
-import System.Exit
-import System.IO
 
 import qualified Elm.Package.Constraint as C
 import qualified Elm.Package.Description as Package
@@ -18,45 +16,41 @@ import qualified Elm.Package.Version as V
 
 import qualified Get.Registry as R
 import qualified CommandLine.Helpers as Cmd
+import qualified Manager
 import qualified Utils.Paths as Path
 
-publish :: ErrorT String IO ()
-publish =
-  do desc <- getDescription
-     let name = Package.name desc
-         version = Package.version desc
-         exposedModules = Package.exposed desc
-     Cmd.out $ unwords [ "Verifying", N.toString name, V.toString version, "..." ]
-     verifyNoDependencies (Package.dependencies desc)
-     verifyElmVersion (Package.elmVersion desc)
-     verifyMetadata desc
-     verifyExposedModulesExist exposedModules
-     verifyVersion name version
-     withCleanup $ do
-       generateDocs exposedModules
-       R.register name version Path.combinedJson
-     Cmd.out "Success!"
 
-getDescription :: ErrorT String IO Package.Description
-getDescription =
-  do either <- liftIO $ runErrorT Package.read
-     case either of
-       Right desc -> return desc
-       Left err ->
-           liftIO $ do
-             hPutStrLn stderr $ "\nError: " ++ err
-             exitFailure
+publish :: Manager.Environment -> Manager.Manager ()
+publish env =
+  do  desc <- Package.read
 
-withCleanup :: ErrorT String IO () -> ErrorT String IO ()
+      let name = Package.name desc
+      let version = Package.version desc
+      let exposedModules = Package.exposed desc
+
+      Cmd.out $ unwords [ "Verifying", N.toString name, V.toString version, "..." ]
+      verifyNoDependencies (Package.dependencies desc)
+      verifyElmVersion (Package.elmVersion desc)
+      verifyMetadata desc
+      verifyExposedModulesExist exposedModules
+      verifyVersion name version
+      withCleanup $ do
+          generateDocs exposedModules
+          R.register name version Path.combinedJson
+      Cmd.out "Success!"
+
+
+withCleanup :: Manager.Manager () -> Manager.Manager ()
 withCleanup action =
-    do existed <- liftIO $ doesDirectoryExist "docs"
-       either <- liftIO $ runErrorT action
-       when (not existed) $ liftIO $ removeDirectoryRecursive "docs"
-       case either of
-         Left err -> throwError err
-         Right () -> return ()
+  do  existed <- liftIO $ doesDirectoryExist "docs"
+      either <- liftIO $ runErrorT action
+      when (not existed) $ liftIO $ removeDirectoryRecursive "docs"
+      case either of
+        Left err -> throwError err
+        Right () -> return ()
 
-verifyNoDependencies :: [(N.Name,C.Constraint)] -> ErrorT String IO ()
+
+verifyNoDependencies :: [(N.Name,C.Constraint)] -> Manager.Manager ()
 verifyNoDependencies [] = return ()
 verifyNoDependencies _ =
     throwError
@@ -64,7 +58,8 @@ verifyNoDependencies _ =
         \very high proirity, we are working on it! For now, announce your library on the\n\
         \mailing list: <https://groups.google.com/forum/#!forum/elm-discuss>"
 
-verifyElmVersion :: V.Version -> ErrorT String IO ()
+
+verifyElmVersion :: V.Version -> Manager.Manager ()
 verifyElmVersion elmVersion =
     if elmVersion == V.elmVersion
         then return ()
@@ -76,17 +71,17 @@ verifyElmVersion elmVersion =
           "have installed is version " ++ V.toString V.elmVersion
 
 
-verifyExposedModulesExist :: [String] -> ErrorT String IO ()
+verifyExposedModulesExist :: [String] -> Manager.Manager ()
 verifyExposedModulesExist modules =
-      mapM_ verifyExists modules
-    where
-      verifyExists modul =
-          let path = Path.moduleToElmFile modul in
-          do exists <- liftIO $ doesFileExist path
-             when (not exists) $ throwError $
-                 "Cannot find module " ++ modul ++ " at " ++ path
+    mapM_ verifyExists modules
+  where
+    verifyExists modul =
+        let path = Path.moduleToElmFile modul in
+        do exists <- liftIO $ doesFileExist path
+           when (not exists) $ throwError $
+               "Cannot find module " ++ modul ++ " at " ++ path
 
-verifyMetadata :: Package.Description -> ErrorT String IO ()
+verifyMetadata :: Package.Description -> Manager.Manager ()
 verifyMetadata deps =
     case problems of
       [] -> return ()
@@ -106,7 +101,7 @@ verifyMetadata deps =
             then Just msg
             else Nothing
 
-verifyVersion :: N.Name -> V.Version -> ErrorT String IO ()
+verifyVersion :: N.Name -> V.Version -> Manager.Manager ()
 verifyVersion name version =
     do response <- R.versions name
        case response of
@@ -139,7 +134,7 @@ verifyVersion name version =
           , ""
           ]
 
-generateDocs :: [String] -> ErrorT String IO ()
+generateDocs :: [String] -> Manager.Manager ()
 generateDocs modules =
     do forM elms $ \path -> Cmd.run "elm-doc" [path]
        liftIO $ do

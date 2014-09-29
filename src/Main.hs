@@ -1,6 +1,5 @@
 module Main where
 
-import Control.Monad.Error
 import System.Directory (findExecutable)
 import System.Exit
 import System.IO
@@ -15,7 +14,7 @@ main :: IO ()
 main =
   do  requireGit
       command <- Options.parse
-      result <- runErrorT (run command)
+      result <- Manager.run (create command)
       case result of
         Right () -> return ()
         Left err ->
@@ -25,14 +24,14 @@ main =
               newline = if last err == '\n' then "" else "\n"
 
 
-run :: Manager.Command -> ErrorT String IO ()
-run command =
+create :: Manager.Command -> Manager.Manager ()
+create command =
     case command of
       Manager.Install maybePackage ->
           Install.install maybePackage
 
       Manager.Publish ->
-          Publish.publish
+          Publish.publish (Manager.Environment "")
 
 
 errExit :: String -> IO ()
