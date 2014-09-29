@@ -1,6 +1,7 @@
 module Elm.Package.Constraint
     ( Constraint
     , fromString
+    , toString
     , exactly
     , isSatisfied
     ) where
@@ -102,7 +103,7 @@ toString constr =
     case constr of
       Range (Included v1) (Included v2)
           | v1 == v2 ->
-              "==" ++ V.toString v1
+              V.toString v1
 
       Range lower upper ->
           concat [renderLower lower, " ", renderUpper upper]
