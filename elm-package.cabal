@@ -81,6 +81,7 @@ Executable elm-package
         Install.Fetch,
         Install.Plan,
         Install.Solver,
+        Manager,
         Publish,
         Utils.Http,
         Utils.Paths

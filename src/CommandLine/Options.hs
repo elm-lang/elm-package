@@ -1,5 +1,4 @@
-{-# OPTIONS_GHC -W #-}
-module CommandLine.Options ( Command(..), parse ) where
+module CommandLine.Options (parse) where
 
 import Control.Applicative (pure, (<$>), (<*>))
 import Data.Monoid ((<>), mconcat, mempty)
@@ -7,16 +6,12 @@ import Data.Version (showVersion)
 import qualified Options.Applicative as Opt
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 
+import qualified Manager
 import qualified Paths_elm_package as This
 import qualified Elm.Package.Paths as Path
 
 
-data Command
-    = Install (Maybe (String, Maybe String))
-    | Publish
-
-
-parse :: IO Command
+parse :: IO Manager.Command
 parse =
     Opt.customExecParser preferences parser
 
@@ -26,14 +21,14 @@ preferences =
     Opt.prefs (mempty <> Opt.showHelpOnError)
 
 
-parser :: Opt.ParserInfo Command
+parser :: Opt.ParserInfo Manager.Command
 parser =
     Opt.info (Opt.helper <*> commands) infoModifier
 
 
 -- GENERAL HELP
 
-infoModifier :: Opt.InfoMod Command
+infoModifier :: Opt.InfoMod Manager.Command
 infoModifier =
     mconcat
         [ Opt.fullDesc
@@ -60,7 +55,7 @@ linesToDoc lines =
 
 -- COMMANDS
 
-commands :: Opt.Parser Command
+commands :: Opt.Parser Manager.Command
 commands =
     Opt.hsubparser $
         mconcat
@@ -69,18 +64,18 @@ commands =
         ]
 
 
-publishInfo :: Opt.ParserInfo Command
+publishInfo :: Opt.ParserInfo Manager.Command
 publishInfo =
-    Opt.info (pure Publish) $
+    Opt.info (pure Manager.Publish) $
         mconcat
         [ Opt.fullDesc
         , Opt.progDesc "Publish your project to the central repository"
         ]
 
 
-installInfo :: Opt.ParserInfo Command
+installInfo :: Opt.ParserInfo Manager.Command
 installInfo =
-    Opt.info (Install <$> Opt.optional package) infoModifier
+    Opt.info (Manager.Install <$> Opt.optional package) infoModifier
   where
     infoModifier =
         mconcat

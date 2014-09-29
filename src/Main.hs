@@ -7,6 +7,7 @@ import System.IO
 
 import qualified CommandLine.Options as Options
 import qualified Install as Install
+import qualified Manager as Manager
 import qualified Publish as Publish
 
 
@@ -24,13 +25,13 @@ main =
               newline = if last err == '\n' then "" else "\n"
 
 
-run :: Options.Command -> ErrorT String IO ()
+run :: Manager.Command -> ErrorT String IO ()
 run command =
     case command of
-      Options.Install maybePackage ->
+      Manager.Install maybePackage ->
           Install.install maybePackage
 
-      Options.Publish ->
+      Manager.Publish ->
           Publish.publish
 
 
