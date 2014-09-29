@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Elm.Package.Description where
 
+import Prelude hiding (read)
 import Control.Applicative
 import Control.Arrow (first)
 import Control.Monad.Error
@@ -10,7 +11,8 @@ import Data.Aeson.Types (Parser)
 import Data.Aeson.Encode.Pretty
 import Data.Maybe (fromMaybe)
 import qualified Data.List as List
-import qualified Data.ByteString.Lazy as BS
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict as Map
 import qualified Data.Text as T
 
@@ -159,9 +161,9 @@ withDescription path handle =
          Left err -> throwError $ "Error reading file " ++ path ++ ":\n    " ++ err
          Right ds -> handle ds
     where
-      readPath :: ErrorT String IO BS.ByteString
+      readPath :: ErrorT String IO LBS.ByteString
       readPath = do
-        result <- liftIO $ E.catch (Right <$> BS.readFile path)
+        result <- liftIO $ E.catch (Right <$> LBS.readFile path)
                                    (\err -> return $ Left (err :: IOError))
         case result of
           Right bytes -> return bytes
@@ -174,12 +176,12 @@ withNative :: FilePath -> ([String] -> ErrorT String IO a) -> ErrorT String IO a
 withNative path handle =
     withDescription path (handle . native)
 
-descriptionAt :: FilePath -> ErrorT String IO Description
-descriptionAt filePath =
-    withDescription filePath return
+read :: ErrorT String IO Description
+read =
+    withDescription Path.description return
 
 -- | Encode dependencies in a canonical JSON format
-prettyJSON :: Description -> BS.ByteString
+prettyJSON :: Description -> LBS.ByteString
 prettyJSON =
     encodePretty' config
   where
@@ -198,3 +200,29 @@ prettyJSON =
         , "source-directories"
         , "dependencies"
         ]
+
+
+-- WRITE DESCRIPTION
+
+write :: Description -> IO ()
+write description =
+    BS.writeFile Path.description json
+  where
+    jsonOrig = LBS.toStrict $ encodePretty description
+    json =
+        replace "\\u003e" ">" $
+        replace "\\u003c" "<" $ jsonOrig
+
+
+replace :: BS.ByteString -> BS.ByteString -> BS.ByteString -> BS.ByteString
+replace old new string =
+    BS.concat $ replaceChunks string
+  where
+    replaceChunks hs =
+        let (before, after) = BS.breakSubstring old hs
+        in
+            case BS.null after of
+              True -> [hs]
+              False ->
+                  before : new : replaceChunks (BS.drop (BS.length old) after)
+

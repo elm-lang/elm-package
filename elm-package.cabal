@@ -74,20 +74,20 @@ Executable elm-package
         Elm.Package.Name,
         Elm.Package.Paths,
         Elm.Package.Version,
-        Get.Install,
-        Get.Library,
-        Get.Options,
+        Options,
         Get.Publish,
         Get.Registry,
+        Install,
+        Install.Fetch,
+        Install.Plan,
         Utils.Commands,
         Utils.Http,
-        Utils.Paths,
-        Utils.ResolveDeps
+        Utils.Paths
 
     Build-depends:
         aeson >= 0.7 && < 0.9,
         aeson-pretty >= 0.7 && < 0.8,
-        ansi-wl-pprint >= 0.6 && < 0.7,
+        ansi-wl-pprint,
         base >=4.2 && <5,
         binary >= 0.7 && < 0.8,
         bytestring >= 0.9 && < 0.11,
@@ -106,7 +106,8 @@ Executable elm-package
         text,
         time,
         unordered-containers,
-        vector >= 0.10 && < 0.11
+        vector >= 0.10 && < 0.11,
+        zip-archive
 
 Test-suite unit-test
     Type:

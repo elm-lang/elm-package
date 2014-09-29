@@ -1,9 +1,8 @@
 {-# OPTIONS_GHC -Wall #-}
 module Elm.Package.Dependencies where
 
-import Prelude hiding (read)
-import Control.Monad (when)
-import Control.Monad.Error (runErrorT, throwError, ErrorT, liftIO)
+import Control.Applicative ((<$>))
+import Control.Monad.Error (throwError, ErrorT, liftIO)
 import Data.Aeson
 import Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy as BS
@@ -23,22 +22,44 @@ type Constraints =
     Map.Map N.Name C.Constraint
 
 
+-- READING AND WRITING SOLUTIONS
 
-{-- CONVERSION TO JSON
+writeSolution :: FilePath -> Solution -> IO ()
+writeSolution filePath solution =
+    BS.writeFile filePath (encodePretty (solutionToJson solution))
 
-toJson :: [(N.Name, V.Version)] -> Value
-toJson deps =
-    object (map toField deps)
+
+readSolutionOr :: FilePath -> ErrorT String IO Solution -> ErrorT String IO Solution
+readSolutionOr path recover =
+  do  exists <- liftIO (doesFileExist path)
+      case exists of
+        False -> recover
+        True ->
+           do rawJson <- liftIO (BS.readFile path)
+              either throwCorrupted listToSolution (eitherDecode rawJson)
+  where
+    throwCorrupted _msg =
+        throwError $
+            "Unable to extract package information from the " ++ path ++
+            " file.\nIt may be corrupted."
+
+
+-- CONVERSION TO JSON
+
+solutionToJson :: Solution -> Value
+solutionToJson solution =
+    object (map toField (Map.toList solution))
   where
     toField (name, version) =
         Text.pack (N.toString name) .= Text.pack (V.toString version)
 
-fromJson :: Map.Map String String -> ErrorT String IO [(N.Name, V.Version)]
-fromJson pairs =
-    mapM parseNameAndVersion (Map.toList pairs)
+
+listToSolution :: [(String,String)] -> ErrorT String IO Solution
+listToSolution pairs =
+    Map.fromList <$> mapM parseNameAndVersion pairs
 
 
-parseNameAndVersion :: (String, String) -> ErrorT String IO (N.Name, V.Version)
+parseNameAndVersion :: (String,String) -> ErrorT String IO (N.Name, V.Version)
 parseNameAndVersion (rawName, rawVersion) =
     do  name <- parse rawName N.fromString ("package name " ++ rawName)
         vrsn <- parse rawVersion V.fromString ("version number for package " ++ rawName)
@@ -50,35 +71,3 @@ parse string fromString msg =
     maybe (throwError ("Could not parse " ++ msg)) return (fromString string)
 
 
--- READING AND WRITING FILES
-
-write :: FilePath -> [(N.Name, V.Version)] -> IO ()
-write filePath pairs =
-    BS.writeFile filePath (encodePretty (toJson pairs))
-
-readAnd :: FilePath -> ([(N.Name, V.Version)] -> ErrorT String IO a) -> ErrorT String IO a
-readAnd path handle =
-  do exists <- liftIO (doesFileExist path)
-     when (not exists) throwDoesNotExist
-     byteString <- liftIO $ BS.readFile path
-     pairs <- either throwCorrupted fromJson (eitherDecode byteString)
-     handle pairs
-  where
-    throwCorrupted _msg =
-        throwError $ "Unable to extract package information from the " ++ path ++
-                     " file.\nIt may be corrupted."
-
-    throwDoesNotExist =
-        throwError ("File " ++ path ++ " does not exist.")
-
-
-read :: FilePath -> ErrorT String IO [(N.Name, V.Version)]
-read path = readAnd path return
-
-readMaybe :: FilePath -> IO (Maybe [(N.Name, V.Version)])
-readMaybe path =
-  do eitherPairs <- runErrorT (read path)
-     case eitherPairs of
-       Right pairs -> return (Just pairs)
-       Left _ -> return Nothing
--}
