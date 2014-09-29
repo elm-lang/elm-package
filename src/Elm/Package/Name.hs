@@ -12,6 +12,7 @@ data Name = Name
     { user :: String
     , project :: String
     }
+    deriving (Eq, Ord)
 
 
 toString :: Name -> String
