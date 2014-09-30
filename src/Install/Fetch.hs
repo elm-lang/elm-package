@@ -1,6 +1,7 @@
+{-# LANGUAGE FlexibleContexts #-}
 module Install.Fetch where
 
-import Control.Monad.Error (ErrorT, liftIO, throwError)
+import Control.Monad.Error (MonadError, MonadIO, liftIO, throwError)
 import qualified Codec.Archive.Zip as Zip
 import qualified Data.List as List
 import qualified Network.HTTP.Client as Client
@@ -12,7 +13,7 @@ import qualified CommandLine.Helpers as Cmd
 import qualified Utils.Http as Http
 
 
-package :: N.Name -> V.Version -> ErrorT String IO ()
+package :: (MonadIO m, MonadError String m) => N.Name -> V.Version -> m ()
 package name version =
   ifNotExists directory $ do
       Http.send zipball extract
@@ -28,7 +29,7 @@ package name version =
         "http://github.com/" ++ N.toUrl name ++ "/zipball/" ++ V.toString version ++ "/"
 
 
-ifNotExists :: FilePath -> ErrorT String IO () -> ErrorT String IO ()
+ifNotExists :: (MonadIO m, MonadError String m) => FilePath -> m () -> m ()
 ifNotExists directory command =
     do exists <- liftIO $ doesDirectoryExist directory
        if exists

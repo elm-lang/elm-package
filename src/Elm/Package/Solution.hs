@@ -1,8 +1,8 @@
 {-# OPTIONS_GHC -Wall #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Elm.Package.Solution where
 
-import Control.Applicative ((<$>))
-import Control.Monad.Error (throwError, ErrorT, liftIO)
+import Control.Monad.Error (MonadError, throwError, MonadIO, liftIO)
 import Data.Aeson
 import Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy as BS
@@ -25,7 +25,7 @@ writeSolution filePath solution =
     BS.writeFile filePath (encodePretty (solutionToJson solution))
 
 
-readSolutionOr :: FilePath -> ErrorT String IO Solution -> ErrorT String IO Solution
+readSolutionOr :: (MonadIO m, MonadError String m) => FilePath -> m Solution -> m Solution
 readSolutionOr path recover =
   do  exists <- liftIO (doesFileExist path)
       case exists of
@@ -50,19 +50,20 @@ solutionToJson solution =
         Text.pack (N.toString name) .= Text.pack (V.toString version)
 
 
-listToSolution :: [(String,String)] -> ErrorT String IO Solution
+listToSolution :: (MonadError String m) => [(String,String)] -> m Solution
 listToSolution pairs =
-    Map.fromList <$> mapM parseNameAndVersion pairs
+    do  parsedPairs <- mapM parseNameAndVersion pairs
+        return (Map.fromList parsedPairs)
 
 
-parseNameAndVersion :: (String,String) -> ErrorT String IO (N.Name, V.Version)
+parseNameAndVersion :: (MonadError String m) => (String,String) -> m (N.Name, V.Version)
 parseNameAndVersion (rawName, rawVersion) =
     do  name <- parse rawName N.fromString ("package name " ++ rawName)
         vrsn <- parse rawVersion V.fromString ("version number for package " ++ rawName)
         return (name, vrsn)
 
 
-parse :: String -> (String -> Maybe a) -> String -> ErrorT String IO a
+parse :: (MonadError String m) => String -> (String -> Maybe a) -> String -> m a
 parse string fromString msg =
     maybe (throwError ("Could not parse " ++ msg)) return (fromString string)
 
