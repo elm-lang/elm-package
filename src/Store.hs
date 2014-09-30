@@ -25,18 +25,25 @@ data Store = Store
     , versionCache :: VersionCache
     }
 
+type ConstraintCache =
+    Map.Map (N.Name, V.Version) [(N.Name, C.Constraint)]
 
-initialStore :: (MonadIO m, MonadError String m) => Manager.Environment -> m Store
-initialStore env =
+type VersionCache =
+    Map.Map N.Name [V.Version]
+
+
+initialStore :: (MonadIO m, MonadError String m) => Manager.Environment -> [(N.Name, C.Constraint)] -> m Store
+initialStore env localConstraints =
   do  let cacheDirectory = Manager.cacheDirectory env
       maybeVersions <- decodeFromFile (cacheDirectory </> "versions.json")
       case maybeVersions of
         Nothing ->
             throwError noLocalPackages
         Just versions ->
-            let versionCache = Map.fromList (versions :: [(N.Name, [V.Version])])
+            let constraintCache = Map.singleton (N.dummyName, V.dummyVersion) localConstraints
+                versionCache = Map.fromList (versions :: [(N.Name, [V.Version])])
             in
-                return (Store Map.empty versionCache)
+                return (Store constraintCache versionCache)
   where
     noLocalPackages =
         unlines
@@ -51,10 +58,6 @@ initialStore env =
 
 
 -- CONSTRAINTS
-
-type ConstraintCache =
-    Map.Map (N.Name, V.Version) [(N.Name, C.Constraint)]
-
 
 getConstraints
     :: (MonadIO m, MonadReader Manager.Environment m, MonadState Store m, MonadError String m)
@@ -100,10 +103,6 @@ descriptionUrl env name version =
 
 
 -- VERSIONS
-
-type VersionCache =
-    Map.Map N.Name [V.Version]
-
 
 getVersions :: (MonadIO m, MonadError String m, MonadState Store m) => N.Name -> m [V.Version]
 getVersions name =

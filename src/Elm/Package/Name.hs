@@ -15,6 +15,11 @@ data Name = Name
     deriving (Eq, Ord)
 
 
+dummyName :: Name
+dummyName =
+    Name "USER" "PROJECT"
+
+
 toString :: Name -> String
 toString name =
     user name ++ "/" ++ project name

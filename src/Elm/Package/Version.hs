@@ -19,6 +19,11 @@ data Version = Version
     deriving (Eq, Ord)
 
 
+dummyVersion :: Version
+dummyVersion =
+    Version 0 0 0
+
+
 bumpPatch :: Version -> Version
 bumpPatch (Version major minor patch) =
     Version major minor (patch + 1)
