@@ -7,20 +7,20 @@ import qualified Data.Map as Map
 import System.Directory (doesFileExist, removeDirectoryRecursive)
 import System.FilePath ((</>))
 
+import qualified CommandLine.Helpers as Cmd
 import qualified Elm.Package.Constraint as Constraint
 import qualified Elm.Package.Description as Desc
 import qualified Elm.Package.Name as N
 import qualified Elm.Package.Paths as Path
 import qualified Elm.Package.Solution as S
 import qualified Elm.Package.Version as V
-
 import qualified Install.Fetch as Fetch
 import qualified Install.Plan as Plan
 import qualified Install.Solver as Solver
-import qualified CommandLine.Helpers as Cmd
+import qualified Manager
 
 
-install :: Maybe (String, Maybe String) -> ErrorT String IO ()
+install :: Maybe (String, Maybe String) -> Manager.Manager ()
 install maybePackage =
     case maybePackage of
       Nothing ->
@@ -32,7 +32,7 @@ install maybePackage =
               upgrade
 
 
-parseInput :: String -> Maybe String -> ErrorT String IO (N.Name, Maybe V.Version)
+parseInput :: String -> Maybe String -> Manager.Manager (N.Name, Maybe V.Version)
 parseInput rawName maybeRawVersion =
   do  name <- parseName rawName
       vrsn <- parseVersion maybeRawVersion
@@ -56,7 +56,7 @@ parseInput rawName maybeRawVersion =
 
 -- INSTALL EVERYTHING
 
-upgrade :: ErrorT String IO ()
+upgrade :: Manager.Manager ()
 upgrade =
   do  description <- Desc.read
 
@@ -79,7 +79,7 @@ getApproval plan =
       Cmd.yesOrNo
 
 
-runPlan :: S.Solution -> S.Solution -> Plan.Plan -> ErrorT String IO ()
+runPlan :: S.Solution -> S.Solution -> Plan.Plan -> Manager.Manager ()
 runPlan oldSolution newSolution plan =
   do  -- fetch new dependencies
       Cmd.inDir Path.packagesDirectory $
@@ -121,7 +121,7 @@ runPlan oldSolution newSolution plan =
 
 -- MODIFY DESCRIPTION
 
-updateDescription :: N.Name -> Maybe V.Version -> ErrorT String IO ()
+updateDescription :: N.Name -> Maybe V.Version -> Manager.Manager ()
 updateDescription name maybeVersion =
   do  version <- getVersion
 
@@ -145,7 +145,7 @@ updateDescription name maybeVersion =
                       throwError $ "Library " ++ N.toString name ++ " wasn't found!"
 
 
-addConstraint :: Desc.Description -> N.Name -> V.Version -> ErrorT String IO ()
+addConstraint :: Desc.Description -> N.Name -> V.Version -> Manager.Manager ()
 addConstraint description name version =
   do  confirm <- liftIO confirmChange
       case confirm of
