@@ -46,6 +46,7 @@ Library
         directory >= 1.0 && < 2.0,
         Elm >= 0.13 && < 0.14,
         filepath >= 1 && < 2.0,
+        HTTP >= 4000.2.5 && < 4000.3,
         http-client >= 0.3 && < 0.4,
         http-client-tls >= 0.2 && < 0.3,
         http-types >= 0.7 && < 0.9,
@@ -66,6 +67,7 @@ Executable elm-package
         Main.hs
 
     other-modules:
+        Catalog,
         CommandLine.Helpers,
         CommandLine.Options,
         Diff.Compare,
@@ -76,7 +78,6 @@ Executable elm-package
         Elm.Package.Paths,
         Elm.Package.Solution,
         Elm.Package.Version,
-        Get.Registry,
         Install,
         Install.Fetch,
         Install.Plan,

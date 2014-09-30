@@ -3,6 +3,7 @@ module Publish where
 
 import Control.Applicative ((<$>))
 import Control.Monad.Error
+import Control.Monad.Reader (ask)
 import qualified Data.ByteString as BS
 import qualified Data.List as List
 import qualified Data.Maybe as Maybe
@@ -14,14 +15,14 @@ import qualified Elm.Package.Name as N
 import qualified Elm.Package.Paths as P
 import qualified Elm.Package.Version as V
 
-import qualified Get.Registry as R
 import qualified CommandLine.Helpers as Cmd
+import qualified Catalog
 import qualified Manager
 import qualified Utils.Paths as Path
 
 
-publish :: Manager.Environment -> Manager.Manager ()
-publish env =
+publish :: Manager.Manager ()
+publish =
   do  desc <- Package.read
 
       let name = Package.name desc
@@ -36,14 +37,15 @@ publish env =
       verifyVersion name version
       withCleanup $ do
           generateDocs exposedModules
-          R.register name version Path.combinedJson
+          Catalog.register name version Path.combinedJson
       Cmd.out "Success!"
 
 
 withCleanup :: Manager.Manager () -> Manager.Manager ()
 withCleanup action =
   do  existed <- liftIO $ doesDirectoryExist "docs"
-      either <- liftIO $ runErrorT action
+      env <- ask
+      either <- liftIO $ Manager.run env action
       when (not existed) $ liftIO $ removeDirectoryRecursive "docs"
       case either of
         Left err -> throwError err
@@ -103,8 +105,8 @@ verifyMetadata deps =
 
 verifyVersion :: N.Name -> V.Version -> Manager.Manager ()
 verifyVersion name version =
-    do response <- R.versions name
-       case response of
+    do maybeVersions <- Catalog.versions name
+       case maybeVersions of
          Nothing -> return ()
          Just versions ->
              do let maxVersion = maximum (version:versions)
