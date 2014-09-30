@@ -20,6 +20,7 @@ import qualified Elm.Package.Name as N
 import qualified Elm.Package.Version as V
 import qualified Elm.Package.Constraint as C
 import qualified Elm.Package.Paths as Path
+import qualified Manager
 
 
 data Description = Description
@@ -52,6 +53,83 @@ defaultDescription =
     , sourceDirs = []
     , dependencies = []
     }
+
+
+-- READ
+
+withDescription :: FilePath -> (Description -> Manager.Manager a) -> Manager.Manager a
+withDescription path handle =
+    do json <- readPath
+       case eitherDecode json of
+         Left err -> throwError $ "Error reading file " ++ path ++ ":\n    " ++ err
+         Right ds -> handle ds
+    where
+      readPath :: Manager.Manager LBS.ByteString
+      readPath = do
+        result <- liftIO $ E.catch (Right <$> LBS.readFile path)
+                                   (\err -> return $ Left (err :: IOError))
+        case result of
+          Right bytes -> return bytes
+          Left _ -> throwError $
+                    "could not find " ++ path ++ " file. You may need to create one.\n" ++
+                    "    For an example of how to fill in the dependencies file, check out\n" ++
+                    "    <https://github.com/evancz/automaton/blob/master/elm_dependencies.json>"
+
+withNative :: FilePath -> ([String] -> Manager.Manager a) -> Manager.Manager a
+withNative path handle =
+    withDescription path (handle . native)
+
+read :: Manager.Manager Description
+read =
+    withDescription Path.description return
+
+
+-- WRITE
+
+write :: Description -> IO ()
+write description =
+    BS.writeFile Path.description json
+  where
+    jsonOrig = LBS.toStrict $ encodePretty description
+    json =
+        replace "\\u003e" ">" $
+        replace "\\u003c" "<" $ jsonOrig
+
+
+replace :: BS.ByteString -> BS.ByteString -> BS.ByteString -> BS.ByteString
+replace old new string =
+    BS.concat $ replaceChunks string
+  where
+    replaceChunks hs =
+        let (before, after) = BS.breakSubstring old hs
+        in
+            case BS.null after of
+              True -> [hs]
+              False ->
+                  before : new : replaceChunks (BS.drop (BS.length old) after)
+
+
+-- JSON
+
+prettyJSON :: Description -> LBS.ByteString
+prettyJSON =
+    encodePretty' config
+  where
+    config = defConfig { confCompare = order }
+    order =
+        keyOrder
+        [ "name"
+        , "version"
+        , "summary"
+        , "description"
+        , "license"
+        , "repo"
+        , "exposed-modules"
+        , "native-modules"
+        , "elm-version"
+        , "source-directories"
+        , "dependencies"
+        ]
 
 
 instance ToJSON Description where
@@ -110,6 +188,7 @@ instance FromJSON Description where
 
     parseJSON _ = mzero
 
+
 getDependencies :: Object -> Parser [(N.Name, C.Constraint)]
 getDependencies obj = 
     toDeps =<< get obj "dependencies" "a listing of your project's dependencies"
@@ -121,6 +200,7 @@ getDependencies obj =
                 (Nothing, _) -> fail $ N.errorMsg f
                 (_, Nothing) -> fail $ "Invalid constraint: " ++ c
 
+
 get :: FromJSON a => Object -> T.Text -> String -> Parser a
 get obj field desc =
     do maybe <- obj .:? field
@@ -129,6 +209,7 @@ get obj field desc =
          Nothing -> fail $ "Missing field " ++ show field ++ ", " ++ desc ++ ".\n" ++
                            "    Check out an example " ++ Path.description ++ " file here:" ++
                            "    <https://github.com/evancz/automaton/blob/master/elm_dependencies.json>"
+
 
 repoToName :: String -> Either String N.Name
 repoToName repo =
@@ -153,76 +234,3 @@ repoToName repo =
           "the 'repository' field must point to a GitHub project for now, something\n\
           \like <https://github.com/USER/PROJECT.git> where USER is your GitHub name\n\
           \and PROJECT is the repo you want to upload."
-
-withDescription :: FilePath -> (Description -> ErrorT String IO a) -> ErrorT String IO a
-withDescription path handle =
-    do json <- readPath
-       case eitherDecode json of
-         Left err -> throwError $ "Error reading file " ++ path ++ ":\n    " ++ err
-         Right ds -> handle ds
-    where
-      readPath :: ErrorT String IO LBS.ByteString
-      readPath = do
-        result <- liftIO $ E.catch (Right <$> LBS.readFile path)
-                                   (\err -> return $ Left (err :: IOError))
-        case result of
-          Right bytes -> return bytes
-          Left _ -> throwError $
-                    "could not find " ++ path ++ " file. You may need to create one.\n" ++
-                    "    For an example of how to fill in the dependencies file, check out\n" ++
-                    "    <https://github.com/evancz/automaton/blob/master/elm_dependencies.json>"
-
-withNative :: FilePath -> ([String] -> ErrorT String IO a) -> ErrorT String IO a
-withNative path handle =
-    withDescription path (handle . native)
-
-read :: ErrorT String IO Description
-read =
-    withDescription Path.description return
-
--- | Encode dependencies in a canonical JSON format
-prettyJSON :: Description -> LBS.ByteString
-prettyJSON =
-    encodePretty' config
-  where
-    config = defConfig { confCompare = order }
-    order =
-        keyOrder
-        [ "name"
-        , "version"
-        , "summary"
-        , "description"
-        , "license"
-        , "repo"
-        , "exposed-modules"
-        , "native-modules"
-        , "elm-version"
-        , "source-directories"
-        , "dependencies"
-        ]
-
-
--- WRITE DESCRIPTION
-
-write :: Description -> IO ()
-write description =
-    BS.writeFile Path.description json
-  where
-    jsonOrig = LBS.toStrict $ encodePretty description
-    json =
-        replace "\\u003e" ">" $
-        replace "\\u003c" "<" $ jsonOrig
-
-
-replace :: BS.ByteString -> BS.ByteString -> BS.ByteString -> BS.ByteString
-replace old new string =
-    BS.concat $ replaceChunks string
-  where
-    replaceChunks hs =
-        let (before, after) = BS.breakSubstring old hs
-        in
-            case BS.null after of
-              True -> [hs]
-              False ->
-                  before : new : replaceChunks (BS.drop (BS.length old) after)
-
