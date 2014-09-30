@@ -14,7 +14,8 @@ main :: IO ()
 main =
   do  requireGit
       command <- Options.parse
-      result <- Manager.run (create command)
+      env <- Manager.defaultEnvironment
+      result <- Manager.run env (create command)
       case result of
         Right () -> return ()
         Left err ->
@@ -31,7 +32,7 @@ create command =
           Install.install maybePackage
 
       Manager.Publish ->
-          Publish.publish (Manager.Environment "")
+          Publish.publish
 
 
 errExit :: String -> IO ()

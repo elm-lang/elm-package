@@ -6,8 +6,18 @@ import qualified System.Directory as Dir
 import System.FilePath ((</>))
 
 
+data Command
+    = Install (Maybe (String, Maybe String))
+    | Publish
+
+
 type Manager =
     ErrorT String (ReaderT Environment IO)
+
+
+run :: Environment -> Manager a -> IO (Either String a)
+run environment manager =
+    runReaderT (runErrorT manager) environment
 
 
 data Environment = Environment
@@ -16,14 +26,10 @@ data Environment = Environment
     }
 
 
-run :: Environment -> Manager a -> IO (Either String a)
-run environment manager =
-    runReaderT (runErrorT manager) environment
-
-
-data Command
-    = Install (Maybe (String, Maybe String))
-    | Publish
+defaultEnvironment :: IO Environment
+defaultEnvironment =
+    do  cacheDirectory <- getCacheDirectory
+        return (Environment "http://package.elm-lang.org" cacheDirectory)
 
 
 getCacheDirectory :: IO FilePath
