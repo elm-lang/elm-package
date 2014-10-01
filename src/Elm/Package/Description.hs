@@ -25,15 +25,14 @@ import qualified Manager
 
 data Description = Description
     { name :: N.Name
+    , repo :: String
     , version :: V.Version
     , summary :: String
     , description :: String
     , license :: String
-    , repo :: String
+    , sourceDirs :: [FilePath]
     , exposed :: [String]
     , native :: [String]
-    , elmVersion :: V.Version
-    , sourceDirs :: [FilePath]
     , dependencies :: [(N.Name, C.Constraint)]
     }
 
@@ -42,15 +41,14 @@ defaultDescription :: Description
 defaultDescription =
     Description
     { name = N.Name "USER" "PROJECT"
-    , version = V.Version 0 0 0
+    , repo = "https://github.com/USER/PROJECT.git"
+    , version = V.Version 1 0 0
     , summary = "helpful summary of your project, less than 80 characters"
     , description = "full description of this project, describe your use case"
     , license = "BSD3"
-    , repo = "https://github.com/USER/PROJECT.git"
+    , sourceDirs = [ "." ]
     , exposed = []
     , native = []
-    , elmVersion = error "TODO: fix this"
-    , sourceDirs = []
     , dependencies = []
     }
 
@@ -75,9 +73,11 @@ withDescription path handle =
                     "    For an example of how to fill in the dependencies file, check out\n" ++
                     "    <https://github.com/evancz/automaton/blob/master/elm_dependencies.json>"
 
+
 withNative :: FilePath -> ([String] -> Manager.Manager a) -> Manager.Manager a
 withNative path handle =
     withDescription path (handle . native)
+
 
 read :: Manager.Manager Description
 read =
@@ -118,16 +118,14 @@ prettyJSON =
     config = defConfig { confCompare = order }
     order =
         keyOrder
-        [ "name"
+        [ "repo"
         , "version"
         , "summary"
         , "description"
         , "license"
-        , "repo"
+        , "source-directories"
         , "exposed-modules"
         , "native-modules"
-        , "elm-version"
-        , "source-directories"
         , "dependencies"
         ]
 
@@ -135,56 +133,51 @@ prettyJSON =
 instance ToJSON Description where
   toJSON d =
       object $
-      [ "version"         .= version d
-      , "summary"         .= summary d
-      , "description"     .= description d
-      , "license"         .= license d
-      , "repository"      .= repo d
+      [ "repository" .= repo d
+      , "version" .= version d
+      , "summary" .= summary d
+      , "description" .= description d
+      , "license" .= license d
+      , "source-directories" .= sourceDirs d
       , "exposed-modules" .= exposed d
-      , "elm-version"     .= elmVersion d
-      , "dependencies"    .= (jsonDeps . dependencies $ d)
-      ] ++ sourceDirectories ++ nativeModules
+      , "dependencies" .= jsonDeps (dependencies d)
+      ] ++ nativeModules
     where
       jsonDeps deps =
           Map.fromList $ map (first (T.pack . N.toString)) deps
 
-      nativeModules
-          | null (native d) = []
-          | otherwise       = [ "native-modules" .= native d ]
-
-      sourceDirectories
-          | null (sourceDirs d) = []
-          | otherwise = [ "source-directories" .= sourceDirs d ]
+      nativeModules =
+          if null (native d)
+              then []
+              else [ "native-modules" .= native d ]
 
 
 instance FromJSON Description where
     parseJSON (Object obj) =
-        do version <- get obj "version" "your projects version number"
+        do  version <- get obj "version" "your projects version number"
 
-           summary <- get obj "summary" "a short summary of your project"
-           when (length summary >= 80) $
-               fail "'summary' must be less than 80 characters"
+            summary <- get obj "summary" "a short summary of your project"
+            when (length summary >= 80) $
+                fail "'summary' must be less than 80 characters"
 
-           desc <- get obj "description" "an extended description of your project \
-                                         \and how to get started with it."
-           license <- get obj "license" "license information (BSD3 is recommended)"
+            desc <- get obj "description" "an extended description of your project \
+                                          \and how to get started with it."
+            license <- get obj "license" "license information (BSD3 is recommended)"
 
-           repo <- get obj "repository" "a link to the project's GitHub repo"
-           name <- case repoToName repo of
-                     Left err -> fail err
-                     Right nm -> return nm
+            repo <- get obj "repository" "a link to the project's GitHub repo"
+            name <- case repoToName repo of
+                      Left err -> fail err
+                      Right nm -> return nm
 
-           exposed <- get obj "exposed-modules" "a list of modules exposed to users"
-           
-           native <- fromMaybe [] <$> (obj .:? "native-modules")
+            exposed <- get obj "exposed-modules" "a list of modules exposed to users"
 
-           elmVersion <- get obj "elm-version" "the version of the Elm compiler you are using"
+            native <- fromMaybe [] <$> (obj .:? "native-modules")
 
-           sourceDirs <- fromMaybe [] <$> (obj .:? "source-directories")
+            sourceDirs <- get obj "source-directories" "the directories that hold source code"
 
-           deps <- getDependencies obj
+            deps <- getDependencies obj
 
-           return $ Description name version summary desc license repo exposed native elmVersion sourceDirs deps
+            return $ Description name repo version summary desc license sourceDirs exposed native deps
 
     parseJSON _ = mzero
 
@@ -208,7 +201,7 @@ get obj field desc =
          Just value -> return value
          Nothing -> fail $ "Missing field " ++ show field ++ ", " ++ desc ++ ".\n" ++
                            "    Check out an example " ++ Path.description ++ " file here:" ++
-                           "    <https://github.com/evancz/automaton/blob/master/elm_dependencies.json>"
+                           "    <https://github.com/evancz/elm-html/blob/master/elm_dependencies.json>"
 
 
 repoToName :: String -> Either String N.Name
