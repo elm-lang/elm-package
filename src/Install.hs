@@ -18,6 +18,7 @@ import qualified Install.Fetch as Fetch
 import qualified Install.Plan as Plan
 import qualified Install.Solver as Solver
 import qualified Manager
+import qualified Store
 
 
 install :: Maybe (String, Maybe String) -> Manager.Manager ()
@@ -123,26 +124,37 @@ runPlan oldSolution newSolution plan =
 
 updateDescription :: N.Name -> Maybe V.Version -> Manager.Manager ()
 updateDescription name maybeVersion =
-  do  version <- getVersion
+  do  version <- getVersion name maybeVersion
 
       exists <- liftIO (doesFileExist Path.description)
       desc <- if exists then Desc.read else return Desc.defaultDescription
 
       addConstraint desc name version
-  where
-    getVersion =
-        case maybeVersion of
-          Just version ->
-              return version
 
-          Nothing ->
-              do  libDb <- error "readLibraries"
-                  case Map.lookup (N.toString name) libDb of
-                    Just versions ->
-                      return $ maximum $ (error "versions") versions
 
-                    Nothing ->
-                      throwError $ "Library " ++ N.toString name ++ " wasn't found!"
+getVersion :: N.Name -> Maybe V.Version -> Manager.Manager V.Version
+getVersion name maybeVersion =
+    case maybeVersion of
+      Just version ->
+          return version
+
+      Nothing ->
+          do  versionCache <- Store.readVersionCache
+              case Map.lookup name versionCache of
+                Just versions ->
+                    return $ maximum versions
+
+                Nothing ->
+                    throwError $
+                    unlines
+                    [ "No versions of package '" ++ N.toString name ++ "' were found!"
+                    , "Is it spelled correctly? If so, try running the following command to download"
+                    , "the latest package listing to your computer:"
+                    , ""
+                    , "    elm-package update"
+                    , ""
+                    , "After that, try installing again."
+                    ]
 
 
 addConstraint :: Desc.Description -> N.Name -> V.Version -> Manager.Manager ()

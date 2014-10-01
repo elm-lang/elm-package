@@ -1,7 +1,6 @@
 module Install.Solver where
 
 import Control.Monad.Error (throwError)
-import Control.Monad.Reader (ask)
 import Control.Monad.State (StateT, evalStateT)
 import Data.Function (on)
 import qualified Data.List as List
@@ -17,8 +16,7 @@ import qualified Store
 
 solve :: [(N.Name, C.Constraint)] -> Manager.Manager S.Solution
 solve constraints =
-    do  env <- ask
-        store <- Store.initialStore env constraints
+    do  store <- Store.initialStore constraints
 
         let explorer =
                 exploreVersion N.dummyName V.dummyVersion Map.empty Map.empty
