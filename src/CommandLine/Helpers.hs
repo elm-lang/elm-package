@@ -77,7 +77,7 @@ run command args =
         \  Can it be run from anywhere? I.e. is it on your PATH?"
 
 
-out :: (MonadError String m, MonadIO m) => String -> m ()
+out :: (MonadIO m) => String -> m ()
 out string =
     liftIO $ hPutStrLn stdout string'
   where
