@@ -72,5 +72,5 @@ errorMsg :: String -> String
 errorMsg string =
     unlines
     [ "Dependency file has an invalid name: " ++ string
-    , "Must have format user/project and match a public github project."
+    , "Must have format USER/PROJECT and match a public github project."
     ]
