@@ -1,6 +1,6 @@
 module CommandLine.Options (parse) where
 
-import Control.Applicative (pure, (<$>), (<*>))
+import Control.Applicative (pure, (<$>), (<*>), (<|>))
 import Data.Monoid ((<>), mconcat, mempty)
 import Data.Version (showVersion)
 import qualified Options.Applicative as Opt
@@ -57,7 +57,13 @@ linesToDoc lines =
 
 commands :: Opt.Parser Manager.Command
 commands =
-    Opt.hsubparser $
+    version <|> Opt.hsubparser commandOptions
+  where
+    version =
+        Opt.flag' Manager.PrintVersion
+            (Opt.long "version" <> Opt.short 'v' <> Opt.hidden)
+
+    commandOptions =
         mconcat
         [ Opt.command "install" installInfo
         , Opt.command "publish" publishInfo

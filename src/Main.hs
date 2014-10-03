@@ -1,8 +1,12 @@
 module Main where
 
+import Control.Monad.RWS (liftIO)
 import System.Directory (findExecutable)
 import System.Exit
 import System.IO
+
+import Data.Version (showVersion)
+import Paths_elm_package (version)
 
 import qualified CommandLine.Options as Options
 import qualified Install as Install
@@ -28,6 +32,9 @@ main =
 create :: Manager.Command -> Manager.Manager ()
 create command =
     case command of
+      Manager.PrintVersion ->
+          liftIO $ putStrLn (showVersion version)
+
       Manager.Install maybePackage ->
           Install.install maybePackage
 
