@@ -1,5 +1,6 @@
 module Diff.Display (packageChanges) where
 
+import Data.Char (isDigit)
 import qualified Data.Map as Map
 import Text.PrettyPrint ((<+>), (<>))
 import qualified Text.PrettyPrint as P
@@ -17,15 +18,15 @@ packageChanges pkgChanges@(D.PackageChanges added changed removed) =
     showRemoved
         | null removed = ""
         | otherwise =
-            "Removed modules:"
-            ++ concatMap ("\n  " ++) removed
+            "------ Removed modules - MAJOR ------\n"
+            ++ concatMap ("\n    " ++) removed
             ++ "\n\n"
 
     showAdded
         | null added = ""
         | otherwise =
-            "Added modules:"
-            ++ concatMap ("\n  " ++) added
+            "------ Added modules - MINOR ------\n"
+            ++ concatMap ("\n    " ++) added
             ++ "\n\n"
 
     showChanged
@@ -37,11 +38,10 @@ packageChanges pkgChanges@(D.PackageChanges added changed removed) =
 
 moduleChanges :: (String, D.ModuleChanges) -> String
 moduleChanges (name, changes) =
-    "Changes to module " ++ name ++ " - " ++ show magnitude ++ "\n"
+    "------ Changes to module " ++ name ++ " - " ++ show magnitude ++ " ------"
     ++ display "Added" adtAdd aliasAdd valueAdd
     ++ display "Removed" adtRemove aliasRemove valueRemove
     ++ display "Changed" adtChange aliasChange valueChange
-    ++ "\n"
   where
     magnitude =
         D.moduleChangeMagnitude changes
@@ -64,12 +64,12 @@ changesToDocs toDoc (D.Changes added changed removed) =
     )
   where
     indented (name, value) =
-        P.text "    " <> toDoc name value
+        P.text "        " <> toDoc name value
 
     diffed (name, (oldValue, newValue)) =
         P.vcat
-        [ P.text "  - " <> toDoc name oldValue
-        , P.text "  + " <> toDoc name newValue
+        [ P.text "      - " <> toDoc name oldValue
+        , P.text "      + " <> toDoc name newValue
         , P.text ""
         ]
 
@@ -83,7 +83,7 @@ display categoryName adts aliases values
             P.text "" : P.text category : adts ++ aliases ++ values
     where
       category =
-          "  " ++ categoryName ++ ":"
+          "\n    " ++ categoryName ++ ":"
 
 
 -- PRETTY PRINTING
@@ -120,8 +120,11 @@ valueDoc name tipe =
     P.text name <+> P.colon <+> typeDoc tipe
 
 
-typeDoc :: M.Type -> P.Doc
-typeDoc tipe =
+parenDoc = generalTypeDoc True
+typeDoc = generalTypeDoc False
+
+generalTypeDoc :: Bool -> M.Type -> P.Doc
+generalTypeDoc parens tipe =
     case tipe of
       M.Var x -> P.text x
 
@@ -130,15 +133,25 @@ typeDoc tipe =
       M.Lambda t t' ->
           let (args, result) = collectLambdas [t] t'
           in
+              (if parens then P.parens else id) $
               foldr arrow (typeDoc result) args
 
       M.App t t' ->
-          let types = collectApps [t'] t
-          in
-              P.hsep (map parenDoc types)
+          case collectApps [t'] t of
+            [ M.Type name, tipe ]
+              | name == "_List" ->
+                  P.lbrack <> typeDoc tipe <> P.rbrack
+                  
+            M.Type name : types
+              | take 6 name == "_Tuple" && all isDigit (drop 6 name) ->
+                  P.parens (P.hsep (P.punctuate P.comma (map typeDoc types)))
+
+            types ->
+                (if parens then P.parens else id) $
+                P.hsep (map parenDoc types)
 
       M.Record fields maybeExt ->
-          P.sep [ P.hang start 4 fieldDocs, P.rbrace ]
+          P.sep [ P.hang start 2 fieldDocs, P.rbrace ]
         where
           start =
               case maybeExt of
@@ -160,14 +173,6 @@ arrow arg result =
         case arg of
           M.Lambda _ _ -> P.parens (typeDoc arg)
           _ -> typeDoc arg
-
-
-parenDoc :: M.Type -> P.Doc
-parenDoc tipe =
-    case tipe of
-      M.Lambda _ _ -> P.parens (typeDoc tipe)
-      M.App _ _ -> P.parens (typeDoc tipe)
-      _ -> typeDoc tipe
 
 
 collectLambdas :: [M.Type] -> M.Type -> ([M.Type], M.Type)
