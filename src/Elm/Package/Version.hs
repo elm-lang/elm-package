@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveDataTypeable, TemplateHaskell #-}
 module Elm.Package.Version where
 
 import Control.Applicative ((<$>), (<*>))
