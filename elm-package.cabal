@@ -105,6 +105,7 @@ Executable elm-package
         mtl >= 2 && < 3,
         network >= 2.4 && < 2.7,
         optparse-applicative >= 0.8.1 && < 0.11,
+        pretty,
         process >= 1 && < 2,
         text,
         time,
@@ -152,4 +153,5 @@ Test-suite unit-test
         test-framework-hunit,
         text,
         time,
+        unordered-containers,
         vector
