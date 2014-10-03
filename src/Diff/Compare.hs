@@ -73,8 +73,8 @@ data Changes k v = Changes
     }
 
 
-diffPackage :: Map.Map String M.Module -> Map.Map String M.Module -> PackageChanges
-diffPackage oldPackage newPackage =
+diffPackage :: M.Package -> M.Package -> PackageChanges
+diffPackage (M.Package oldPackage) (M.Package newPackage) =
     PackageChanges
         (Map.keys added)
         (filterOutPatches (Map.map (uncurry diffModule) changed))

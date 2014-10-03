@@ -9,6 +9,10 @@ import qualified Data.Map as Map
 
 -- MODEL
 
+newtype Package =
+    Package (Map.Map String Module)
+
+
 data Module = Module
     { adts :: Map.Map String ([String], Map.Map String Type)
     , aliases :: Map.Map String ([String], Type)
@@ -25,6 +29,12 @@ data Type
 
 
 -- FROM JSON
+
+instance FromJSON Package where
+    parseJSON value =
+        do  pairs <- parseJSON value
+            return (Package (Map.fromList pairs))
+
 
 instance FromJSON Module where
     parseJSON (Object obj) =
