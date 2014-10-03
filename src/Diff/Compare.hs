@@ -1,268 +1,240 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Diff.Compare where
 
-import Control.Monad.Error
-import Data.Aeson hiding (Number)
-import Data.Aeson.Types (Parser)
-import Data.Functor ((<$>))
-import Data.Text (Text)
+import Control.Applicative ((<$>), (<*>))
+import Control.Monad (zipWithM)
+import Data.Function (on)
 import qualified Data.List as List
 import qualified Data.Map as Map
-import qualified Data.Maybe as Maybe
-import qualified Data.Vector as Vector
+import qualified Data.Set as Set
 
-import qualified Elm.Package.Version as V
+import qualified Diff.Model as M
 
--- DATATYPE DEFINITIONS
+
+-- CHANGE MAGNITUDE
 
 data Magnitude
-    = Major
-    | Minor
-    | Patch
+    = PATCH
+    | MINOR
+    | MAJOR
+    deriving (Eq, Ord, Show)
 
 
-data Compatibility
-    = Incompatible
-    | Compatible
-    | Same
+packageChangeMagnitude :: PackageChanges -> Magnitude
+packageChangeMagnitude pkgChanges =
+    maximum (added : removed : map moduleChangeMagnitude moduleChanges)
+  where
+    moduleChanges =
+        Map.elems (modulesChanged pkgChanges)
+
+    removed =
+        if null (modulesRemoved pkgChanges)
+            then PATCH
+            else MAJOR
+
+    added =
+        if null (modulesAdded pkgChanges)
+            then PATCH
+            else MINOR
+
+moduleChangeMagnitude :: ModuleChanges -> Magnitude
+moduleChangeMagnitude moduleChanges =
+    maximum
+        [ changeMagnitude (adtChanges moduleChanges)
+        , changeMagnitude (aliasChanges moduleChanges)
+        , changeMagnitude (valueChanges moduleChanges)
+        ]
+
+changeMagnitude :: Changes k v -> Magnitude
+changeMagnitude (Changes added changed removed)
+    | Map.size removed > 0 = MAJOR
+    | Map.size changed > 0 = MAJOR
+    | Map.size added   > 0 = MINOR
+    | otherwise            = PATCH
 
 
-magnitude :: Compatibility -> Magnitude
-magnitude compat =
-  case compat of
-    Incompatible -> Major
-    Compatible -> Minor
-    Same -> Patch
+-- DETECT CHANGES
+
+data PackageChanges = PackageChanges
+    { modulesAdded :: [String]
+    , modulesChanged :: Map.Map String ModuleChanges
+    , modulesRemoved :: [String]
+    }
+
+data ModuleChanges = ModuleChanges
+    { adtChanges :: Changes String ([String], Map.Map String M.Type)
+    , aliasChanges :: Changes String ([String], M.Type)
+    , valueChanges :: Changes String M.Type
+    }
+
+data Changes k v = Changes
+    { added :: Map.Map k v
+    , changed :: Map.Map k (v,v)
+    , removed :: Map.Map k v
+    }
 
 
-data DiffError
-    = ParsingError
-    | StringError String
+diffPackage :: Map.Map String M.Module -> Map.Map String M.Module -> PackageChanges
+diffPackage oldPackage newPackage =
+    PackageChanges
+        (Map.keys added)
+        (filterOutPatches (Map.map (uncurry diffModule) changed))
+        (Map.keys removed)
+  where
+    filterOutPatches chngs =
+        Map.filter (\chng -> moduleChangeMagnitude chng /= PATCH) chngs
 
-data Difference
-    = DifferentRenaming Var Var Var
-    | DifferentTypes
-    | DifferentRecordExtensions
+    (Changes added changed removed) =
+        getChanges (\_ _ -> False) oldPackage newPackage
 
 
-data TypeClass
+diffModule :: M.Module -> M.Module -> ModuleChanges
+diffModule (M.Module adts aliases values) (M.Module adts' aliases' values') =
+    ModuleChanges
+        (getChanges isEquivalentAdt adts adts')
+        (getChanges isEquivalentType aliases aliases')
+        (getChanges (\t t' -> isEquivalentType ([],t) ([],t')) values values')
+
+
+getChanges :: (Ord k) => (v -> v -> Bool) -> Map.Map k v -> Map.Map k v -> Changes k v
+getChanges isEquivalent old new =
+    Changes
+    { added =
+        Map.difference new old
+    , changed =
+        Map.filter
+            (not . uncurry isEquivalent)
+            (Map.intersectionWith (,) old new)
+    , removed =
+        Map.difference old new
+    }
+
+
+isEquivalentAdt :: ([String], Map.Map String M.Type) -> ([String], Map.Map String M.Type) -> Bool
+isEquivalentAdt (oldVars, oldCtors) (newVars, newCtors) =
+    Map.size oldCtors == Map.size newCtors
+    && and (zipWith (==) (Map.keys oldCtors) (Map.keys newCtors))
+    && and (Map.elems (Map.intersectionWith equiv oldCtors newCtors))
+  where
+    equiv oldType newType =
+        isEquivalentType (oldVars, oldType) (newVars, newType)
+
+
+isEquivalentType :: ([String], M.Type) -> ([String], M.Type) -> Bool
+isEquivalentType (oldVars, oldType) (newVars, newType) =
+    case diffType oldType newType of
+      Nothing -> False
+      Just renamings ->
+          length oldVars == length newVars
+          && isEquivalentRenaming (zip oldVars newVars ++ renamings)
+
+
+-- TYPES
+
+diffType :: M.Type -> M.Type -> Maybe [(String,String)]
+diffType oldType newType =
+    case (oldType, newType) of
+      (M.Var oldName, M.Var newName) ->
+          Just [(oldName, newName)]
+
+      (M.Type oldName, M.Type newName) ->
+          if oldName == newName
+              then Just []
+              else Nothing
+
+      (M.Lambda a b, M.Lambda a' b') ->
+          (++)
+              <$> diffType a a'
+              <*> diffType b b'
+
+      (M.App a b, M.App a' b') ->
+          (++)
+              <$> diffType a a'
+              <*> diffType b b'
+
+      (M.Record fields maybeExt, M.Record fields' maybeExt') ->
+          case (maybeExt, maybeExt') of
+            (Nothing, Just _) -> Nothing
+            (Just _, Nothing) -> Nothing
+            (Nothing, Nothing) -> diffFields fields fields'
+            (Just ext, Just ext') ->
+                (++)
+                    <$> diffType ext ext'
+                    <*> diffFields fields fields'
+
+      (_, _) ->
+          Nothing
+
+
+diffFields :: [(String, M.Type)] -> [(String, M.Type)] -> Maybe [(String,String)]
+diffFields rawFields rawFields'
+    | length rawFields /= length rawFields' = Nothing
+    | or (zipWith ((/=) `on` fst) fields fields') = Nothing
+    | otherwise =
+        concat <$> zipWithM (diffType `on` snd) fields fields'
+    where
+      fields  = sort rawFields
+      fields' = sort rawFields'
+
+      sort =
+          List.sortBy (compare `on` fst)
+
+
+-- TYPE VARIABLES
+
+isEquivalentRenaming :: [(String,String)] -> Bool
+isEquivalentRenaming varPairs =
+    case mapM verify renamings of
+      Nothing -> False
+      Just verifiedRenamings ->
+          allUnique (map snd verifiedRenamings)
+  where
+    renamings =
+        Map.toList (foldr insert Map.empty varPairs)
+
+    insert (old,new) dict =
+        Map.insertWith (++) old [new] dict
+
+    verify (old, news) =
+        case news of
+          [] -> Nothing
+          new : rest ->
+              if all (new ==) rest
+                  then Just (old, new)
+                  else Nothing
+
+    allUnique list =
+        length list == Set.size (Set.fromList list)
+
+
+compatableVars :: String -> String -> Bool
+compatableVars old new =
+    case (categorizeVar old, categorizeVar new) of
+      (Comparable, Comparable) -> True
+      (Appendable, Appendable) -> True
+      (Number    , Number    ) -> True
+
+      (Comparable, Appendable) -> True
+      (Number    , Comparable) -> True
+
+      (_, Var) -> True
+
+      (_, _) -> False
+
+
+data TypeVarCategory
     = Comparable
     | Appendable
     | Number
+    | Var
 
 
-isTypeClass :: String -> Maybe TypeClass
-isTypeClass varName
-    | any (/= '\'') primes = Nothing
-    | name == "comparable" = Just Comparable
-    | name == "appendable" = Just Appendable
-    | name == "number"     = Just Number
-    | otherwise            = Nothing
+categorizeVar :: String -> TypeVarCategory
+categorizeVar varName
+    | any (/= '\'') primes = Var
+    | name == "comparable" = Comparable
+    | name == "appendable" = Appendable
+    | name == "number"     = Number
+    | otherwise            = Var
     where
       (name, primes) =
           break (=='\'') varName
-
-
-type DocsComparison = Map.Map String [ComparisonEntry]
-
-
-diffPackage :: (Value, Value) -> Parser DocsComparison
-diffPackage (oldModules, newModules) =
-  let moduleName :: Value -> Parser String
-      moduleName v =
-        do o <- getObject "module information" v
-           o .: "name"
-
-      addModule env v =
-        do name <- moduleName v
-           return $ Map.insert name v env
-
-      processModule oldEnv compMap v =
-        do name <- moduleName v
-           case Map.lookup name oldEnv of
-             Nothing -> return compMap
-             Just v2 ->
-               do comparison <- diffModule (v, v2)
-                  return $ Map.insert name comparison compMap
-  in
-  case (oldModules, newModules) of
-    (Array a1, Array a2) ->
-      do env2 <- Vector.foldM addModule Map.empty a2
-         Vector.foldM (processModule env2) Map.empty a1
-    _ -> fail "Trying to parse documents from non-array"
-
-
-diffModule :: (Value, Value) -> Parser [ComparisonEntry]
-diffModule (oldModule, newModule) =
-    case (oldModule, newModule) of
-      (Object o1, Object o2) ->
-        do (oldValues, newValues) <- extract "values"
-           env1 <- buildEnv oldValues
-           env2 <- buildEnv newValues
-           entries <- mapMapM env1 $ \name (raw, value) ->
-             do (state, raw2) <- buildEntry env2 name value
-                return $ ComparisonEntry name raw raw2 state
-           let f name (raw, _) ls =
-                 case Map.lookup name env1 of
-                   Nothing -> ComparisonEntry name raw Nothing Removed : ls
-                   _ -> ls
-           let entriesRemoved = Map.foldrWithKey f [] env2
-           return $ entries ++ entriesRemoved
-      _ -> fail "Tried to parse module information from non-object"
-  where
-    extractEntry :: Value -> Parser (Maybe (String, String, Value))
-    extractEntry val =
-      do o <- getObject "binding information" val
-         exposed <- error "o .:? \"exposed\""
-         name <- o .: "name"
-         raw <- o .: "raw"
-         typ <- o .: "type"
-         return $
-           case exposed of
-             Just False -> Nothing
-             _ -> Just (name, raw, typ)
-
-    buildMap :: Ord a => [(a, b, c)] -> Map.Map a (b, c)
-    buildMap = Map.fromList . map (\(x, y, z) -> (x, (y, z)))
-
-    buildEnv :: [Value] -> Parser (Map.Map String (String, Value))
-    buildEnv vs = buildMap . Maybe.catMaybes <$> mapM extractEntry vs
-
-    mapMapM :: Monad m => Map.Map k v -> (k -> v -> m a) -> m [a]
-    mapMapM m fn = Map.foldrWithKey g (return []) m
-      where g k v act = liftM2 (:) (fn k v) act
-
-    buildEntry :: Map.Map String (String, Value) -> String -> Value -> Parser (BindingState, Maybe String)
-    buildEntry env name typ =
-      case Map.lookup name env of
-        Nothing -> return (Added, Nothing)
-        Just (raw, typ2) ->
-          do compat <- runErrorT $ diffType Map.empty (typ, typ2)
-             return $ (\ x -> (x, Just raw)) $
-               case compat of
-                 Left _ -> Existing Incompatible
-                 Right env -> Existing (compatibility env)
-
-
-type Diff = ErrorT DiffError Parser
-
-type NameUpdates = Map.Map String String
-
-diffType :: NameUpdates -> (Value, Value) -> Diff NameUpdates
-diffType nameDict (oldValue, newValue) =
-    case (oldValue, newValue) of
-      (Object old, Object new) ->
-          do  (oldTag, newTag) <- getStrings old new "tag"
-              assert (oldTag == newTag)
-              case oldTag of
-                "var" ->
-                    diffVar nameDict old new
-                "function" ->
-                    diffFunction nameDict old new
-                "adt" ->
-                    diffAdt nameDict old new
-                "alias" ->
-                    error "is this actually correct? Diff.Compare.diffType - alias"
-                "record" ->
-                    diffRecord nameDict old new
-                _ -> fail $ "Unknown tag " ++ oldTag
-
-      _ -> fail "Trying to parse types from non-objects"
-
-
-assert :: Bool -> Diff ()
-assert condition =
-    if condition then return () else throwError DifferentTypes
-
-
-diffVar :: NameUpdates -> Object -> Object -> Diff NameUpdates
-diffVar nameDict old new =
-  do  (oldName, newName) <- getStrings old new "name"
-      case Map.lookup oldName nameDict of
-        Just revisedName ->
-            if revisedName == newName
-                then return nameDict
-                else throwError $ DifferentRenaming oldName newName revisedName
-
-        Nothing ->
-            return (Map.insert oldName newName nameDict)
-
-
-diffFunction :: NameUpdates -> Object -> Object -> Diff NameUpdates
-diffFunction nameDict old new =
-  do  (oldArgs, newArgs) <- getValueLists old new "args"
-      assert (length oldArgs == length newArgs)
-      nameDict' <- foldM diffType nameDict (zip oldArgs newArgs)
-
-      (oldResult, newResult) <- getValues old new "result"
-      diffType nameDict' (oldResult, newResult)
-
-
-diffAdt :: NameUpdates -> Object -> Object -> Diff NameUpdates
-diffAdt nameDict old new =
-  do  (oldName, newName) <- getStrings old new "name"
-      assert (oldName == newName)
-
-      (oldArgs, newArgs) <- getValueLists old new "args"
-      assert (length oldArgs == length newArgs)
-      foldM diffType nameDict (zip oldArgs newArgs)
-
-
-diffAlias :: NameUpdates -> Object -> Object -> Diff NameUpdates
-diffAlias nameDict old new =
-  do  (oldAlias, newAlias) <- getStrings old new "alias"
-      assert (oldAlias == newAlias)
-      return nameDict
-
-diffRecord :: NameUpdates -> Object -> Object -> Diff NameUpdates
-diffRecord nameDict old new =
-  do  (oldExtension, newExtension) <- getOptionalValues old new "extensions"
-      nameDict' <-
-          case (oldExtension, newExtension) of
-            (Nothing, Nothing) -> return nameDict
-            (Just ov, Just nv) -> diffType nameDict (ov, nv)
-            _ -> throwError DifferentTypes
-
-      (oldFields, newFields) <- getKeyValuePairs old new "field"
-      assert (length oldFields == length newFields)
-
-      foldM (diffField (Map.fromList newFields)) nameDict' oldFields
-
-  where
-    diffField newFields nameDict (oldField, oldValue) =
-        case Map.lookup oldField newFields of
-          Just newValue ->
-              diffType nameDict (oldValue, newValue)
-          Nothing ->
-              throwError DifferentTypes
-
-
--- JSON GETTERS
-
-getObject :: String -> Value -> Parser Object
-getObject name value =
-    case value of
-      Object o -> return o
-      _ -> fail $ "Expected JSON object while parsing " ++ name
-
-
-get :: FromJSON a => Object -> Object -> Text -> Parser (a, a)
-get object1 object2 field =
-  do  value1 <- (object1 .: field)
-      value2 <- (object2 .: field)
-      return (value1, value2)
-
-getStrings :: Object -> Object -> Text -> RenameContext (String, String)
-getStrings = get
-
-getValues :: Object -> Object -> Text -> RenameContext (Value, Value)
-getValues = get
-
-getOptionalValues :: Object -> Object -> Text -> RenameContext (Maybe Value, Maybe Value)
-getOptionalValues = get
-
-getValueLists :: Object -> Object -> Text -> RenameContext ([Value], [Value])
-getValueLists = get
-
-getKeyValuePairs :: Object -> Object -> Text -> RenameContext ([(String, Value)], [(String, Value)])
-getKeyValuePairs = get
