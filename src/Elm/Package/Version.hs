@@ -18,6 +18,10 @@ data Version = Version
     deriving (Eq, Ord)
 
 
+initialVersion :: Version
+initialVersion =
+    Version 1 0 0
+
 dummyVersion :: Version
 dummyVersion =
     Version 0 0 0
