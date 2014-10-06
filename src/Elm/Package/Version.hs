@@ -40,6 +40,18 @@ bumpMajor (Version major _minor _patch) =
     Version (major + 1) 0 0
 
 
+-- FILTERING
+
+filterLatest :: (Ord a) => (V.Version -> a) -> [V.Version] -> [V.Version]
+filterLatest characteristic versions =
+    map last (List.groupBy ((==) `on` characteristic) (List.sort versions))
+
+
+majorAndMinor :: V.Version -> (Int,Int)
+majorAndMinor (V.Version major minor _patch) =
+    (major, minor)
+
+
 -- CONVERSIONS
 
 toString :: Version -> String

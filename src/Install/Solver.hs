@@ -54,7 +54,7 @@ explorePackages solution availablePackages =
 
 exploreVersionList :: N.Name -> [V.Version] -> S.Solution -> Packages -> Explorer (Maybe S.Solution)
 exploreVersionList name versions solution remainingPackages =
-    go (reverse (filterOldPatches versions))
+    go (reverse (V.filterLatest V.majorAndMinor versions))
   where
     go versions =
         case versions of
@@ -64,14 +64,6 @@ exploreVersionList name versions solution remainingPackages =
                   case maybeSolution of
                     Nothing -> go rest
                     answer -> return answer
-
-
-filterOldPatches :: [V.Version] -> [V.Version]
-filterOldPatches versions =
-    map last (List.groupBy ((==) `on` majorAndMinor) (List.sort versions))
-  where
-    majorAndMinor (V.Version major minor _patch) =
-        (major, minor)
 
 
 exploreVersion :: N.Name -> V.Version -> S.Solution -> Packages -> Explorer (Maybe S.Solution)
