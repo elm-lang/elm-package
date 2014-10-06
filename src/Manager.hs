@@ -9,6 +9,7 @@ import System.FilePath ((</>))
 data Command
     = Install (Maybe (String, Maybe String))
     | Publish
+    | Bump
     | PrintVersion
 
 

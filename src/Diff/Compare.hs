@@ -19,6 +19,14 @@ data Magnitude
     deriving (Eq, Ord, Show)
 
 
+bumpBy :: PackageChanges -> V.Version -> V.Version
+bumpBy changes version =
+    case packageChangeMagnitude changes of
+      PATCH -> V.bumpPatch version
+      MINOR -> V.bumpMinor version
+      MAJOR -> V.bumpMajor version
+
+
 packageChangeMagnitude :: PackageChanges -> Magnitude
 packageChangeMagnitude pkgChanges =
     maximum (added : removed : map moduleChangeMagnitude moduleChanges)

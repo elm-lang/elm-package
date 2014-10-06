@@ -60,3 +60,27 @@ register name version path =
         [ partFileSource "docs" path
         , partFileSource "deps" P.description
         ]
+
+
+docs :: N.Name -> V.Version -> Manager.Manager FilePath
+docs name version =
+  do  cacheDir <- asks Manager.cacheDirectory
+      let path = docsPath cacheDir
+      exists <- doesFileExist path
+      if exists
+          then return path
+          else fetchDocs path
+
+  where
+    docsPath dir =
+        cacheDir </> N.toFilePath name </> V.toString <.> "json"
+
+    fetchDocs path =
+        do  domain <- asks Manager.catalog
+            Http.send (docsUrl domain) $ \request manager ->
+                do  response <- Client.httpLbs request manager
+                    LBS.writeString path response
+                    return path
+
+    docsUrl domain =
+        domain ++ "/" ++ N.toString name ++ "/" ++ V.toString version "/docs.json"
