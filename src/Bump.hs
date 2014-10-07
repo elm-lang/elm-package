@@ -32,6 +32,8 @@ bump =
                     then suggestVersion newDocs name statedVersion description
                     else throwError (unbumpable bumps)
 
+        return ()
+
 
 unbumpable :: [V.Version] -> String
 unbumpable validBumps =
@@ -48,11 +50,17 @@ unbumpable validBumps =
     ]
 
 
-validateInitialVersion :: Desc.Description -> Manager.Manager ()
+data Validity
+    = Valid
+    | Invalid
+    | Changed V.Version
+
+
+validateInitialVersion :: Desc.Description -> Manager.Manager Validity
 validateInitialVersion description =
     do  Cmd.out explanation
         if Desc.version description == V.initialVersion
-            then Cmd.out goodMsg
+            then Cmd.out goodMsg >> return Valid
             else changeVersion badMsg description V.initialVersion
     where
         explanation =
@@ -78,25 +86,26 @@ validateInitialVersion description =
         badMsg =
             unlines
             [ "It looks like the version in " ++ Path.description ++ " has been changed though!"
-            , ""
             , "Would you like me to change it back to " ++ V.toString V.initialVersion ++ "? (y/n)"
             ]
 
 
-changeVersion :: String -> Desc.Description -> V.Version -> Manager.Manager ()
+changeVersion :: String -> Desc.Description -> V.Version -> Manager.Manager Validity
 changeVersion explanation description newVersion = 
     do  Cmd.out explanation
         yes <- liftIO Cmd.yesOrNo
         case yes of
-            False ->
+            False -> do
                 Cmd.out "Okay, no changes were made."
+                return Invalid
 
             True -> do
                 liftIO $ Desc.write (description { Desc.version = newVersion })
-                Cmd.out "Success!"
+                Cmd.out $ "Version changed to " ++ V.toString newVersion ++ "."
+                return (Changed newVersion)
 
 
-suggestVersion :: FilePath -> N.Name -> V.Version -> Desc.Description -> Manager.Manager ()
+suggestVersion :: FilePath -> N.Name -> V.Version -> Desc.Description -> Manager.Manager Validity
 suggestVersion newDocs name version description =
     do  changes <- Compare.computeChanges newDocs name version
         let newVersion = Compare.bumpBy changes version
@@ -117,7 +126,7 @@ suggestVersion newDocs name version description =
             ]
 
 
-validateVersion :: FilePath -> N.Name -> V.Version -> [V.Version] -> Manager.Manager ()
+validateVersion :: FilePath -> N.Name -> V.Version -> [V.Version] -> Manager.Manager Validity
 validateVersion newDocs name statedVersion publishedVersions =
     case List.find (\(_ ,new, _) -> statedVersion == new) bumps of
         Nothing ->
@@ -126,9 +135,12 @@ validateVersion newDocs name statedVersion publishedVersions =
         Just (old, new, magnitude) ->
             do  changes <- Compare.computeChanges newDocs name old
                 let realNew = Compare.bumpBy changes old
-                if new == realNew
-                    then Cmd.out (looksGood old new magnitude)
-                    else throwError (badBump old new realNew magnitude changes)
+                case new == realNew of
+                    False ->
+                        throwError (badBump old new realNew magnitude changes)
+                    True -> do
+                        Cmd.out (looksGood old new magnitude)
+                        return Valid
 
     where
         bumps = validBumps publishedVersions
@@ -145,7 +157,7 @@ validateVersion newDocs name statedVersion publishedVersions =
             , "that you are improving upon, we will compute which version should come next"
             , "when you run:"
             , ""
-            , "    elm-package bump"
+            , "    elm-package version-bump"
             ]
 
         badBump old new realNew magnitude changes =
@@ -164,7 +176,7 @@ validateVersion newDocs name statedVersion publishedVersions =
             , "that you are improving upon, we will compute which version should come next"
             , "when you run:"
             , ""
-            , "    elm-package bump"
+            , "    elm-package version-bump"
             ]
 
 
