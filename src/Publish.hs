@@ -1,24 +1,18 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Publish where
 
-import Control.Monad.Error
-import Control.Monad.Reader (ask)
-import qualified Data.ByteString as BS
-import qualified Data.List as List
+import Control.Monad.Error (throwError)
 import qualified Data.Maybe as Maybe
-import System.Directory (doesDirectoryExist, doesFileExist, removeDirectoryRecursive)
-import System.FilePath ((</>))
 
 import qualified Bump
 import qualified Catalog
 import qualified CommandLine.Helpers as Cmd
+import qualified Docs
 import qualified Elm.Package.Description as Desc
 import qualified Elm.Package.Name as N
 import qualified Elm.Package.Paths as P
 import qualified Elm.Package.Version as V
 import qualified Manager
 import qualified Utils.Http as Http
-import qualified Utils.Paths as Path
 
 
 publish :: Manager.Manager ()
@@ -30,8 +24,10 @@ publish =
 
       Cmd.out $ unwords [ "Verifying", N.toString name, V.toString version, "..." ]
       verifyMetadata description
-      exposedModules <- locateExposedModules description
-      validity <- verifyVersion description
+
+      docsPath <- Docs.generate description
+
+      validity <- verifyVersion docsPath description
       newVersion <-
           case validity of
             Bump.Valid -> return version
@@ -39,59 +35,9 @@ publish =
             Bump.Changed v -> return v
 
       verifyTag name newVersion
-      withCleanup $ do
-          generateDocs exposedModules
-          Catalog.register name newVersion Path.combinedJson
+      Catalog.register name newVersion docsPath
       Cmd.out "Success!"
 
-
-withCleanup :: Manager.Manager () -> Manager.Manager ()
-withCleanup action =
-  do  existed <- liftIO $ doesDirectoryExist "docs"
-      env <- ask
-      either <- liftIO $ Manager.run env action
-      when (not existed) $ liftIO $ removeDirectoryRecursive "docs"
-      case either of
-        Left err -> throwError err
-        Right () -> return ()
-
-
-locateExposedModules :: Desc.Description -> Manager.Manager [FilePath]
-locateExposedModules desc =
-    mapM locate (Desc.exposed desc)
-  where
-    locate modul =
-      let path = Path.moduleToElmFile modul
-          dirs = Desc.sourceDirs desc
-      in
-      do  possibleLocations <-
-              forM dirs $ \dir -> do
-                  exists <- liftIO $ doesFileExist (dir </> path)
-                  return (if exists then Just (dir </> path) else Nothing)
-
-          case Maybe.catMaybes possibleLocations of
-            [] ->
-                throwError $
-                unlines
-                [ "Could not find exposed module '" ++ modul ++ "' when looking through"
-                , "the following source directories:"
-                , concatMap ("\n    " ++) dirs
-                , ""
-                , "You may need to add a source directory to your " ++ P.description ++ " file."
-                ]
-
-            [location] ->
-                return location
-
-            locations ->
-                throwError $
-                unlines
-                [ "I found more than one module named '" ++ modul ++ "' in the"
-                , "following locations:"
-                , concatMap ("\n    " ++) locations
-                , ""
-                , "Module names must be unique within your package."
-                ]
 
 
 verifyMetadata :: Desc.Description -> Manager.Manager ()
@@ -117,15 +63,15 @@ verifyMetadata deps =
             else Nothing
 
 
-verifyVersion :: Desc.Description -> Manager.Manager Bump.Validity
-verifyVersion description =
+verifyVersion :: FilePath -> Desc.Description -> Manager.Manager Bump.Validity
+verifyVersion docsPath description =
   let name = Desc.name description
       version = Desc.version description
   in
   do  maybeVersions <- Catalog.versions name
       case maybeVersions of
         Just publishedVersions ->
-            Bump.validateVersion (error "generate docs") name version publishedVersions
+            Bump.validateVersion docsPath name version publishedVersions
 
         Nothing ->
             Bump.validateInitialVersion description
@@ -152,24 +98,3 @@ tagMessage version =
     , "    git push origin " ++ v
     , ""
     ]
-
-
-generateDocs :: [String] -> Manager.Manager ()
-generateDocs modules =
-    do  forM elms $ \path -> Cmd.run "elm-doc" [path]
-        liftIO $ do
-            let path = Path.combinedJson
-            BS.writeFile path "[\n"
-            let addCommas = List.intersperse (BS.appendFile path ",\n")
-            sequence_ $ addCommas $ map append jsons
-            BS.appendFile path "\n]"
-
-    where
-      elms = map Path.moduleToElmFile modules
-      jsons = map Path.moduleToJsonFile modules
-
-      append :: FilePath -> IO ()
-      append path = do
-        json <- BS.readFile path
-        BS.length json `seq` return ()
-        BS.appendFile Path.combinedJson json

@@ -6,6 +6,7 @@ import qualified Data.List as List
 import qualified Catalog
 import qualified CommandLine.Helpers as Cmd
 import qualified Diff.Compare as Compare
+import qualified Docs
 import qualified Elm.Package.Description as Desc
 import qualified Elm.Package.Name as N
 import qualified Elm.Package.Paths as Path
@@ -19,7 +20,7 @@ bump =
         let name = Desc.name description
         let statedVersion = Desc.version description
 
-        newDocs <- error "need to generate docs"
+        newDocs <- Docs.generate description
 
         maybeVersions <- Catalog.versions name
         case maybeVersions of
