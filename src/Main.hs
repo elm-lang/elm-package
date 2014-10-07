@@ -1,45 +1,27 @@
 module Main where
 
-import Control.Monad.RWS (liftIO)
 import System.Directory (findExecutable)
-import System.Exit
+import System.Exit (exitFailure)
 import System.IO
 
-import Data.Version (showVersion)
-import Paths_elm_package (version)
-
 import qualified CommandLine.Options as Options
-import qualified Install as Install
-import qualified Manager as Manager
-import qualified Publish as Publish
+import qualified Manager
 
 
 main :: IO ()
 main =
   do  requireGit
-      command <- Options.parse
+      manager <- Options.parse
       env <- Manager.defaultEnvironment
-      result <- Manager.run env (create command)
+      result <- Manager.run env manager
       case result of
-        Right () -> return ()
+        Right () ->
+            return ()
+
         Left err ->
-            do hPutStr stderr ("\nError: " ++ err ++ newline)
-               exitFailure
-            where
-              newline = if last err == '\n' then "" else "\n"
-
-
-create :: Manager.Command -> Manager.Manager ()
-create command =
-    case command of
-      Manager.PrintVersion ->
-          liftIO $ putStrLn (showVersion version)
-
-      Manager.Install maybePackage ->
-          Install.install maybePackage
-
-      Manager.Publish ->
-          Publish.publish
+            errExit ("\nError: " ++ err ++ newline)
+          where
+            newline = if last err == '\n' then "" else "\n"
 
 
 errExit :: String -> IO ()

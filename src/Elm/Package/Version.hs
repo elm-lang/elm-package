@@ -4,6 +4,8 @@ import Control.Applicative ((<$>), (<*>))
 import Data.Aeson
 import Data.Binary
 import Data.Char (isDigit)
+import Data.Function (on)
+import qualified Data.List as List
 import qualified Data.Text as T
 
 elmVersion :: Version
@@ -42,13 +44,13 @@ bumpMajor (Version major _minor _patch) =
 
 -- FILTERING
 
-filterLatest :: (Ord a) => (V.Version -> a) -> [V.Version] -> [V.Version]
+filterLatest :: (Ord a) => (Version -> a) -> [Version] -> [Version]
 filterLatest characteristic versions =
     map last (List.groupBy ((==) `on` characteristic) (List.sort versions))
 
 
-majorAndMinor :: V.Version -> (Int,Int)
-majorAndMinor (V.Version major minor _patch) =
+majorAndMinor :: Version -> (Int,Int)
+majorAndMinor (Version major minor _patch) =
     (major, minor)
 
 

@@ -6,13 +6,6 @@ import qualified System.Directory as Dir
 import System.FilePath ((</>))
 
 
-data Command
-    = Install (Maybe (String, Maybe String))
-    | Publish
-    | Bump
-    | PrintVersion
-
-
 type Manager =
     ErrorT String (ReaderT Environment IO)
 

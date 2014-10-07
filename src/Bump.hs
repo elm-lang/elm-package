@@ -1,47 +1,84 @@
 module Bump where
 
+import Control.Monad.Error (throwError, liftIO)
 import qualified Data.List as List
 
 import qualified Catalog
+import qualified CommandLine.Helpers as Cmd
+import qualified Diff.Compare as Compare
 import qualified Elm.Package.Description as Desc
 import qualified Elm.Package.Name as N
-import qualified Elm.Package.Paths as P
+import qualified Elm.Package.Paths as Path
 import qualified Elm.Package.Version as V
 import qualified Manager
 
 
-whatIsNext :: N.Name -> Manager.Manager V.Version
-whatIsNext name =
+bump :: Manager.Manager ()
+bump =
     do  description <- Desc.read
+        let name = Desc.name description
         let statedVersion = Desc.version description
 
         newDocs <- error "need to generate docs"
 
-        publishedVersions <- Catalog.versions name
-        if statedVersion `elem` publishedVersions
-            then suggestVersion newDocs name statedVersion description
-            else validateVersion newDocs name statedVersion publishedVersions
+        maybeVersions <- Catalog.versions name
+        case maybeVersions of
+            Nothing -> do
+                Cmd.out explanation
+                if statedVersion == V.initialVersion
+                    then Cmd.out goodMsg
+                    else changeVersion badMsg description V.initialVersion
+
+            Just publishedVersions ->
+                if statedVersion `elem` publishedVersions
+                    then suggestVersion newDocs name statedVersion description
+                    else validateVersion newDocs name statedVersion publishedVersions
+
+    where
+        explanation =
+            unlines
+            [ "This package has never been published before. Here's how things work:"
+            , ""
+            , "  * All packages start with initial version " ++ V.toString V.initialVersion
+            , "  * Versions are incremented based on API changes and verified automatically"
+            , ""
+            ]
+
+        goodMsg =
+            "The version number in " ++ Path.description ++ " is correct so you are all set!"
+
+        badMsg =
+            unlines
+            [ "It looks like the version in " ++ Path.description ++ " has been changed though!"
+            , ""
+            , "Would you like me to change it back to " ++ V.toString V.initialVersion ++ "? (y/n)"
+            ]
 
 
-suggestVersion :: FilePath -> N.Name -> V.Version -> Desc.Description -> Manager.Manager ()
-suggestVersion newDocs name version description =
-    do  changes <- computeChanges newDocs name version
-        let newVersion = Compare.bumpBy changes version
-        Cmd.out (infoMsg changes)
-        yes <- Cmd.yesOrNo
+changeVersion :: String -> Desc.Description -> V.Version -> Manager.Manager ()
+changeVersion explanation description newVersion = 
+    do  Cmd.out explanation
+        yes <- liftIO Cmd.yesOrNo
         case yes of
             False ->
                 Cmd.out "Okay, but it is best to let me change it, so run this command later!"
 
-            True ->
-                do  Desc.write (description { version = newVersion })
-                    Cmd.out "Success!"
+            True -> do
+                liftIO $ Desc.write (description { Desc.version = newVersion })
+                Cmd.out "Success!"
+
+
+suggestVersion :: FilePath -> N.Name -> V.Version -> Desc.Description -> Manager.Manager ()
+suggestVersion newDocs name version description =
+    do  changes <- Compare.computeChanges newDocs name version
+        let newVersion = Compare.bumpBy changes version
+        changeVersion (infoMsg changes newVersion) description newVersion
 
     where
         infoMsg changes newVersion =
             unlines
             [ "Based on your new API, this should be a " ++ show (Compare.packageChangeMagnitude changes) ++ " change."
-            , "That means you need to upgrade from version " ++ V.toString version ++ " to " ++ V.toString newVersion ++ "."
+            , "If you are improving upon " ++ V.toString version ++ ", the new version should be " ++ V.toString newVersion ++ "."
             , ""
             , "Would you like us to make this change to " ++ Path.description ++ " now? (y/n)"
             ]
@@ -49,19 +86,24 @@ suggestVersion newDocs name version description =
 
 validateVersion :: FilePath -> N.Name -> V.Version -> [V.Version] -> Manager.Manager ()
 validateVersion newDocs name statedVersion publishedVersions =
-    do  bumps <- validBumps publishedVersions
-        case List.find (\(_ ,new, _) -> statedVersion == new) bumps of
-            Nothing ->
-                throwError invalidBump
+    case List.find (\(_ ,new, _) -> statedVersion == new) bumps of
+        Nothing ->
+            throwError invalidBump
 
-            Just (old, new, magnitude) ->
-                do  changes <- computeChanges newDocs name old
-                    let realNew = Compare.bumpBy changes old
-                    if new == realNew
-                        then return new
-                        else throwError (badBump old new realNew magnitude changes)
+        Just (old, new, magnitude) ->
+            do  changes <- Compare.computeChanges newDocs name old
+                let realNew = Compare.bumpBy changes old
+                if new == realNew
+                    then Cmd.out (looksGood old new magnitude)
+                    else throwError (badBump old new realNew magnitude changes)
 
     where
+        bumps = validBumps publishedVersions
+
+        looksGood old new magnitude =
+            "Version number " ++ V.toString new ++ " verified (" ++ show magnitude
+            ++ " change, " ++ V.toString old ++ " => " ++ V.toString new ++ ")"
+
         invalidBump =
             unlines
             [ "Something is off with the version listed in " ++ Path.description ++ "."
@@ -93,26 +135,13 @@ validateVersion newDocs name statedVersion publishedVersions =
             ]
 
 
-computeChanges :: FilePath -> N.Name -> V.Version -> Manager.Manager Compare.PackageChanges
-computeChanges newDocs name version =
-    do  oldDocs <- Catalog.docs name version
-        old <- BS.readFile oldDocs
-        new <- BS.readFile newDocs
-        case (,) <$> Json.eitherDecode old <*> Json.eitherDecode new of
-            Left msg ->
-                throwError msg
-
-            Right (oldPackage, newPackage) ->
-                return (Compare.diffPackage oldPackage newPackage)
-
-
 -- VALID BUMPS
 
 validBumps :: [V.Version] -> [(V.Version, V.Version, Compare.Magnitude)]
 validBumps publishedVersions =
     [ (majorPoint, V.bumpMajor majorPoint, Compare.MAJOR) ]
-    ++ map (\v -> (v, V.bumpMinor v, Compare.MINOR) minorPoints
-    ++ map (\v -> (v, V.bumpPatch v, Compare.PATCH) patchPoints
+    ++ map (\v -> (v, V.bumpMinor v, Compare.MINOR)) minorPoints
+    ++ map (\v -> (v, V.bumpPatch v, Compare.PATCH)) patchPoints
   where
     patchPoints = V.filterLatest V.majorAndMinor publishedVersions
     minorPoints = V.filterLatest V.major publishedVersions

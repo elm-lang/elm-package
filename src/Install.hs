@@ -21,38 +21,26 @@ import qualified Manager
 import qualified Store
 
 
-install :: Maybe (String, Maybe String) -> Manager.Manager ()
+data Args
+    = Everything
+    | Latest N.Name
+    | Exactly N.Name V.Version
+
+
+install :: Args -> Manager.Manager ()
 install maybePackage =
     case maybePackage of
-      Nothing ->
+      Everything ->
           upgrade
 
-      Just (rawName, maybeRawVersion) ->
-          do  (name, maybeVersion) <- parseInput rawName maybeRawVersion
-              updateDescription name maybeVersion
+      Latest name ->
+          do  version <- latestVersion name
+              updateDescription name version
               upgrade
 
-
-parseInput :: String -> Maybe String -> Manager.Manager (N.Name, Maybe V.Version)
-parseInput rawName maybeRawVersion =
-  do  name <- parseName rawName
-      vrsn <- parseVersion maybeRawVersion
-      return (name, vrsn)
-  where
-    parseName rawName =
-        maybe (throwError $ invalidName rawName) return (N.fromString rawName)
-
-    invalidName name =
-        "The package name '" ++ name ++ "' is not valid. It must look like evancz/elm-html"
-
-    parseVersion maybeVersion =
-        case maybeVersion of
-          Nothing -> return Nothing
-          Just rawVersion ->
-              maybe (throwError $ invalidVersion rawVersion) (return . Just) (V.fromString rawVersion)
-
-    invalidVersion vrsn =
-        "The version number '" ++ vrsn ++ "' is not valid. It must look like X.Y.Z"
+      Exactly name version ->
+          do  updateDescription name version
+              upgrade
 
 
 -- INSTALL EVERYTHING
@@ -122,39 +110,31 @@ runPlan oldSolution newSolution plan =
 
 -- MODIFY DESCRIPTION
 
-updateDescription :: N.Name -> Maybe V.Version -> Manager.Manager ()
-updateDescription name maybeVersion =
-  do  version <- getVersion name maybeVersion
-
-      exists <- liftIO (doesFileExist Path.description)
+updateDescription :: N.Name -> V.Version -> Manager.Manager ()
+updateDescription name version =
+  do  exists <- liftIO (doesFileExist Path.description)
       desc <- if exists then Desc.read else return Desc.defaultDescription
-
       addConstraint desc name version
 
 
-getVersion :: N.Name -> Maybe V.Version -> Manager.Manager V.Version
-getVersion name maybeVersion =
-    case maybeVersion of
-      Just version ->
-          return version
+latestVersion :: N.Name -> Manager.Manager V.Version
+latestVersion name =
+  do  versionCache <- Store.readVersionCache
+      case Map.lookup name versionCache of
+        Just versions ->
+            return $ maximum versions
 
-      Nothing ->
-          do  versionCache <- Store.readVersionCache
-              case Map.lookup name versionCache of
-                Just versions ->
-                    return $ maximum versions
-
-                Nothing ->
-                    throwError $
-                    unlines
-                    [ "No versions of package '" ++ N.toString name ++ "' were found!"
-                    , "Is it spelled correctly? If so, try running the following command to download"
-                    , "the latest package listing to your computer:"
-                    , ""
-                    , "    elm-package update"
-                    , ""
-                    , "After that, try installing again."
-                    ]
+        Nothing ->
+            throwError $
+            unlines
+            [ "No versions of package '" ++ N.toString name ++ "' were found!"
+            , "Is it spelled correctly? If so, try running the following command to download"
+            , "the latest package listing to your computer:"
+            , ""
+            , "    elm-package update"
+            , ""
+            , "After that, try installing again."
+            ]
 
 
 addConstraint :: Desc.Description -> N.Name -> V.Version -> Manager.Manager ()

@@ -2,7 +2,6 @@ module Install.Solver where
 
 import Control.Monad.Error (throwError)
 import Control.Monad.State (StateT, evalStateT)
-import Data.Function (on)
 import qualified Data.List as List
 import qualified Data.Map as Map
 

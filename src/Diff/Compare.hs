@@ -2,12 +2,31 @@ module Diff.Compare where
 
 import Control.Applicative ((<$>), (<*>))
 import Control.Monad (zipWithM)
+import Control.Monad.Error (liftIO, throwError)
+import qualified Data.Aeson as Json
+import qualified Data.ByteString.Lazy as LBS
 import Data.Function (on)
 import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 
+import qualified Catalog
 import qualified Diff.Model as M
+import qualified Elm.Package.Name as N
+import qualified Elm.Package.Version as V
+import qualified Manager
+
+computeChanges :: FilePath -> N.Name -> V.Version -> Manager.Manager PackageChanges
+computeChanges newDocs name version =
+    do  oldDocs <- Catalog.docs name version
+        old <- liftIO $ LBS.readFile oldDocs
+        new <- liftIO $ LBS.readFile newDocs
+        case (,) <$> Json.eitherDecode old <*> Json.eitherDecode new of
+            Left msg ->
+                throwError msg
+
+            Right (oldPackage, newPackage) ->
+                return (diffPackage oldPackage newPackage)
 
 
 -- CHANGE MAGNITUDE
