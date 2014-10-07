@@ -8,7 +8,6 @@ import Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy as BS
 import qualified Data.Text as Text
 import qualified Data.Map as Map
-import System.Directory (doesFileExist)
 
 import qualified Elm.Package.Name as N
 import qualified Elm.Package.Version as V
@@ -20,19 +19,15 @@ type Solution =
 
 -- READING AND WRITING SOLUTIONS
 
-writeSolution :: FilePath -> Solution -> IO ()
-writeSolution filePath solution =
+write :: FilePath -> Solution -> IO ()
+write filePath solution =
     BS.writeFile filePath (encodePretty (solutionToJson solution))
 
 
-readSolutionOr :: (MonadIO m, MonadError String m) => FilePath -> m Solution -> m Solution
-readSolutionOr path recover =
-  do  exists <- liftIO (doesFileExist path)
-      case exists of
-        False -> recover
-        True ->
-           do rawJson <- liftIO (BS.readFile path)
-              either throwCorrupted listToSolution (eitherDecode rawJson)
+read :: (MonadIO m, MonadError String m) => FilePath -> m Solution
+read path =
+  do  rawJson <- liftIO (BS.readFile path)
+      either throwCorrupted listToSolution (eitherDecode rawJson)
   where
     throwCorrupted _msg =
         throwError $

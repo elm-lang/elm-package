@@ -1,5 +1,6 @@
 module Install where
 
+import Control.Applicative ((<|>))
 import Control.Monad.Error
 import Data.Function (on)
 import qualified Data.List as List
@@ -12,7 +13,7 @@ import qualified Elm.Package.Constraint as Constraint
 import qualified Elm.Package.Description as Desc
 import qualified Elm.Package.Name as N
 import qualified Elm.Package.Paths as Path
-import qualified Elm.Package.Solution as S
+import qualified Elm.Package.Solution as Solution
 import qualified Elm.Package.Version as V
 import qualified Install.Fetch as Fetch
 import qualified Install.Plan as Plan
@@ -50,7 +51,7 @@ upgrade =
   do  description <- Desc.read
 
       newSolution <- Solver.solve (Desc.dependencies description)
-      oldSolution <- S.readSolutionOr Path.solvedDependencies (return Map.empty)
+      oldSolution <- Solution.read Path.solvedDependencies <|> return Map.empty
       let plan = Plan.create oldSolution newSolution
 
       approve <- liftIO $ getApproval plan
@@ -68,14 +69,14 @@ getApproval plan =
       Cmd.yesOrNo
 
 
-runPlan :: S.Solution -> S.Solution -> Plan.Plan -> Manager.Manager ()
+runPlan :: Solution.Solution -> Solution.Solution -> Plan.Plan -> Manager.Manager ()
 runPlan oldSolution newSolution plan =
   do  -- fetch new dependencies
       Cmd.inDir Path.packagesDirectory $
           mapM_ (uncurry Fetch.package) installs
 
       -- try to build new dependencies
-      liftIO (writeSolution newSolution)
+      liftIO (Solution.write Path.solvedDependencies newSolution)
       success <- error "try to build everything"
 
       -- remove dependencies that are not needed
@@ -84,7 +85,7 @@ runPlan oldSolution newSolution plan =
 
       -- revert solution if needed
       when (not success) $
-          liftIO (writeSolution oldSolution)
+          liftIO (Solution.write Path.solvedDependencies oldSolution)
 
       liftIO $ putStrLn (if success then "Success!" else failureMsg)
   where
@@ -98,9 +99,6 @@ runPlan oldSolution newSolution plan =
 
     remove (name, version) =
         removeDirectoryRecursive (N.toFilePath name </> V.toString version)
-
-    writeSolution =
-        S.writeSolution (Path.packagesDirectory </> Path.solvedDependencies)
 
     failureMsg =
         "I could not build the new packages, so I have reverted to your previous\n\
