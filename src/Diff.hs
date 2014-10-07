@@ -1,11 +1,12 @@
 module Diff where
 
-import qualified Data.List as List
+import Control.Monad.Error (throwError)
 
 import qualified Catalog
 import qualified CommandLine.Helpers as Cmd
 import qualified Diff.Compare as Compare
 import qualified Diff.Display as Display
+import qualified Docs
 import qualified Elm.Package.Description as Desc
 import qualified Elm.Package.Name as N
 import qualified Elm.Package.Version as V
@@ -13,7 +14,7 @@ import qualified Manager
 
 
 data Range
-    = StatedVsActual
+    = LatestVsActual
     | Since V.Version
     | Between N.Name V.Version V.Version
 
@@ -21,22 +22,35 @@ data Range
 diff :: Range -> Manager.Manager ()
 diff range =
     case range of
-        StatedVsActual ->
+        LatestVsActual ->
             do  desc <- Desc.read
-                computeDiff (Desc.name desc) (Desc.version desc) Nothing
+                let name = Desc.name desc
+                newDocs <- Docs.generate desc
+
+                maybeVersions <- Catalog.versions name
+                latestVersion <-
+                    maybe (throwError noVersions) (return . last) maybeVersions
+
+                computeDiff name latestVersion newDocs Nothing
 
         Since version ->
             do  desc <- Desc.read
-                computeDiff (Desc.name desc) version Nothing
+                newDocs <- Docs.generate desc
+                computeDiff (Desc.name desc) version newDocs Nothing
 
         Between name old new ->
-            computeDiff name old (Just new)
+            do  newDocs <- Catalog.docs name new
+                computeDiff name old newDocs (Just new)
 
 
-computeDiff :: N.Name -> V.Version -> Maybe V.Version -> Manager.Manager ()
-computeDiff name oldVersion maybeNewVersion =
+noVersions :: String
+noVersions =
+    "This package has not been published, there is nothing to diff against!"
+
+
+computeDiff :: N.Name -> V.Version -> FilePath -> Maybe V.Version -> Manager.Manager ()
+computeDiff name oldVersion newDocs maybeNewVersion =
     do  Cmd.out msg
-        newDocs <- error "need to generate docs"
         changes <- Compare.computeChanges newDocs name oldVersion
         Cmd.out (Display.packageChanges changes)
     where

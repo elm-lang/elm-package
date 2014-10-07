@@ -102,7 +102,7 @@ diffInfo =
     range =
         (Diff.Between <$> package <*> version <*> version)
         <|> (Diff.Since <$> version)
-        <|> (pure Diff.StatedVsActual)
+        <|> (pure Diff.LatestVsActual)
 
 
 -- PUBLISH
