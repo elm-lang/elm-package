@@ -73,7 +73,7 @@ commands =
         mconcat
         [ Opt.command "install" installInfo
         , Opt.command "diff" diffInfo
-        , Opt.command "bump" bumpInfo
+        , Opt.command "version-bump" bumpInfo
         , Opt.command "publish" publishInfo
         ]
 

@@ -23,24 +23,52 @@ bump =
 
         maybeVersions <- Catalog.versions name
         case maybeVersions of
-            Nothing -> do
-                Cmd.out explanation
-                if statedVersion == V.initialVersion
-                    then Cmd.out goodMsg
-                    else changeVersion badMsg description V.initialVersion
+            Nothing -> 
+                validateInitialVersion description
 
             Just publishedVersions ->
-                if statedVersion `elem` publishedVersions
+                let bumps = map (\(old, _, _) -> old) (validBumps publishedVersions) in
+                if statedVersion `elem` bumps
                     then suggestVersion newDocs name statedVersion description
-                    else validateVersion newDocs name statedVersion publishedVersions
+                    else throwError (unbumpable bumps)
 
+
+unbumpable :: [V.Version] -> String
+unbumpable validBumps =
+    unlines
+    [ "To use version-bump you must start with an already published version number"
+    , "in " ++ Path.description ++ ", giving us a starting point to bump from."
+    , ""
+    , "The version numbers that can be bumped include the following subset of"
+    , "published versions:"
+    , "  " ++ List.intercalate ", " (map V.toString validBumps)
+    , ""
+    , "Switch back to one of these versions before running 'elm-package version-bump'"
+    , "again."
+    ]
+
+
+validateInitialVersion :: Desc.Description -> Manager.Manager ()
+validateInitialVersion description =
+    do  Cmd.out explanation
+        if Desc.version description == V.initialVersion
+            then Cmd.out goodMsg
+            else changeVersion badMsg description V.initialVersion
     where
         explanation =
             unlines
             [ "This package has never been published before. Here's how things work:"
             , ""
+            , "  * Versions all have exactly three parts: MAJOR.MINOR.PATCH"
+            , ""
+            , "  * Versions are incremented based on how the API changes:"
+            , "        MAJOR - existing values have been changed or removed"
+            , "        MINOR - values have been added, existing values are unchanged"
+            , "        PATCH - the API is the same, no risk of breaking code"
+            , ""
             , "  * All packages start with initial version " ++ V.toString V.initialVersion
-            , "  * Versions are incremented based on API changes and verified automatically"
+            , ""
+            , "  * I will bump versions for you, automatically enforcing these rules"
             , ""
             ]
 
@@ -61,7 +89,7 @@ changeVersion explanation description newVersion =
         yes <- liftIO Cmd.yesOrNo
         case yes of
             False ->
-                Cmd.out "Okay, but it is best to let me change it, so run this command later!"
+                Cmd.out "Okay, no changes were made."
 
             True -> do
                 liftIO $ Desc.write (description { Desc.version = newVersion })
@@ -76,11 +104,16 @@ suggestVersion newDocs name version description =
 
     where
         infoMsg changes newVersion =
+            let old = V.toString version
+                new = V.toString newVersion
+            in
             unlines
             [ "Based on your new API, this should be a " ++ show (Compare.packageChangeMagnitude changes) ++ " change."
-            , "If you are improving upon " ++ V.toString version ++ ", the new version should be " ++ V.toString newVersion ++ "."
+            , "You are improving upon " ++ old ++ ", so the new version should be " ++ new ++ "."
             , ""
-            , "Would you like us to make this change to " ++ Path.description ++ " now? (y/n)"
+            , "Run 'elm-package diff' for a detailed overview of how your API has changed."
+            , ""
+            , "Should I change " ++ old ++ " to " ++ new ++ " in " ++ Path.description ++ "? (y/n)"
             ]
 
 
