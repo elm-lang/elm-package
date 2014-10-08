@@ -9,6 +9,7 @@ import qualified Diff.Display as Display
 import qualified Docs
 import qualified Elm.Package.Description as Desc
 import qualified Elm.Package.Name as N
+import qualified Elm.Package.Paths as Path
 import qualified Elm.Package.Version as V
 import qualified Manager
 
@@ -23,7 +24,7 @@ diff :: Range -> Manager.Manager ()
 diff range =
     case range of
         LatestVsActual ->
-            do  desc <- Desc.read
+            do  desc <- Desc.read Path.description
                 let name = Desc.name desc
                 newDocs <- Docs.generate desc
 
@@ -34,7 +35,7 @@ diff range =
                 computeDiff name latestVersion newDocs Nothing
 
         Since version ->
-            do  desc <- Desc.read
+            do  desc <- Desc.read Path.description
                 newDocs <- Docs.generate desc
                 computeDiff (Desc.name desc) version newDocs Nothing
 

@@ -48,7 +48,7 @@ install maybePackage =
 
 upgrade :: Manager.Manager ()
 upgrade =
-  do  description <- Desc.read
+  do  description <- Desc.read Path.description
 
       newSolution <- Solver.solve (Desc.dependencies description)
       oldSolution <- Solution.read Path.solvedDependencies <|> return Map.empty
@@ -111,7 +111,7 @@ runPlan oldSolution newSolution plan =
 updateDescription :: N.Name -> V.Version -> Manager.Manager ()
 updateDescription name version =
   do  exists <- liftIO (doesFileExist Path.description)
-      desc <- if exists then Desc.read else return Desc.defaultDescription
+      desc <- if exists then Desc.read Path.description else return Desc.defaultDescription
       addConstraint desc name version
 
 

@@ -6,8 +6,9 @@ module Elm.Package.Constraint
     , isSatisfied
     ) where
 
-import Data.Aeson
 import Control.Applicative ((<$>), (<*>))
+import qualified Data.Aeson as Json
+import qualified Data.Text as Text
 
 import qualified Elm.Package.Version as V
 
@@ -80,6 +81,17 @@ parseUpper str =
       _ -> Nothing
 
 
+toString :: Constraint -> String
+toString constr =
+    case constr of
+      Range (Included v1) (Included v2)
+          | v1 == v2 ->
+              V.toString v1
+
+      Range lower upper ->
+          concat [renderLower lower, " ", renderUpper upper]
+
+
 fromString :: String -> Maybe Constraint
 fromString str =
     case words str of
@@ -94,16 +106,17 @@ fromString str =
       _ -> Nothing
 
 
-instance ToJSON Constraint where
-  toJSON = toJSON . toString
+instance Json.ToJSON Constraint where
+    toJSON constraint =
+        Json.toJSON (toString constraint)
 
 
-toString :: Constraint -> String
-toString constr =
-    case constr of
-      Range (Included v1) (Included v2)
-          | v1 == v2 ->
-              V.toString v1
+instance Json.FromJSON Constraint where
+    parseJSON (Json.String text) =
+        let rawConstraint = Text.unpack text in
+        case fromString rawConstraint of
+          Nothing -> fail ("'" ++ rawConstraint ++ "' is not a valid constraint")
+          Just constraint -> return constraint
 
-      Range lower upper ->
-          concat [renderLower lower, " ", renderUpper upper]
+    parseJSON _ = fail "constraint must be a string."
+

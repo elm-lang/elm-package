@@ -17,7 +17,7 @@ import qualified Utils.Http as Http
 
 publish :: Manager.Manager ()
 publish =
-  do  description <- Desc.read
+  do  description <- Desc.read P.description
 
       let name = Desc.name description
       let version = Desc.version description

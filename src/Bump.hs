@@ -16,7 +16,7 @@ import qualified Manager
 
 bump :: Manager.Manager ()
 bump =
-    do  description <- Desc.read
+    do  description <- Desc.read Path.description
         let name = Desc.name description
         let statedVersion = Desc.version description
 

@@ -1,26 +1,28 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Elm.Package.Description where
 
 import Prelude hiding (read)
-import Control.Applicative
+import Control.Applicative ((<$>))
 import Control.Arrow (first)
-import Control.Monad.Error
-import qualified Control.Exception as E
+import Control.Monad.Error (MonadError, throwError, MonadIO, liftIO, when, mzero, forM)
 import Data.Aeson
 import Data.Aeson.Types (Parser)
 import Data.Aeson.Encode.Pretty
-import Data.Maybe (fromMaybe)
-import qualified Data.List as List
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict as Map
+import qualified Data.List as List
+import qualified Data.Maybe as Maybe
 import qualified Data.Text as T
+import System.FilePath ((</>), (<.>))
+import System.Directory (doesFileExist)
 
+import qualified Elm.Compiler.Module as Module
 import qualified Elm.Package.Name as N
 import qualified Elm.Package.Version as V
 import qualified Elm.Package.Constraint as C
 import qualified Elm.Package.Paths as Path
-import qualified Manager
 
 
 data Description = Description
@@ -31,7 +33,7 @@ data Description = Description
     , description :: String
     , license :: String
     , sourceDirs :: [FilePath]
-    , exposed :: [String]
+    , exposed :: [Module.Name]
     , native :: [String]
     , dependencies :: [(N.Name, C.Constraint)]
     }
@@ -55,33 +57,12 @@ defaultDescription =
 
 -- READ
 
-withDescription :: FilePath -> (Description -> Manager.Manager a) -> Manager.Manager a
-withDescription path handle =
-    do json <- readPath
+read :: (MonadIO m, MonadError String m) => FilePath -> m Description
+read path =
+    do json <- liftIO (LBS.readFile path)
        case eitherDecode json of
          Left err -> throwError $ "Error reading file " ++ path ++ ":\n    " ++ err
-         Right ds -> handle ds
-    where
-      readPath :: Manager.Manager LBS.ByteString
-      readPath = do
-        result <- liftIO $ E.catch (Right <$> LBS.readFile path)
-                                   (\err -> return $ Left (err :: IOError))
-        case result of
-          Right bytes -> return bytes
-          Left _ -> throwError $
-                    "could not find " ++ path ++ " file. You may need to create one.\n" ++
-                    "    For an example of how to fill in the dependencies file, check out\n" ++
-                    "    <https://github.com/evancz/automaton/blob/master/elm_dependencies.json>"
-
-
-withNative :: FilePath -> ([String] -> Manager.Manager a) -> Manager.Manager a
-withNative path handle =
-    withDescription path (handle . native)
-
-
-read :: Manager.Manager Description
-read =
-    withDescription Path.description return
+         Right ds -> return ds
 
 
 -- WRITE
@@ -107,6 +88,46 @@ replace old new string =
               True -> [hs]
               False ->
                   before : new : replaceChunks (BS.drop (BS.length old) after)
+
+
+-- FIND MODULE FILE PATHS
+
+locateExposedModules :: (MonadIO m, MonadError String m) => Description -> m [FilePath]
+locateExposedModules desc =
+    mapM locate (exposed desc)
+  where
+    locate modul =
+      let path = Module.nameToPath modul <.> "elm"
+          dirs = sourceDirs desc
+      in
+      do  possibleLocations <-
+              forM dirs $ \dir -> do
+                  exists <- liftIO $ doesFileExist (dir </> path)
+                  return (if exists then Just (dir </> path) else Nothing)
+
+          case Maybe.catMaybes possibleLocations of
+            [] ->
+                throwError $
+                unlines
+                [ "Could not find exposed module '" ++ Module.nameToString modul ++ "' when looking through"
+                , "the following source directories:"
+                , concatMap ("\n    " ++) dirs
+                , ""
+                , "You may need to add a source directory to your " ++ Path.description ++ " file."
+                ]
+
+            [location] ->
+                return location
+
+            locations ->
+                throwError $
+                unlines
+                [ "I found more than one module named '" ++ Module.nameToString modul ++ "' in the"
+                , "following locations:"
+                , concatMap ("\n    " ++) locations
+                , ""
+                , "Module names must be unique within your package."
+                ]
 
 
 -- JSON
@@ -171,27 +192,16 @@ instance FromJSON Description where
 
             exposed <- get obj "exposed-modules" "a list of modules exposed to users"
 
-            native <- fromMaybe [] <$> (obj .:? "native-modules")
+            native <- Maybe.fromMaybe [] <$> (obj .:? "native-modules")
 
             sourceDirs <- get obj "source-directories" "the directories that hold source code"
 
-            deps <- getDependencies obj
+            deps <- get obj "dependencies" "a listing of your project's dependencies"
 
             return $ Description name repo version summary desc license sourceDirs exposed native deps
 
     parseJSON _ = mzero
 
-
-getDependencies :: Object -> Parser [(N.Name, C.Constraint)]
-getDependencies obj = 
-    toDeps =<< get obj "dependencies" "a listing of your project's dependencies"
-    where
-      toDeps deps =
-          forM (Map.toList deps) $ \(f,c) ->
-              case (N.fromString f, C.fromString c) of
-                (Just name, Just constr) -> return (name, constr)
-                (Nothing, _) -> fail $ N.errorMsg f
-                (_, Nothing) -> fail $ "Invalid constraint: " ++ c
 
 
 get :: FromJSON a => Object -> T.Text -> String -> Parser a
