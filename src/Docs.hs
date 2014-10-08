@@ -15,7 +15,7 @@ generate :: Desc.Description -> Manager.Manager FilePath
 generate description =
     do  exposedModules <- Desc.locateExposedModules description
         jsonPaths <-
-            forM exposedModules $ \path -> do
+            forM exposedModules $ \(_name, path) -> do
                 Cmd.run "elm-doc" [path]
                 return (error "path to json docs")
 

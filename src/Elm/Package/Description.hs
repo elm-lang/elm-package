@@ -92,7 +92,7 @@ replace old new string =
 
 -- FIND MODULE FILE PATHS
 
-locateExposedModules :: (MonadIO m, MonadError String m) => Description -> m [FilePath]
+locateExposedModules :: (MonadIO m, MonadError String m) => Description -> m [(Module.Name, FilePath)]
 locateExposedModules desc =
     mapM locate (exposed desc)
   where
@@ -117,7 +117,7 @@ locateExposedModules desc =
                 ]
 
             [location] ->
-                return location
+                return (modul, location)
 
             locations ->
                 throwError $
