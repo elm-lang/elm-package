@@ -2,6 +2,8 @@
 module Elm.Package.Paths where
 
 import System.FilePath ((</>))
+import qualified Elm.Package.Name as N
+import qualified Elm.Package.Version as V
 
 
 {-| Name of directory for all of a project's dependencies. -}
@@ -24,3 +26,9 @@ for building and sharing projects.
 description :: FilePath
 description =
     "elm_package.json"
+
+
+{-| Path to a particular package. -}
+package :: N.Name -> V.Version -> FilePath
+package name version =
+    packagesDirectory </> N.toFilePath name </> V.toString version
