@@ -195,7 +195,7 @@ instance FromJSON Description where
 
             sourceDirs <- get obj "source-directories" "the directories that hold source code"
 
-            deps <- get obj "dependencies" "a listing of your project's dependencies"
+            deps <- getDependencies obj
 
             return $ Description name repo version summary desc license sourceDirs exposed native deps
 
@@ -211,6 +211,18 @@ get obj field desc =
          Nothing -> fail $ "Missing field " ++ show field ++ ", " ++ desc ++ ".\n" ++
                            "    Check out an example " ++ Path.description ++ " file here:" ++
                            "    <https://github.com/evancz/elm-html/blob/master/elm_dependencies.json>"
+
+
+getDependencies :: Object -> Parser [(N.Name, C.Constraint)]
+getDependencies obj =
+    toDeps =<< get obj "dependencies" "a listing of your project's dependencies"
+  where
+    toDeps deps =
+        forM (Map.toList deps) $ \(f, c) ->
+            case (N.fromString f, C.fromString c) of
+              (Just name, Just constr) -> return (name, constr)
+              (Nothing, _) -> fail $ N.errorMsg f
+              (_, Nothing) -> fail $ "Invalid constraint: " ++ c
 
 
 repoToName :: String -> Either String N.Name
