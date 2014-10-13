@@ -71,10 +71,9 @@ write :: Description -> IO ()
 write description =
     BS.writeFile Path.description json
   where
-    jsonOrig = LBS.toStrict $ encodePretty description
+    rawJson = LBS.toStrict (prettyJSON description)
     json =
-        replace "\\u003e" ">" $
-        replace "\\u003c" "<" $ jsonOrig
+        replace "\\u003e" ">" (replace "\\u003c" "<" rawJson)
 
 
 replace :: BS.ByteString -> BS.ByteString -> BS.ByteString -> BS.ByteString
@@ -133,16 +132,16 @@ locateExposedModules desc =
 -- JSON
 
 prettyJSON :: Description -> LBS.ByteString
-prettyJSON =
-    encodePretty' config
+prettyJSON description =
+    encodePretty' config description
   where
     config = defConfig { confCompare = order }
     order =
         keyOrder
-        [ "repo"
-        , "version"
+        [ "version"
         , "summary"
         , "description"
+        , "repository"
         , "license"
         , "source-directories"
         , "exposed-modules"
