@@ -8,7 +8,7 @@ import Control.Arrow (first)
 import Control.Monad.Error (MonadError, throwError, MonadIO, liftIO, when, mzero, forM)
 import Data.Aeson
 import Data.Aeson.Types (Parser)
-import Data.Aeson.Encode.Pretty
+import Data.Aeson.Encode.Pretty (encodePretty', defConfig, confCompare, keyOrder)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict as Map
