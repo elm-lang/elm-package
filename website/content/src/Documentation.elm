@@ -36,13 +36,13 @@ be easy for readers to glance through a file and find the information they
 need. Modules that are missing documentation cannot be uploaded to the catalog.
 
 All documentation can use the same markdown as in Elm. You can check out
-the [Maybe](https://github.com/evancz/Elm/blob/master/libraries/Maybe.elm)
-and [Either](https://github.com/evancz/Elm/blob/master/libraries/Either.elm)
+the [Maybe](https://github.com/elm-lang/Elm/blob/master/libraries/Maybe.elm)
+and [Either](https://github.com/elm-lang/Elm/blob/master/libraries/Either.elm)
 documentation for complete examples.
 
 ## Documenting a value
 
-Here is an example from [the `String` library](/catalog/evancz-Elm/0.10.1/String):
+Here is an example from [the `String` library](/catalog/elm-lang-Elm/latest/String):
 
 ```haskell
 {-| Convert a list of characters into a String. Can be useful if you
@@ -72,11 +72,11 @@ to argue about style.
 
 ## Documenting a module
 
-Here is the module documentation for [the `Maybe` library](/catalog/evancz-Elm/0.10.1/Maybe)
-in Elm 0.10.1:
+Here is the module documentation for [the `Maybe` library](/catalog/elm-lang-Elm/latest/Maybe):
 
 ```haskell
-module Maybe where
+module Maybe (Maybe(..), maybe, isJust, isNothing, map) where
+
 {-| Represents an optional value. Maybe it is there, maybe it is not.
 
 # Type and Constructors
@@ -85,15 +85,13 @@ module Maybe where
 # Taking Maybes apart
 @docs maybe, isJust, isNothing
 
-# Maybes and Lists
-@docs justs
+# Map
+@docs map
 -}
-
-import List (foldr)
 ```
 
 This represents the text that actually gets displayed as [the
-documentation](/catalog/evancz-Elm/0.10.1/Maybe) for a module. Notice that:
+documentation](/catalog/elm-lang-Elm/latest/Maybe) for a module. Notice that:
 
   * The module documentation comes after the module declaration, but
     before the imports. This is so the first thing in the file is the
@@ -101,7 +99,7 @@ documentation](/catalog/evancz-Elm/0.10.1/Maybe) for a module. Notice that:
   * The first line starts after a single space, and all subsequent lines
     start in the zeroth column.
   * The `@docs` keyword starts a list of values that are inlined in [the
-    resulting documentation](/catalog/evancz-Elm/0.10.1/Maybe).
+    resulting documentation](/catalog/elm-lang-Elm/latest/Maybe).
   * Functions are grouped into related units with titles
   * Although documentation for each function should be self-contained,
     things are ordered intelligently. Assume people will read through
@@ -112,6 +110,5 @@ documentation](/catalog/evancz-Elm/0.10.1/Maybe) for a module. Notice that:
 
 Again, the goal is to have consistency, so readers can glance through easily
 and writers do not need to argue about style.
-
 
 |]
