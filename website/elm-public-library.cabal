@@ -19,7 +19,7 @@ Cabal-version:       >=1.9
 
 source-repository head
   type:     git
-  location: git://github.com/evancz/elm-get.git
+  location: git://github.com/evancz/elm-package.git
 
 Executable elm-public-library
   hs-source-dirs:     server
@@ -35,7 +35,7 @@ Executable elm-public-library
                       cmdargs,
                       containers,
                       Elm >= 0.12,
-                      elm-get >= 0.1,
+                      elm-package >= 0.1,
                       directory,
                       filepath,
                       http-client >= 0.3.2,
