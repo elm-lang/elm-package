@@ -85,7 +85,7 @@ bumpInfo =
     Opt.info (pure Bump.bump) $
         mconcat
         [ Opt.fullDesc
-        , Opt.progDesc "Bump your package's version number based on API changes"
+        , Opt.progDesc "Bump version numbers based on API changes"
         ]
 
 
@@ -96,7 +96,7 @@ diffInfo =
     Opt.info (Diff.diff <$> range) $
         mconcat
         [ Opt.fullDesc
-        , Opt.progDesc "Bump your package's version number based on API changes"
+        , Opt.progDesc "Get differences between two APIs"
         ]
   where
     range =
