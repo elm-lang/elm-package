@@ -2,8 +2,8 @@ module Website.Skeleton (skeleton,home) where
 
 import Graphics.Input as Input
 import Graphics.Input.Field as F
+import Text
 import Website.ColorScheme as C
-import Graphics.Input as Input
 import Window
 
 headerHeight = 80
@@ -22,7 +22,7 @@ searchStyle = { padding = { top=0, bottom=0, left=6, right=6 }
                           , radius = 4
                           }
               , highlight = F.noHighlight
-              , style = defaultStyle
+              , style = Text.defaultStyle
               }
 
 type BodyGen a = String -> a -> Int -> Element
@@ -33,7 +33,7 @@ skeleton ghostText links bodyFunc info =
 
 internalSkeleton : String -> [(String,Text)] -> BodyGen a -> F.Content -> a -> (Int,Int) -> Element
 internalSkeleton ghostText links bodyFunc term info (outer,h) =
-    let margin = outer `div` 10
+    let margin = outer // 10
         inner = margin * 8
         leftGutter = max margin headerHeight
         content = bodyFunc term.string info (min inner (outer - leftGutter))
@@ -48,7 +48,7 @@ internalSkeleton ghostText links bodyFunc term info (outer,h) =
         leftAligned <| Text.height 30 <| concat <| intersperse (toText " / ") <| (Text.link "/" <| toText "~") ::
         zipWith (<|) (repeat (length links) (uncurry Text.link) ++ [snd]) (("/catalog", toText "Catalog") :: links)
       , container (searchWidth + 20) headerHeight middle <| width searchWidth <|
-        F.field searchStyle search.handle id ghostText term
+        F.field searchStyle search.handle identity ghostText term
       ]
     , let contentHeight = max (heightOf content)
                               (h - topBarHeight - headerHeight - footerHeight)
@@ -61,7 +61,7 @@ home bodyFunc = internalHome bodyFunc <~ Window.dimensions
 
 internalHome : (Int -> Element) -> (Int,Int) -> Element
 internalHome bodyFunc (outer,h) =
-    let margin = outer `div` 10
+    let margin = outer // 10
         inner = outer - 2 * homeHeaderHeight
         content = bodyFunc inner
     in
@@ -84,14 +84,14 @@ logoButton =
     in  Input.customButton clicks.handle () (box (rgb 57 59 58)) (box C.accent1) (box C.accent1)
 
 browseButton : Element
-browseButton = 
+browseButton =
     let box c = color c <| container 122 52 middle <|
                 color C.accent1 <| container 120 50 middle <|
-                leftAligned . Text.height 20 . Text.color C.lightGrey <| toText "Browse"
+                leftAligned << Text.height 20 << Text.color C.lightGrey <| toText "Browse"
     in  Input.customButton clicks.handle () (box C.mediumGrey) (box C.lightGrey) (box white)
 
 tileSize = 84
-homeHeaderHeight = 3 * (tileSize `div` 2)
+homeHeaderHeight = 3 * (tileSize // 2)
 homeHeader outer inner =
     color (rgb 60 60 60) <| layers
     [ tiledImage outer homeHeaderHeight "/resources/tile.png"
@@ -109,7 +109,7 @@ title =
     flow down
     [ link "/" <| leftAligned <| bigWords ++ alpha
     , spacer 10 4
-    , leftAligned . Text.height 16 . Text.color C.mediumGrey <| toText "Discover libraries, browse documentation"
+    , leftAligned << Text.height 16 << Text.color C.mediumGrey <| toText "Discover libraries, browse documentation"
     ]
 
 topBarHeight = 6

@@ -13,11 +13,11 @@ padCol w col =
     container (w-40) (heightOf col') middle col'
 
 scene w =
-    flow down 
+    flow down
     [ spacer w 20
-    , flow right [ padCol (div w 2) leftCol
+    , flow right [ padCol (w // 2) leftCol
                  , spacer 80 10
-                 , padCol (div w 2) rightCol ]
+                 , padCol (w // 2) rightCol ]
     ]
 
 --The Public Library is the central catalog of libraries created by the Elm community.
