@@ -74,7 +74,7 @@ run command args =
 
     missingExe =
         "Could not find command '" ++ command ++ "'. Do you have it installed?\n\
-        \  Can it be run from anywhere? I.e. is it on your PATH?"
+        \    Can it be run from anywhere? Is it on your PATH?"
 
 
 out :: (MonadIO m) => String -> m ()
