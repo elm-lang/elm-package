@@ -3,7 +3,6 @@
 module Elm.Package.Description where
 
 import Prelude hiding (read)
-import Control.Applicative ((<$>))
 import Control.Arrow (first)
 import Control.Monad.Error (MonadError, throwError, MonadIO, liftIO, when, mzero, forM)
 import Data.Aeson
@@ -34,7 +33,6 @@ data Description = Description
     , license :: String
     , sourceDirs :: [FilePath]
     , exposed :: [Module.Name]
-    , native :: [String]
     , dependencies :: [(N.Name, C.Constraint)]
     }
 
@@ -50,7 +48,6 @@ defaultDescription =
     , license = "BSD3"
     , sourceDirs = [ "." ]
     , exposed = []
-    , native = []
     , dependencies = []
     }
 
@@ -145,7 +142,6 @@ prettyJSON description =
         , "license"
         , "source-directories"
         , "exposed-modules"
-        , "native-modules"
         , "dependencies"
         ]
 
@@ -161,15 +157,10 @@ instance ToJSON Description where
       , "source-directories" .= sourceDirs d
       , "exposed-modules" .= exposed d
       , "dependencies" .= jsonDeps (dependencies d)
-      ] ++ nativeModules
+      ]
     where
       jsonDeps deps =
           Map.fromList $ map (first (T.pack . N.toString)) deps
-
-      nativeModules =
-          if null (native d)
-              then []
-              else [ "native-modules" .= native d ]
 
 
 instance FromJSON Description where
@@ -191,13 +182,11 @@ instance FromJSON Description where
 
             exposed <- get obj "exposed-modules" "a list of modules exposed to users"
 
-            native <- Maybe.fromMaybe [] <$> (obj .:? "native-modules")
-
             sourceDirs <- get obj "source-directories" "the directories that hold source code"
 
             deps <- getDependencies obj
 
-            return $ Description name repo version summary desc license sourceDirs exposed native deps
+            return $ Description name repo version summary desc license sourceDirs exposed deps
 
     parseJSON _ = mzero
 
