@@ -3,10 +3,10 @@ module Get.Init where
 import System.IO (hFlush, stdout)
 
 import Data.Aeson.Encode.Pretty (encodePretty)
-import qualified Elm.Internal.Name as N
-import qualified Elm.Internal.Version as V
-import qualified Elm.Internal.Dependencies as D
-import qualified Elm.Internal.Paths as EPaths
+import qualified Elm.Package.Name as N
+import qualified Elm.Package.Version as V
+import qualified Elm.Package.Description as D
+import qualified Elm.Package.Paths as Path
 import qualified Data.ByteString.Lazy as BS
 
 askForChecked :: (String -> Either String a) -> String -> IO a
@@ -48,7 +48,7 @@ askForLimited name limit req = askForChecked check req
                               , show limit
                               , " characters!"]
 
-readDeps :: IO D.Deps
+readDeps :: IO D.Description
 readDeps = do
   projectName <- askFor "Project name:"
   userName <- askFor "Github user name:"
@@ -58,9 +58,9 @@ readDeps = do
   license <- askForWithDefault "BSD3" "License? [default: BSD3]"
   repo <- askFor "Repository address?"
   elmVersion <- askForVersion Nothing "Elm version?"
-  return $ D.Deps (N.Name userName projectName) version summary description license repo [] [] elmVersion []
+  return $ D.Description (N.Name userName projectName) version summary description license repo [] [] elmVersion [] []
 
 initialize :: IO ()
 initialize = do
   dependencies <- readDeps
-  BS.writeFile EPaths.dependencyFile (encodePretty dependencies)
+  BS.writeFile Path.description (encodePretty dependencies)
