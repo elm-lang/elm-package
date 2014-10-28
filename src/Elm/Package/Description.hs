@@ -29,7 +29,6 @@ data Description = Description
     , repo :: String
     , version :: V.Version
     , summary :: String
-    , description :: String
     , license :: String
     , sourceDirs :: [FilePath]
     , exposed :: [Module.Name]
@@ -44,7 +43,6 @@ defaultDescription =
     , repo = "https://github.com/USER/PROJECT.git"
     , version = V.initialVersion
     , summary = "helpful summary of your project, less than 80 characters"
-    , description = "full description of this project, describe your use case"
     , license = "BSD3"
     , sourceDirs = [ "." ]
     , exposed = []
@@ -137,7 +135,6 @@ prettyJSON description =
         keyOrder
         [ "version"
         , "summary"
-        , "description"
         , "repository"
         , "license"
         , "source-directories"
@@ -152,7 +149,6 @@ instance ToJSON Description where
       [ "repository" .= repo d
       , "version" .= version d
       , "summary" .= summary d
-      , "description" .= description d
       , "license" .= license d
       , "source-directories" .= sourceDirs d
       , "exposed-modules" .= exposed d
@@ -171,8 +167,6 @@ instance FromJSON Description where
             when (length summary >= 80) $
                 fail "'summary' must be less than 80 characters"
 
-            desc <- get obj "description" "an extended description of your project \
-                                          \and how to get started with it."
             license <- get obj "license" "license information (BSD3 is recommended)"
 
             repo <- get obj "repository" "a link to the project's GitHub repo"
@@ -186,7 +180,7 @@ instance FromJSON Description where
 
             deps <- getDependencies obj
 
-            return $ Description name repo version summary desc license sourceDirs exposed deps
+            return $ Description name repo version summary license sourceDirs exposed deps
 
     parseJSON _ = mzero
 
