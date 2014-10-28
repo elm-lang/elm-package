@@ -31,6 +31,13 @@ create old new =
         else Just upgrade
 
 
+isEmpty :: Plan -> Bool
+isEmpty (Plan installs upgrades removals) =
+    Map.null installs
+        && Map.null upgrades
+        && Map.null removals
+
+
 -- DISPLAY
 
 display :: Plan -> String

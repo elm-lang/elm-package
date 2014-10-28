@@ -1,6 +1,5 @@
 module Install where
 
-import Control.Applicative ((<|>))
 import Control.Monad.Error
 import Data.Function (on)
 import qualified Data.List as List
@@ -51,10 +50,16 @@ upgrade =
   do  description <- Desc.read Path.description
 
       newSolution <- Solver.solve (Desc.dependencies description)
-      oldSolution <- Solution.read Path.solvedDependencies <|> return Map.empty
+
+      exists <- liftIO (doesFileExist Path.solvedDependencies)
+      oldSolution <-
+          if exists
+              then Solution.read Path.solvedDependencies
+              else return Map.empty
+
       let plan = Plan.create oldSolution newSolution
 
-      approve <- liftIO $ getApproval plan
+      approve <- liftIO (getApproval plan)
 
       if approve
           then runPlan oldSolution newSolution plan
@@ -62,11 +67,13 @@ upgrade =
 
 
 getApproval :: Plan.Plan -> IO Bool
-getApproval plan =
-  do  putStrLn "To install we must make the following changes:"
-      putStrLn (Plan.display plan)
-      putStr "Do you approve of this plan? (y/n)"
-      Cmd.yesOrNo
+getApproval plan
+    | Plan.isEmpty plan = return True
+    | otherwise =
+        do  putStrLn "To install we must make the following changes:"
+            putStrLn (Plan.display plan)
+            putStr "Do you approve of this plan? (y/n)"
+            Cmd.yesOrNo
 
 
 runPlan :: Solution.Solution -> Solution.Solution -> Plan.Plan -> Manager.Manager ()
