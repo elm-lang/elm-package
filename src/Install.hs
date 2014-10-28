@@ -29,8 +29,8 @@ data Args
 
 
 install :: Args -> Manager.Manager ()
-install maybePackage =
-    case maybePackage of
+install args =
+    case args of
       Everything ->
           upgrade
 
