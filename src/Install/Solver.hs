@@ -15,12 +15,8 @@ import qualified Store
 
 solve :: [(N.Name, C.Constraint)] -> Manager.Manager S.Solution
 solve constraints =
-    do  store <- Store.initialStore constraints
-
-        let explorer =
-                exploreVersion N.dummyName V.dummyVersion Map.empty Map.empty
-
-        maybeSolution <- evalStateT explorer store
+    do  store <- Store.initialStore
+        maybeSolution <- evalStateT (exploreConstraints constraints) store
         case maybeSolution of
           Just solution -> return solution
           Nothing ->
@@ -39,6 +35,13 @@ type Explorer a =
 
 type Packages =
     Map.Map N.Name [V.Version]
+
+
+exploreConstraints :: [(N.Name, C.Constraint)] -> Explorer (Maybe S.Solution)
+exploreConstraints constraints =
+  do  maybeInitialPackages <- addConstraints Map.empty constraints
+      let initialPackages = maybe Map.empty id maybeInitialPackages
+      explorePackages Map.empty initialPackages
 
 
 explorePackages :: S.Solution -> Packages -> Explorer (Maybe S.Solution)

@@ -32,14 +32,12 @@ type VersionCache =
     Map.Map N.Name [V.Version]
 
 
-initialStore :: (MonadIO m, MonadReader Manager.Environment m, MonadError String m)
-             => [(N.Name, C.Constraint)] -> m Store
-initialStore localConstraints =
+initialStore
+    :: (MonadIO m, MonadReader Manager.Environment m, MonadError String m)
+    => m Store
+initialStore =
   do  versionCache <- readVersionCache
-      return (Store constraintCache versionCache)
-  where
-    constraintCache =
-        Map.singleton (N.dummyName, V.dummyVersion) localConstraints
+      return (Store Map.empty versionCache)
 
 
 readVersionCache :: (MonadIO m, MonadReader Manager.Environment m, MonadError String m) => m VersionCache
@@ -48,20 +46,9 @@ readVersionCache =
       maybeVersions <- decodeFromFile (cacheDirectory </> "versions.json")
       case maybeVersions of
         Nothing ->
-            throwError noLocalPackages
+            return Map.empty
         Just versions ->
             return $ Map.fromList (versions :: [(N.Name, [V.Version])])
-  where
-    noLocalPackages =
-        unlines
-        [ "Before installing anything, you need to run the following command to"
-        , "update your local package listing:"
-        , ""
-        , "    elm-package update"
-        , ""
-        , "This will download all of the latest packages available."
-        , "After that, try to install again."
-        ]
 
 
 -- CONSTRAINTS
