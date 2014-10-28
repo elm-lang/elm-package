@@ -39,7 +39,14 @@ Library
         Elm.Package.Name,
         Elm.Package.Paths,
         Elm.Package.Solution,
+        Elm.Package.Solver,
         Elm.Package.Version
+
+    other-modules:
+        Install.Solver,
+        Manager,
+        Store,
+        Utils.Http
 
     Build-depends:
         aeson >= 0.7 && < 0.9,
