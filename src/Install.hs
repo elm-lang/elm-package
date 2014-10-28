@@ -62,7 +62,7 @@ upgrade =
       approve <- liftIO (getApproval plan)
 
       if approve
-          then runPlan oldSolution newSolution plan
+          then runPlan newSolution plan
           else liftIO $ putStrLn "Okay, I did not change anything!"            
 
 
@@ -76,14 +76,14 @@ getApproval plan
             Cmd.yesOrNo
 
 
-runPlan :: Solution.Solution -> Solution.Solution -> Plan.Plan -> Manager.Manager ()
-runPlan oldSolution newSolution plan =
+runPlan :: Solution.Solution -> Plan.Plan -> Manager.Manager ()
+runPlan solution plan =
   do  -- fetch new dependencies
       Cmd.inDir Path.packagesDirectory $
           mapM_ (uncurry Fetch.package) installs
 
       -- try to build new dependencies
-      liftIO (Solution.write Path.solvedDependencies newSolution)
+      liftIO (Solution.write Path.solvedDependencies solution)
 
       -- remove dependencies that are not needed
       Cmd.inDir Path.packagesDirectory $
@@ -101,11 +101,6 @@ runPlan oldSolution newSolution plan =
 
     remove (name, version) =
         removeDirectoryRecursive (N.toFilePath name </> V.toString version)
-
-    failureMsg =
-        "I could not build the new packages, so I have reverted to your previous\n\
-        \configuration. I reported the error so no one else has to go through this\n\
-        \trouble!"
 
 
 -- MODIFY DESCRIPTION
