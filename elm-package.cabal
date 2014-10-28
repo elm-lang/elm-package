@@ -36,13 +36,17 @@ Library
     exposed-modules:
         Elm.Package.Constraint,
         Elm.Package.Description,
+        Elm.Package.Initialize,
         Elm.Package.Name,
         Elm.Package.Paths,
         Elm.Package.Solution,
-        Elm.Package.Solver,
         Elm.Package.Version
 
     other-modules:
+        CommandLine.Helpers,
+        Install,
+        Install.Fetch,
+        Install.Plan,
         Install.Solver,
         Manager,
         Store,
@@ -67,7 +71,9 @@ Library
         process >= 1 && < 2,
         text,
         unordered-containers,
-        vector >= 0.10 && < 0.11
+        vector >= 0.10 && < 0.11,
+        zip-archive
+
 
 Executable elm-package
     ghc-options:
