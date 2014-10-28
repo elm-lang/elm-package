@@ -84,17 +84,12 @@ runPlan oldSolution newSolution plan =
 
       -- try to build new dependencies
       liftIO (Solution.write Path.solvedDependencies newSolution)
-      success <- error "try to build everything"
 
       -- remove dependencies that are not needed
       Cmd.inDir Path.packagesDirectory $
-          liftIO $ mapM_ remove (if success then removals else installs)
+          liftIO $ mapM_ remove removals
 
-      -- revert solution if needed
-      when (not success) $
-          liftIO (Solution.write Path.solvedDependencies oldSolution)
-
-      liftIO $ putStrLn (if success then "Success!" else failureMsg)
+      liftIO $ putStrLn "Packages configured successfully!"
   where
     installs =
         Map.toList (Plan.installs plan)
