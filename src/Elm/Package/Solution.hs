@@ -1,7 +1,8 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE FlexibleContexts #-}
-module Elm.Package.Solution where
+module Elm.Package.Solution (Solution, write, read) where
 
+import Prelude hiding (read)
 import Control.Monad.Error (MonadError, throwError, MonadIO, liftIO)
 import Data.Aeson
 import Data.Aeson.Encode.Pretty (encodePretty)
@@ -62,5 +63,3 @@ parseNameAndVersion (rawName, rawVersion) =
 parse :: (MonadError String m) => String -> (String -> Maybe a) -> String -> m a
 parse string fromString msg =
     maybe (throwError ("Could not parse " ++ msg)) return (fromString string)
-
-
