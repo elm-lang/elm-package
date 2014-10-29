@@ -11,8 +11,8 @@ import qualified Elm.Package.Description as Desc
 import qualified Elm.Package.Name as N
 import qualified Elm.Package.Paths as P
 import qualified Elm.Package.Version as V
+import qualified GitHub
 import qualified Manager
-import qualified Utils.Http as Http
 
 
 publish :: Manager.Manager ()
@@ -78,8 +78,7 @@ verifyVersion docsPath description =
 
 verifyTag :: N.Name -> V.Version -> Manager.Manager ()
 verifyTag name version =
-    do  (Http.Tags tags) <- Http.githubTags name
-        let publicVersions = Maybe.mapMaybe V.fromString tags
+    do  publicVersions <- GitHub.getVersionTags name
         if version `elem` publicVersions
             then return ()
             else throwError (tagMessage version)

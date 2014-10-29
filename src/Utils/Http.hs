@@ -4,20 +4,18 @@ module Utils.Http where
 
 import qualified Control.Exception as E
 import Control.Monad.Error
-import Data.Aeson as Json
+import qualified Data.Aeson as Json
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.List as List
-import Data.Monoid ((<>))
-import qualified Data.Vector as Vector
 import Network (withSocketsDo)
 import Network.HTTP.Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Network.HTTP.Types
 
-import qualified Elm.Package.Name as Name
 
-
-send :: (MonadIO m, MonadError String m) => String -> (Request -> Manager -> IO a) -> m a
+send
+    :: (MonadIO m, MonadError String m)
+    => String -> (Request -> Manager -> IO a) -> m a
 send url handler =
     do result <- liftIO $ E.catch (Right `fmap` sendRequest) handleError
        either throwError return result
@@ -39,48 +37,16 @@ send url handler =
                  "    <" ++ url ++ ">"
 
 
-decodeFromUrl :: (MonadIO m, MonadError String m, FromJSON a) => String -> m a
+decodeFromUrl
+    :: (MonadIO m, MonadError String m, Json.FromJSON a)
+    => String -> m a
 decodeFromUrl url =
   do  result <-
           send url $ \request manager -> do
               response <- httpLbs request manager
-              return (decode (responseBody response))
+              return (Json.decode (responseBody response))
 
       case result of
         Just v -> return v
         Nothing -> throwError $ "Failure when reading value from " ++ url
-
-
--- TAGS from GITHUB
-
-data Tags
-    = Tags [String]
-    deriving Show
-
-
-githubTags :: (MonadIO m, MonadError String m) => Name.Name -> m Tags
-githubTags name =
-    do  response <-
-            send url $ \request manager ->
-                httpLbs (request {requestHeaders = headers}) manager
-        case Json.eitherDecode $ responseBody response of
-          Left err -> throwError err
-          Right tags -> return tags
-    where
-      url = "https://api.github.com/repos/" ++ Name.user name ++
-            "/" ++ Name.project name ++ "/tags"
-
-      headers = [("User-Agent", "elm-package")] <>
-                [("Accept", "application/json")]
-
-
-instance FromJSON Tags where
-    parseJSON (Array arr) = Tags `fmap` mapM toTag list
-        where
-          list = Vector.toList arr
-
-          toTag (Object obj) = obj .: "name"
-          toTag _ = fail "expecting an object"
-
-    parseJSON _ = fail "expecting an array"
 

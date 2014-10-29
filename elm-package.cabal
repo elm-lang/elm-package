@@ -40,7 +40,8 @@ Library
         Elm.Package.Name,
         Elm.Package.Paths,
         Elm.Package.Solution,
-        Elm.Package.Version
+        Elm.Package.Version,
+        GitHub
 
     other-modules:
         CommandLine.Helpers,
