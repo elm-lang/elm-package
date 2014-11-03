@@ -12,7 +12,7 @@ import qualified Network.HTTP.Client.MultipartFormData as Multi
 import System.Directory (doesFileExist)
 import System.FilePath ((</>), (<.>))
 
-import qualified Elm.Package.Description as Package
+import qualified Elm.Package.Description as Desc
 import qualified Elm.Package.Name as N
 import qualified Elm.Package.Paths as P
 import qualified Elm.Package.Version as V
@@ -29,9 +29,9 @@ catalog path vars =
     version = ("elm-package-version", showVersion This.version)
 
 
-description :: N.Name -> Manager.Manager (Maybe Package.Description)
+description :: N.Name -> Manager.Manager (Maybe Desc.Description)
 description name =
-    do  url <- catalog "metadata" [("library", N.toString name)]
+    do  url <- catalog "description" [("name", N.toString name)]
         Http.send url $ \request manager -> do
             response <- Client.httpLbs request manager
             return $ Json.decode $ Client.responseBody response
@@ -39,7 +39,7 @@ description name =
 
 versions :: N.Name -> Manager.Manager (Maybe [V.Version])
 versions name =
-    do  url <- catalog "versions" [("library", N.toString name)]
+    do  url <- catalog "versions" [("name", N.toString name)]
         Http.send url $ \request manager -> do
             response <- Client.httpLbs request manager
             return $ Binary.decode $ Client.responseBody response
@@ -55,7 +55,7 @@ register name version path =
           return ()
   where
     vars =
-        [ ("library", N.toString name)
+        [ ("name", N.toString name)
         , ("version", V.toString version)
         ]
 
