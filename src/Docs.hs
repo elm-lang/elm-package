@@ -1,39 +1,32 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Docs where
 
 import Control.Monad (forM)
 import Control.Monad.Error (liftIO)
-import qualified Data.ByteString as BS
-import qualified Data.List as List
 
 import qualified CommandLine.Helpers as Cmd
 import qualified Elm.Package.Description as Desc
+import qualified Elm.Package.Paths as Path
 import qualified Manager
 
 
 generate :: Desc.Description -> Manager.Manager FilePath
 generate description =
     do  exposedModules <- Desc.locateExposedModules description
-        jsonPaths <-
-            forM exposedModules $ \(_name, path) -> do
-                Cmd.run "elm-doc" [path]
-                return (error "path to json docs")
 
-        let packageDocs = error "Path.combinedJson"
-        liftIO $ do
-            BS.writeFile packageDocs "[\n"
-            let addCommas = List.intersperse (BS.appendFile packageDocs ",\n")
-            sequence_ $ addCommas $ map (append packageDocs) jsonPaths
-            BS.appendFile packageDocs "\n]"
+        liftIO (writeFile Path.documentation "[\n")
 
-        return packageDocs
+        forM (prep exposedModules) $ \(seperator, path) ->
+            do  liftIO (appendFile Path.documentation seperator)
+                json <- Cmd.run "elm-doc" [path]
+                liftIO (appendFile Path.documentation json)
 
-    where
-      append :: FilePath -> FilePath -> IO ()
-      append packageDocs moduleDocs =
-        do  json <- BS.readFile moduleDocs
-            BS.length json `seq` return ()
-            BS.appendFile packageDocs json
+        liftIO (appendFile Path.documentation "\n]")
+
+        return Path.documentation
+
+
+prep exposedModules =
+    zip ("" : repeat ",\n") (map snd exposedModules)
 
 
 

@@ -20,6 +20,13 @@ solvedDependencies =
     packagesDirectory </> "solved-dependencies.json"
 
 
+{-| Documentation for all the exposed modules in this package.
+-}
+documentation :: FilePath
+documentation =
+    packagesDirectory </> "documentation.json"
+
+
 {-| Name of the dependency file, specifying dependencies and other metadata
 for building and sharing projects.
 -}
