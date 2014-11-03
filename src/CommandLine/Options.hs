@@ -1,6 +1,7 @@
 module CommandLine.Options (parse) where
 
-import Control.Applicative (pure, (<$>), (<*>), (<|>))
+import Control.Applicative (pure, optional, (<$>), (<*>), (<|>))
+import Control.Monad.Error (throwError)
 import Data.Monoid ((<>), mconcat, mempty)
 import Data.Version (showVersion)
 import qualified Options.Applicative as Opt
@@ -120,12 +121,26 @@ publishInfo =
 
 installInfo :: Opt.ParserInfo (Manager.Manager ())
 installInfo =
-    Opt.info (Install.install <$> args) infoModifier
+    Opt.info args infoModifier
   where
     args =
-        (Install.Exactly <$> package <*> version)
-        <|> (Install.Latest <$> package)
-        <|> (pure Install.Everything)
+        installWith <$> optional package <*> optional version
+
+    installWith maybeName maybeVersion =
+        case (maybeName, maybeVersion) of
+          (Nothing, Nothing) ->
+              Install.install Install.Everything
+
+          (Just name, Nothing) ->
+              Install.install (Install.Latest name)
+
+          (Just name, Just version) ->
+              Install.install (Install.Exactly name version)
+
+          (Nothing, Just version) ->
+              throwError $
+                "You specified a version number, but not a package!\nVersion "
+                ++ V.toString version ++ " of what?"
 
     infoModifier =
         mconcat
