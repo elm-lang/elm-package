@@ -71,9 +71,9 @@ validateInitialVersion description =
             , "  * Versions all have exactly three parts: MAJOR.MINOR.PATCH"
             , ""
             , "  * Versions are incremented based on how the API changes:"
-            , "        MAJOR - existing values have been changed or removed"
-            , "        MINOR - values have been added, existing values are unchanged"
             , "        PATCH - the API is the same, no risk of breaking code"
+            , "        MINOR - values have been added, existing values are unchanged"
+            , "        MAJOR - existing values have been changed or removed"
             , ""
             , "  * All packages start with initial version " ++ V.toString V.initialVersion
             , ""
