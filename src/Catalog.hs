@@ -60,8 +60,8 @@ register name version path =
         ]
 
     files =
-        [ Multi.partFileSource "docs" path
-        , Multi.partFileSource "deps" P.description
+        [ Multi.partFileSource "documentation" path
+        , Multi.partFileSource "description" P.description
         ]
 
 
