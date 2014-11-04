@@ -35,18 +35,3 @@ send url handler =
             _ -> return . Left $
                  "failed with '" ++ show exception ++ "' when sending request to\n" ++
                  "    <" ++ url ++ ">"
-
-
-decodeFromUrl
-    :: (MonadIO m, MonadError String m, Json.FromJSON a)
-    => String -> m a
-decodeFromUrl url =
-  do  result <-
-          send url $ \request manager -> do
-              response <- httpLbs request manager
-              return (Json.decode (responseBody response))
-
-      case result of
-        Just v -> return v
-        Nothing -> throwError $ "Failure when reading value from " ++ url
-

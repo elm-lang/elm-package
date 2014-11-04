@@ -12,8 +12,8 @@ import Data.Version (showVersion)
 import Network.HTTP
 import qualified Network.HTTP.Client as Client
 import qualified Network.HTTP.Client.MultipartFormData as Multi
-import System.Directory (doesFileExist)
-import System.FilePath ((</>), (<.>))
+import System.Directory (createDirectoryIfMissing, doesFileExist)
+import System.FilePath ((</>), (<.>), dropFileName)
 
 import qualified Elm.Docs as Docs
 import qualified Elm.Package.Description as Desc
@@ -81,17 +81,23 @@ register name version =
         ]
 
 
-description :: N.Name -> V.Version -> Manager.Manager Desc.Description
+description
+    :: (MonadIO m, MonadReader Manager.Environment m, MonadError String m)
+    => N.Name -> V.Version -> m Desc.Description
 description name version =
   getJson "description" name version
 
 
-documentation :: N.Name -> V.Version -> Manager.Manager [Docs.Documentation]
+documentation
+    :: (MonadIO m, MonadReader Manager.Environment m, MonadError String m)
+    => N.Name -> V.Version -> m [Docs.Documentation]
 documentation name version =
   getJson "documentation" name version
 
 
-getJson :: (Json.FromJSON a) => String -> N.Name -> V.Version -> Manager.Manager a
+getJson
+    :: (MonadIO m, MonadReader Manager.Environment m, MonadError String m, Json.FromJSON a)
+    => String -> N.Name -> V.Version -> m a
 getJson metadata name version =
   do  cacheDir <- asks Manager.cacheDirectory
       let metadataPath =
@@ -106,6 +112,7 @@ getJson metadata name version =
             do  url <- catalog metadata [("name", N.toString name), ("version", V.toString version)]
                 Http.send url $ \request manager ->
                     do  response <- Client.httpLbs request manager
+                        createDirectoryIfMissing True (dropFileName metadataPath)
                         LBS.writeFile metadataPath (Client.responseBody response)
                         return (Client.responseBody response)
                       
