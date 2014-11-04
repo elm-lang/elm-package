@@ -44,12 +44,14 @@ Library
         GitHub
 
     other-modules:
+        Catalog,
         CommandLine.Helpers,
         Install,
         Install.Fetch,
         Install.Plan,
         Install.Solver,
         Manager,
+        Paths_elm_package,
         Store,
         Utils.Http
 
