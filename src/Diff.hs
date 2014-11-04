@@ -7,6 +7,7 @@ import qualified CommandLine.Helpers as Cmd
 import qualified Diff.Compare as Compare
 import qualified Diff.Display as Display
 import qualified Docs
+import qualified Elm.Docs as Docs
 import qualified Elm.Package.Description as Desc
 import qualified Elm.Package.Name as N
 import qualified Elm.Package.Paths as Path
@@ -40,7 +41,7 @@ diff range =
                 computeDiff (Desc.name desc) version newDocs Nothing
 
         Between name old new ->
-            do  newDocs <- Catalog.docs name new
+            do  newDocs <- Catalog.documentation name new
                 computeDiff name old newDocs (Just new)
 
 
@@ -49,7 +50,12 @@ noVersions =
     "This package has not been published, there is nothing to diff against!"
 
 
-computeDiff :: N.Name -> V.Version -> FilePath -> Maybe V.Version -> Manager.Manager ()
+computeDiff
+    :: N.Name
+    -> V.Version
+    -> [Docs.Documentation]
+    -> Maybe V.Version
+    -> Manager.Manager ()
 computeDiff name oldVersion newDocs maybeNewVersion =
     do  Cmd.out msg
         changes <- Compare.computeChanges newDocs name oldVersion

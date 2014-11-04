@@ -4,8 +4,9 @@ import Data.Char (isDigit)
 import qualified Data.Map as Map
 import Text.PrettyPrint ((<+>), (<>))
 import qualified Text.PrettyPrint as P
+
+import qualified Elm.Docs as Docs
 import qualified Diff.Compare as D
-import qualified Diff.Model as M
 
 
 packageChanges :: D.PackageChanges -> String
@@ -88,7 +89,7 @@ display categoryName adts aliases values
 
 -- PRETTY PRINTING
 
-adtDoc :: String -> ([String], Map.Map String M.Type) -> P.Doc
+adtDoc :: String -> ([String], Map.Map String [Docs.Type]) -> P.Doc
 adtDoc name (tvars, ctors) =
     P.hang setup 4 (P.sep (zipWith (<+>) separators ctorDocs))
   where
@@ -101,13 +102,11 @@ adtDoc name (tvars, ctors) =
     ctorDocs =
         map ctorDoc (Map.toList ctors)
 
-    ctorDoc (ctor, tipe) =
-        let (args, _) = collectLambdas [] tipe
-        in
-            P.hsep (P.text ctor : map parenDoc args)
+    ctorDoc (ctor, tipes) =
+        P.hsep (P.text ctor : map parenDoc tipes)
 
 
-aliasDoc :: String -> ([String], M.Type) -> P.Doc
+aliasDoc :: String -> ([String], Docs.Type) -> P.Doc
 aliasDoc name (tvars, tipe) =
     P.hang (setup <+> P.equals) 4 (typeDoc tipe)
   where
@@ -115,7 +114,7 @@ aliasDoc name (tvars, tipe) =
         P.text "type" <+> P.text name <+> P.hsep (map P.text tvars)
 
 
-valueDoc :: String -> M.Type -> P.Doc
+valueDoc :: String -> Docs.Type -> P.Doc
 valueDoc name tipe =
     P.text name <+> P.colon <+> typeDoc tipe
 
@@ -123,26 +122,26 @@ valueDoc name tipe =
 parenDoc = generalTypeDoc True
 typeDoc = generalTypeDoc False
 
-generalTypeDoc :: Bool -> M.Type -> P.Doc
+generalTypeDoc :: Bool -> Docs.Type -> P.Doc
 generalTypeDoc parens tipe =
     case tipe of
-      M.Var x -> P.text x
+      Docs.Var x -> P.text x
 
-      M.Type name -> P.text name
+      Docs.Type name -> P.text name
 
-      M.Lambda t t' ->
+      Docs.Lambda t t' ->
           let (args, result) = collectLambdas [t] t'
           in
               (if parens then P.parens else id) $
               foldr arrow (typeDoc result) args
 
-      M.App t t' ->
-          case collectApps [t'] t of
-            [ M.Type name, tipe ]
+      Docs.App t ts ->
+          case t : ts of
+            [ Docs.Type name, tipe ]
               | name == "_List" ->
                   P.lbrack <> typeDoc tipe <> P.rbrack
                   
-            M.Type name : types
+            Docs.Type name : types
               | take 6 name == "_Tuple" && all isDigit (drop 6 name) ->
                   P.parens (P.hsep (P.punctuate P.comma (map typeDoc types)))
 
@@ -150,7 +149,7 @@ generalTypeDoc parens tipe =
                 (if parens then P.parens else id) $
                 P.hsep (map parenDoc types)
 
-      M.Record fields maybeExt ->
+      Docs.Record fields maybeExt ->
           P.sep [ P.hang start 2 fieldDocs, P.rbrace ]
         where
           start =
@@ -165,27 +164,19 @@ generalTypeDoc parens tipe =
               P.text name <+> P.colon <+> typeDoc tipe
 
 
-arrow :: M.Type -> P.Doc -> P.Doc
+arrow :: Docs.Type -> P.Doc -> P.Doc
 arrow arg result =
     argDoc <+> P.text "->" <+> result
   where
     argDoc =
         case arg of
-          M.Lambda _ _ -> P.parens (typeDoc arg)
+          Docs.Lambda _ _ -> P.parens (typeDoc arg)
           _ -> typeDoc arg
 
 
-collectLambdas :: [M.Type] -> M.Type -> ([M.Type], M.Type)
+collectLambdas :: [Docs.Type] -> Docs.Type -> ([Docs.Type], Docs.Type)
 collectLambdas args result =
     case result of
-      M.Lambda t t' -> collectLambdas (t:args) t'
+      Docs.Lambda t t' -> collectLambdas (t:args) t'
       _ -> (reverse args, result)
 
-
-collectApps :: [M.Type] -> M.Type -> [M.Type]
-collectApps args tipe =
-    case tipe of
-      M.App t t' ->
-          collectApps (t' : args) t
-
-      _ -> tipe : args

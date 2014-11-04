@@ -4,11 +4,14 @@ module Store (Store, getConstraints, getVersions, initialStore, readVersionCache
 import Control.Monad.Error (MonadError, throwError)
 import Control.Monad.RWS (MonadIO, liftIO, MonadReader, ask, asks, MonadState, gets, modify)
 import qualified Data.Aeson as Json
+import qualified Data.Binary as Binary
 import qualified Data.ByteString.Lazy as BS
 import qualified Data.Map as Map
+import qualified Data.Time.Clock as Time
 import qualified System.Directory as Dir
 import System.FilePath ((</>), dropFileName)
 
+import qualified Catalog
 import qualified Elm.Package.Constraint as C
 import qualified Elm.Package.Description as Desc
 import qualified Elm.Package.Name as N
@@ -35,27 +38,59 @@ type VersionCache =
 initialStore
     :: (MonadIO m, MonadReader Manager.Environment m, MonadError String m)
     => m Store
+
 initialStore =
   do  versionCache <- readVersionCache
       return (Store Map.empty versionCache)
 
 
-readVersionCache :: (MonadIO m, MonadReader Manager.Environment m, MonadError String m) => m VersionCache
+readVersionCache
+    :: (MonadIO m, MonadReader Manager.Environment m, MonadError String m)
+    => m VersionCache
+
 readVersionCache =
   do  cacheDirectory <- asks Manager.cacheDirectory
-      maybeVersions <- decodeFromFile (cacheDirectory </> "versions.json")
-      case maybeVersions of
+      let versionsFile = cacheDirectory </> "versions.json"
+      let lastUpdatedPath = cacheDirectory </> "last-updated"
+
+      now <- liftIO Time.getCurrentTime
+
+      exists <- liftIO (Dir.doesFileExist lastUpdatedPath)
+      maybeTime <-
+          case exists of
+            False -> return Nothing
+            True ->
+              do  rawTime <- liftIO (readFile lastUpdatedPath)
+                  return $ Just (read rawTime)
+
+      maybePackages <- Catalog.allPackages maybeTime
+
+      case maybePackages of
         Nothing ->
-            return Map.empty
-        Just versions ->
-            return $ Map.fromList (versions :: [(N.Name, [V.Version])])
+          do  exists <- liftIO (Dir.doesFileExist versionsFile)
+              case exists of
+                False -> return Map.empty
+                True ->
+                  do  binary <- liftIO (BS.readFile versionsFile)
+                      return (Binary.decode binary)
+
+        Just packages ->
+          let cache :: VersionCache
+              cache = Map.fromList packages
+          in
+              do  liftIO $ BS.writeFile versionsFile (Binary.encode cache)
+                  liftIO $ writeFile lastUpdatedPath (show now)
+                  return cache
 
 
 -- CONSTRAINTS
 
 getConstraints
     :: (MonadIO m, MonadReader Manager.Environment m, MonadState Store m, MonadError String m)
-    => N.Name -> V.Version -> m [(N.Name, C.Constraint)]
+    => N.Name
+    -> V.Version
+    -> m [(N.Name, C.Constraint)]
+
 getConstraints name version =
   do  cache <- gets constraintCache
       case Map.lookup (name, version) cache of

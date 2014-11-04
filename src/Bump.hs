@@ -7,6 +7,7 @@ import qualified Catalog
 import qualified CommandLine.Helpers as Cmd
 import qualified Diff.Compare as Compare
 import qualified Docs
+import qualified Elm.Docs as Docs
 import qualified Elm.Package.Description as Desc
 import qualified Elm.Package.Name as N
 import qualified Elm.Package.Paths as Path
@@ -106,7 +107,12 @@ changeVersion explanation description newVersion =
                 return (Changed newVersion)
 
 
-suggestVersion :: FilePath -> N.Name -> V.Version -> Desc.Description -> Manager.Manager Validity
+suggestVersion
+    :: [Docs.Documentation]
+    -> N.Name
+    -> V.Version
+    -> Desc.Description
+    -> Manager.Manager Validity
 suggestVersion newDocs name version description =
     do  changes <- Compare.computeChanges newDocs name version
         let newVersion = Compare.bumpBy changes version
@@ -127,7 +133,12 @@ suggestVersion newDocs name version description =
             ]
 
 
-validateVersion :: FilePath -> N.Name -> V.Version -> [V.Version] -> Manager.Manager Validity
+validateVersion
+    :: [Docs.Documentation]
+    -> N.Name
+    -> V.Version
+    -> [V.Version]
+    -> Manager.Manager Validity
 validateVersion newDocs name statedVersion publishedVersions =
     case List.find (\(_ ,new, _) -> statedVersion == new) bumps of
         Nothing ->

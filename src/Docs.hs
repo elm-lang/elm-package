@@ -1,32 +1,39 @@
 module Docs where
 
 import Control.Monad (forM)
-import Control.Monad.Error (liftIO)
+import Control.Monad.Error (liftIO, throwError)
+import qualified Data.Aeson as Json
+import qualified Data.ByteString.Lazy.Char8 as BS
 
 import qualified CommandLine.Helpers as Cmd
+import qualified Elm.Docs as Docs
 import qualified Elm.Package.Description as Desc
 import qualified Elm.Package.Paths as Path
 import qualified Manager
 
 
-generate :: Desc.Description -> Manager.Manager FilePath
+generate :: Desc.Description -> Manager.Manager [Docs.Documentation]
 generate description =
     do  exposedModules <- Desc.locateExposedModules description
 
-        liftIO (writeFile Path.documentation "[\n")
+        chunks <-
+            forM (prep exposedModules) $ \(seperator, path) ->
+                do  json <- Cmd.run "elm-doc" [path]
+                    return (seperator ++ json)
 
-        forM (prep exposedModules) $ \(seperator, path) ->
-            do  liftIO (appendFile Path.documentation seperator)
-                json <- Cmd.run "elm-doc" [path]
-                liftIO (appendFile Path.documentation json)
+        let json = BS.pack (concat chunks ++ "\n]")
 
-        liftIO (appendFile Path.documentation "\n]")
+        case Json.eitherDecode json of
+          Left err ->
+            throwError $ "Error generating documentation:\n" ++ err
 
-        return Path.documentation
+          Right docs ->
+            do  liftIO (BS.writeFile Path.documentation json)
+                return docs
 
 
 prep exposedModules =
-    zip ("" : repeat ",\n") (map snd exposedModules)
+    zip ("[\n" : repeat ",\n") (map snd exposedModules)
 
 
 

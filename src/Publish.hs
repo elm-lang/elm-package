@@ -7,6 +7,7 @@ import qualified Bump
 import qualified Catalog
 import qualified CommandLine.Helpers as Cmd
 import qualified Docs
+import qualified Elm.Docs as Docs
 import qualified Elm.Package.Description as Desc
 import qualified Elm.Package.Name as N
 import qualified Elm.Package.Paths as P
@@ -25,9 +26,9 @@ publish =
       Cmd.out $ unwords [ "Verifying", N.toString name, V.toString version, "..." ]
       verifyMetadata description
 
-      docsPath <- Docs.generate description
+      docs <- Docs.generate description
 
-      validity <- verifyVersion docsPath description
+      validity <- verifyVersion docs description
       newVersion <-
           case validity of
             Bump.Valid -> return version
@@ -35,7 +36,7 @@ publish =
             Bump.Changed v -> return v
 
       verifyTag name newVersion
-      Catalog.register name newVersion docsPath
+      Catalog.register name newVersion
       Cmd.out "Success!"
 
 
@@ -62,15 +63,18 @@ verifyMetadata deps =
             else Nothing
 
 
-verifyVersion :: FilePath -> Desc.Description -> Manager.Manager Bump.Validity
-verifyVersion docsPath description =
+verifyVersion
+    :: [Docs.Documentation]
+    -> Desc.Description
+    -> Manager.Manager Bump.Validity
+verifyVersion docs description =
   let name = Desc.name description
       version = Desc.version description
   in
   do  maybeVersions <- Catalog.versions name
       case maybeVersions of
         Just publishedVersions ->
-            Bump.validateVersion docsPath name version publishedVersions
+            Bump.validateVersion docs name version publishedVersions
 
         Nothing ->
             Bump.validateInitialVersion description

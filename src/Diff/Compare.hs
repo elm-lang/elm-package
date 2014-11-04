@@ -2,31 +2,27 @@ module Diff.Compare where
 
 import Control.Applicative ((<$>), (<*>))
 import Control.Monad (zipWithM)
-import Control.Monad.Error (liftIO, throwError)
-import qualified Data.Aeson as Json
-import qualified Data.ByteString.Lazy as LBS
 import Data.Function (on)
 import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 
 import qualified Catalog
-import qualified Diff.Model as M
+import qualified Elm.Compiler.Module as Module
+import qualified Elm.Docs as Docs
 import qualified Elm.Package.Name as N
 import qualified Elm.Package.Version as V
 import qualified Manager
 
-computeChanges :: FilePath -> N.Name -> V.Version -> Manager.Manager PackageChanges
-computeChanges newDocs name version =
-    do  oldDocs <- Catalog.docs name version
-        old <- liftIO $ LBS.readFile oldDocs
-        new <- liftIO $ LBS.readFile newDocs
-        case (,) <$> Json.eitherDecode old <*> Json.eitherDecode new of
-            Left msg ->
-                throwError msg
 
-            Right (oldPackage, newPackage) ->
-                return (diffPackage oldPackage newPackage)
+computeChanges
+    :: [Docs.Documentation]
+    -> N.Name
+    -> V.Version
+    -> Manager.Manager PackageChanges
+computeChanges newDocs name version =
+    do  oldDocs <- Catalog.documentation name version
+        return (diffPackages oldDocs newDocs)
 
 
 -- CHANGE MAGNITUDE
@@ -88,9 +84,9 @@ data PackageChanges = PackageChanges
     }
 
 data ModuleChanges = ModuleChanges
-    { adtChanges :: Changes String ([String], Map.Map String M.Type)
-    , aliasChanges :: Changes String ([String], M.Type)
-    , valueChanges :: Changes String M.Type
+    { adtChanges :: Changes String ([String], Map.Map String [Docs.Type])
+    , aliasChanges :: Changes String ([String], Docs.Type)
+    , valueChanges :: Changes String Docs.Type
     }
 
 data Changes k v = Changes
@@ -100,8 +96,8 @@ data Changes k v = Changes
     }
 
 
-diffPackage :: M.Package -> M.Package -> PackageChanges
-diffPackage (M.Package oldPackage) (M.Package newPackage) =
+diffPackages :: [Docs.Documentation] -> [Docs.Documentation] -> PackageChanges
+diffPackages oldDocs newDocs =
     PackageChanges
         (Map.keys added)
         (filterOutPatches (Map.map (uncurry diffModule) changed))
@@ -111,11 +107,45 @@ diffPackage (M.Package oldPackage) (M.Package newPackage) =
         Map.filter (\chng -> moduleChangeMagnitude chng /= PATCH) chngs
 
     (Changes added changed removed) =
-        getChanges (\_ _ -> False) oldPackage newPackage
+        getChanges
+            (\_ _ -> False)
+            (docsToModules oldDocs)
+            (docsToModules newDocs)
 
 
-diffModule :: M.Module -> M.Module -> ModuleChanges
-diffModule (M.Module adts aliases values) (M.Module adts' aliases' values') =
+data Module = Module
+    { adts :: Map.Map String ([String], Map.Map String [Docs.Type])
+    , aliases :: Map.Map String ([String], Docs.Type)
+    , values :: Map.Map String Docs.Type
+    }
+
+
+docsToModules :: [Docs.Documentation] -> Map.Map String Module
+docsToModules docs =
+    Map.fromList (map docToModule docs)
+
+
+docToModule :: Docs.Documentation -> (String, Module)
+docToModule (Docs.Documentation name _ aliases' unions' values') =
+    (,) (Module.nameToString name) $ Module
+    { adts =
+        Map.fromList $ flip map unions' $ \union ->
+            ( Docs.unionName union
+            , (Docs.unionArgs union, Map.fromList (Docs.unionCases union))
+            )
+
+    , aliases =
+        Map.fromList $ flip map aliases' $ \alias ->
+            (Docs.aliasName alias, (Docs.aliasArgs alias, Docs.aliasType alias))
+
+    , values =
+        Map.fromList $ flip map values' $ \value ->
+            (Docs.valueName value, Docs.valueType value)
+    }
+
+
+diffModule :: Module -> Module -> ModuleChanges
+diffModule (Module adts aliases values) (Module adts' aliases' values') =
     ModuleChanges
         (getChanges isEquivalentAdt adts adts')
         (getChanges isEquivalentType aliases aliases')
@@ -136,17 +166,28 @@ getChanges isEquivalent old new =
     }
 
 
-isEquivalentAdt :: ([String], Map.Map String M.Type) -> ([String], Map.Map String M.Type) -> Bool
+isEquivalentAdt
+    :: ([String], Map.Map String [Docs.Type])
+    -> ([String], Map.Map String [Docs.Type])
+    -> Bool
 isEquivalentAdt (oldVars, oldCtors) (newVars, newCtors) =
     Map.size oldCtors == Map.size newCtors
     && and (zipWith (==) (Map.keys oldCtors) (Map.keys newCtors))
     && and (Map.elems (Map.intersectionWith equiv oldCtors newCtors))
   where
-    equiv oldType newType =
-        isEquivalentType (oldVars, oldType) (newVars, newType)
+    equiv :: [Docs.Type] -> [Docs.Type] -> Bool
+    equiv oldTypes newTypes =
+        let allEquivalent =
+                zipWith
+                  isEquivalentType
+                  (map ((,) oldVars) oldTypes)
+                  (map ((,) newVars) newTypes)
+        in
+            length oldTypes == length newTypes
+            && and allEquivalent
 
 
-isEquivalentType :: ([String], M.Type) -> ([String], M.Type) -> Bool
+isEquivalentType :: ([String], Docs.Type) -> ([String], Docs.Type) -> Bool
 isEquivalentType (oldVars, oldType) (newVars, newType) =
     case diffType oldType newType of
       Nothing -> False
@@ -157,28 +198,31 @@ isEquivalentType (oldVars, oldType) (newVars, newType) =
 
 -- TYPES
 
-diffType :: M.Type -> M.Type -> Maybe [(String,String)]
+diffType :: Docs.Type -> Docs.Type -> Maybe [(String,String)]
 diffType oldType newType =
     case (oldType, newType) of
-      (M.Var oldName, M.Var newName) ->
+      (Docs.Var oldName, Docs.Var newName) ->
           Just [(oldName, newName)]
 
-      (M.Type oldName, M.Type newName) ->
+      (Docs.Type oldName, Docs.Type newName) ->
           if oldName == newName
               then Just []
               else Nothing
 
-      (M.Lambda a b, M.Lambda a' b') ->
+      (Docs.Lambda a b, Docs.Lambda a' b') ->
           (++)
               <$> diffType a a'
               <*> diffType b b'
 
-      (M.App a b, M.App a' b') ->
-          (++)
-              <$> diffType a a'
-              <*> diffType b b'
+      (Docs.App t ts, Docs.App t' ts') ->
+          if length ts /= length ts'
+            then Nothing
+            else
+                (++)
+                    <$> diffType t t'
+                    <*> (concat <$> zipWithM diffType ts ts')
 
-      (M.Record fields maybeExt, M.Record fields' maybeExt') ->
+      (Docs.Record fields maybeExt, Docs.Record fields' maybeExt') ->
           case (maybeExt, maybeExt') of
             (Nothing, Just _) -> Nothing
             (Just _, Nothing) -> Nothing
@@ -192,7 +236,7 @@ diffType oldType newType =
           Nothing
 
 
-diffFields :: [(String, M.Type)] -> [(String, M.Type)] -> Maybe [(String,String)]
+diffFields :: [(String, Docs.Type)] -> [(String, Docs.Type)] -> Maybe [(String,String)]
 diffFields rawFields rawFields'
     | length rawFields /= length rawFields' = Nothing
     | or (zipWith ((/=) `on` fst) fields fields') = Nothing

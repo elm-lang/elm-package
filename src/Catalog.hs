@@ -1,10 +1,13 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Catalog where
 
-import Control.Monad.Reader (asks, liftIO)
+import Control.Monad.Error (MonadError, throwError)
+import Control.Monad.RWS (MonadIO, liftIO, MonadReader, asks)
 import qualified Data.Aeson as Json
 import qualified Data.Binary as Binary
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Time.Clock as Time
 import Data.Version (showVersion)
 import Network.HTTP
 import qualified Network.HTTP.Client as Client
@@ -12,6 +15,7 @@ import qualified Network.HTTP.Client.MultipartFormData as Multi
 import System.Directory (doesFileExist)
 import System.FilePath ((</>), (<.>))
 
+import qualified Elm.Docs as Docs
 import qualified Elm.Package.Description as Desc
 import qualified Elm.Package.Name as N
 import qualified Elm.Package.Paths as P
@@ -21,7 +25,11 @@ import qualified Paths_elm_package as This
 import qualified Utils.Http as Http
 
 
-catalog :: String -> [(String,String)] -> Manager.Manager String
+catalog
+    :: (MonadIO m, MonadReader Manager.Environment m, MonadError String m)
+    => String
+    -> [(String,String)]
+    -> m String
 catalog path vars =
   do  domain <- asks Manager.catalog
       return $ domain ++ "/" ++ path ++ "?" ++ urlEncodeVars (version : vars)
@@ -29,24 +37,32 @@ catalog path vars =
     version = ("elm-package-version", showVersion This.version)
 
 
-description :: N.Name -> Manager.Manager (Maybe Desc.Description)
-description name =
-    do  url <- catalog "description" [("name", N.toString name)]
-        Http.send url $ \request manager -> do
-            response <- Client.httpLbs request manager
-            return $ Json.decode $ Client.responseBody response
-
-
 versions :: N.Name -> Manager.Manager (Maybe [V.Version])
 versions name =
-    do  url <- catalog "versions" [("name", N.toString name)]
-        Http.send url $ \request manager -> do
-            response <- Client.httpLbs request manager
-            return $ Binary.decode $ Client.responseBody response
+  do  url <- catalog "versions" [("name", N.toString name)]
+      Http.send url $ \request manager -> do
+          response <- Client.httpLbs request manager
+          return $ Binary.decode $ Client.responseBody response
 
 
-register :: N.Name -> V.Version -> FilePath -> Manager.Manager ()
-register name version path =
+allPackages
+    :: (MonadIO m, MonadReader Manager.Environment m, MonadError String m)
+    => Maybe Time.UTCTime
+    -> m (Maybe [(N.Name, [V.Version])])
+allPackages maybeTime =
+  do  url <- catalog "all-packages" vars
+      Http.send url $ \request manager -> do
+          response <- Client.httpLbs request manager
+          return $ Binary.decode $ Client.responseBody response
+  where
+    vars =
+      case maybeTime of
+        Nothing -> []
+        Just time -> [("since", show time)]
+
+
+register :: N.Name -> V.Version -> Manager.Manager ()
+register name version =
   do  url <- catalog "register" vars
       Http.send url $ \request manager -> do
           request' <- Multi.formDataBody files request
@@ -60,30 +76,42 @@ register name version path =
         ]
 
     files =
-        [ Multi.partFileSource "documentation" path
+        [ Multi.partFileSource "documentation" P.documentation
         , Multi.partFileSource "description" P.description
         ]
 
 
-docs :: N.Name -> V.Version -> Manager.Manager FilePath
-docs name version =
+description :: N.Name -> V.Version -> Manager.Manager Desc.Description
+description name version =
+  getJson "description" name version
+
+
+documentation :: N.Name -> V.Version -> Manager.Manager [Docs.Documentation]
+documentation name version =
+  getJson "documentation" name version
+
+
+getJson :: (Json.FromJSON a) => String -> N.Name -> V.Version -> Manager.Manager a
+getJson metadata name version =
   do  cacheDir <- asks Manager.cacheDirectory
-      let path = docsPath cacheDir
-      exists <- liftIO (doesFileExist path)
-      if exists
-          then return path
-          else fetchDocs path
+      let metadataPath =
+            cacheDir </> N.toFilePath name </> V.toString version </> metadata <.> "json"
 
-  where
-    docsPath dir =
-        dir </> N.toFilePath name </> V.toString version <.> "json"
-
-    fetchDocs path =
-        do  domain <- asks Manager.catalog
-            Http.send (docsUrl domain) $ \request manager ->
-                do  response <- Client.httpLbs request manager
-                    LBS.writeFile path (Client.responseBody response)
-                    return path
-
-    docsUrl domain =
-        domain ++ "/" ++ N.toString name ++ "/" ++ V.toString version ++ "/docs.json"
+      exists <- liftIO (doesFileExist metadataPath)
+      
+      content <-
+        case exists of
+          True -> liftIO (LBS.readFile metadataPath)
+          False ->
+            do  url <- catalog metadata [("name", N.toString name), ("version", V.toString version)]
+                Http.send url $ \request manager ->
+                    do  response <- Client.httpLbs request manager
+                        LBS.writeFile metadataPath (Client.responseBody response)
+                        return (Client.responseBody response)
+                      
+      case Json.eitherDecode content of
+        Right value -> return value
+        Left err ->
+          throwError $
+            "Unable to get " ++ metadata ++ " for "
+            ++ N.toString name ++ " " ++ V.toString version ++ "\n" ++ err

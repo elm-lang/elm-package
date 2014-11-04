@@ -24,7 +24,7 @@ data Environment = Environment
 defaultEnvironment :: IO Environment
 defaultEnvironment =
     do  cacheDirectory <- getCacheDirectory
-        return (Environment "http://package.elm-lang.org" cacheDirectory)
+        return (Environment "http://localhost:8000" cacheDirectory)
 
 
 getCacheDirectory :: IO FilePath
