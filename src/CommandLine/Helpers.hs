@@ -4,7 +4,6 @@ module CommandLine.Helpers where
 import Control.Monad.Error
 import System.Directory
 import System.Exit
-import System.FilePath
 import System.IO
 import System.Process
 
@@ -28,26 +27,6 @@ inDir dir doStuff =
       result <- doStuff
       liftIO $ setCurrentDirectory here
       return result
-
-
-copyDir :: (MonadError String m, MonadIO m) => FilePath -> FilePath -> m ()
-copyDir src dst =
-  do  exists <- liftIO $ doesDirectoryExist src
-      if exists
-        then liftIO $ copyDir' src dst
-        else throwError $ "Directory " ++ src ++ " does not exist"
-
-
-copyDir' ::  FilePath -> FilePath -> IO ()
-copyDir' src dst =
-  do  createDirectoryIfMissing True dst
-      content <- getDirectoryContents src
-      let paths = filter (`notElem` [".", "..",".git",".gitignore"]) content
-      forM_ paths $ \name -> do
-          let srcPath = src </> name
-          let dstPath = dst </> name
-          isDirectory <- doesDirectoryExist srcPath
-          (if isDirectory then copyDir' else copyFile) srcPath dstPath
 
 
 git :: (MonadError String m, MonadIO m) => [String] -> m String
