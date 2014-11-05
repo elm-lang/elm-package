@@ -3,9 +3,9 @@ module CommandLine.Helpers where
 
 import Control.Monad.Error
 import System.Directory
-import System.Exit
 import System.IO
-import System.Process
+
+import qualified Elm.Utils as Utils
 
 
 yesOrNo :: IO Bool
@@ -34,26 +34,7 @@ git = run "git"
 
 
 run :: (MonadError String m, MonadIO m) => String -> [String] -> m String
-run command args =
-  do  result <- liftIO runCommand
-      case result of
-        Right out -> return out
-        Left err ->
-            throwError $
-            "failure when running:" ++ concatMap (' ':) (command:args) ++ "\n" ++ err
-  where
-    runCommand =
-        do  (exitCode, stdout, stderr) <- readProcessWithExitCode command args ""
-            return $ case exitCode of
-                       ExitSuccess -> Right stdout
-                       ExitFailure code
-                           | code == 127  -> Left missingExe  -- UNIX
-                           | code == 9009 -> Left missingExe  -- Windows
-                           | otherwise    -> Left stderr
-
-    missingExe =
-        "Could not find command '" ++ command ++ "'. Do you have it installed?\n\
-        \    Can it be run from anywhere? Is it on your PATH?"
+run = Utils.run
 
 
 out :: (MonadIO m) => String -> m ()
