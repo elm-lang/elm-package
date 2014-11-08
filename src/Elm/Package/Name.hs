@@ -6,6 +6,7 @@ import Data.Aeson
 import Data.Binary
 import qualified Data.Text as T
 import qualified Data.Maybe as Maybe
+import System.FilePath ((</>))
 
 
 data Name = Name
@@ -32,7 +33,7 @@ toUrl name =
 
 toFilePath :: Name -> FilePath
 toFilePath name =
-    user name ++ "-" ++ project name
+    user name </> project name
 
 
 fromString :: String -> Maybe Name

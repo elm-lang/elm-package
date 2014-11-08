@@ -14,11 +14,11 @@ import qualified Utils.Http as Http
 
 
 package :: (MonadIO m, MonadError String m) => N.Name -> V.Version -> m ()
-package name version =
+package name@(N.Name user _) version =
   ifNotExists directory $ do
       Http.send zipball extract
       files <- liftIO $ getDirectoryContents "."
-      case List.find (List.isPrefixOf (N.toFilePath name)) files of
+      case List.find (List.isPrefixOf user) files of
         Nothing ->
             throwError "Could not download source code successfully."
         Just dir ->
