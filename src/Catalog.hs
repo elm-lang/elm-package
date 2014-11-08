@@ -78,6 +78,7 @@ register name version =
     files =
         [ Multi.partFileSource "documentation" P.documentation
         , Multi.partFileSource "description" P.description
+        , Multi.partFileSource "readme" "README.md"
         ]
 
 
