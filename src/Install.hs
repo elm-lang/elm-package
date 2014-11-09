@@ -72,7 +72,7 @@ getApproval plan
     | otherwise =
         do  putStrLn "To install we must make the following changes:"
             putStrLn (Plan.display plan)
-            putStr "Do you approve of this plan? (y/n)"
+            putStrLn "Do you approve of this plan? (y/n)"
             Cmd.yesOrNo
 
 
