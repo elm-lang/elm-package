@@ -42,7 +42,8 @@ isEmpty (Plan installs upgrades removals) =
 
 display :: Plan -> String
 display (Plan installs upgrades removals) =
-    displayCategory "Install" displayInstall installs
+    "\n"
+    ++ displayCategory "Install" displayInstall installs
     ++ displayCategory "Upgrade" displayUpgrade upgrades
     ++ displayCategory "Remove" displayRemove removals
   where
