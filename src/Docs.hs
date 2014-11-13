@@ -4,6 +4,8 @@ import Control.Monad (forM)
 import Control.Monad.Error (liftIO, throwError)
 import qualified Data.Aeson as Json
 import qualified Data.ByteString.Lazy.Char8 as BS
+import System.Directory (createDirectoryIfMissing)
+import System.FilePath (dropFileName)
 
 import qualified CommandLine.Helpers as Cmd
 import qualified Elm.Docs as Docs
@@ -28,7 +30,9 @@ generate description =
             throwError $ "Error generating documentation:\n" ++ err
 
           Right docs ->
-            do  liftIO (BS.writeFile Path.documentation json)
+            do  liftIO $ do
+                    createDirectoryIfMissing True (dropFileName Path.documentation)
+                    BS.writeFile Path.documentation json
                 return docs
 
 
