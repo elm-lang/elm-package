@@ -4,6 +4,7 @@ module Catalog where
 
 import Control.Monad.Error (MonadError, throwError)
 import Control.Monad.RWS (MonadIO, liftIO, MonadReader, asks)
+import Data.Aeson ((.:))
 import qualified Data.Aeson as Json
 import qualified Data.Binary as Binary
 import qualified Data.ByteString.Lazy as LBS
@@ -53,12 +54,30 @@ allPackages maybeTime =
   do  url <- catalog "all-packages" vars
       Http.send url $ \request manager -> do
           response <- Client.httpLbs request manager
-          return $ Binary.decode $ Client.responseBody response
+          case Json.eitherDecode (Client.responseBody response) of
+            Left _ ->
+              return Nothing
+
+            Right summaries ->
+              return $ Just $ map (\(PackageSummary s) -> s) summaries
   where
     vars =
       case maybeTime of
         Nothing -> []
         Just time -> [("since", show time)]
+
+newtype PackageSummary = PackageSummary (N.Name, [V.Version])
+
+instance Json.FromJSON PackageSummary where
+    parseJSON (Json.Object obj) =
+      do  name <- obj .: "name"
+          versions <- obj .: "versions"
+          return (PackageSummary (name, versions))
+
+    parseJSON _ =
+      fail "package summary must be an object"
+
+
 
 
 register :: N.Name -> V.Version -> Manager.Manager ()
