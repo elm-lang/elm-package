@@ -88,7 +88,7 @@ validateInitialVersion description =
         badMsg =
             unlines
             [ "It looks like the version in " ++ Path.description ++ " has been changed though!"
-            , "Would you like me to change it back to " ++ V.toString V.initialVersion ++ "? (y/n)"
+            , "Would you like me to change it back to " ++ V.toString V.initialVersion ++ "? (y/n) "
             ]
 
 
@@ -129,7 +129,7 @@ suggestVersion newDocs name version description =
             , ""
             , "Run 'elm-package diff' for a detailed overview of how your API has changed."
             , ""
-            , "Should I change " ++ old ++ " to " ++ new ++ " in " ++ Path.description ++ "? (y/n)"
+            , "Should I change " ++ old ++ " to " ++ new ++ " in " ++ Path.description ++ "? (y/n) "
             ]
 
 
@@ -142,6 +142,7 @@ validateVersion
 validateVersion newDocs name statedVersion publishedVersions =
     case List.find (\(_ ,new, _) -> statedVersion == new) bumps of
         Nothing ->
+            -- TODO: make this error more specific, it's very confusing if you try to publish a duplicate
             throwError invalidBump
 
         Just (old, new, magnitude) ->
