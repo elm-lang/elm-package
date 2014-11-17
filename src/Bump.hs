@@ -122,14 +122,13 @@ suggestVersion newDocs name version description =
         infoMsg changes newVersion =
             let old = V.toString version
                 new = V.toString newVersion
+                magnitude = show (Compare.packageChangeMagnitude changes)
             in
             concat
-            [ "Based on your new API, this should be a " ++ show (Compare.packageChangeMagnitude changes) ++ " change.\n"
-            , "You are improving upon " ++ old ++ ", so the new version should be " ++ new ++ ".\n"
+            [ "Based on your new API, this should be a ", magnitude, " change (", old, " => ", new, ")\n"
+            , "Bail out of this command and run 'elm-package diff' for a full explanation.\n"
             , "\n"
-            , "Run 'elm-package diff' for a detailed overview of how your API has changed.\n"
-            , "\n"
-            , "Should I change " ++ old ++ " to " ++ new ++ " in " ++ Path.description ++ "? (y/n) "
+            , "Should I perform the update (", old, " => ", new, ") in ", Path.description, "? (y/n) "
             ]
 
 
@@ -142,8 +141,9 @@ validateVersion
 validateVersion newDocs name statedVersion publishedVersions =
     case List.find (\(_ ,new, _) -> statedVersion == new) bumps of
         Nothing ->
-            -- TODO: make this error more specific, it's very confusing if you try to publish a duplicate
-            throwError invalidBump
+          let isPublished = statedVersion `elem` publishedVersions
+          in
+              throwError (if isPublished then alreadyPublished else invalidBump)
 
         Just (old, new, magnitude) ->
             do  changes <- Compare.computeChanges newDocs name old
@@ -162,13 +162,23 @@ validateVersion newDocs name statedVersion publishedVersions =
             "Version number " ++ V.toString new ++ " verified (" ++ show magnitude
             ++ " change, " ++ V.toString old ++ " => " ++ V.toString new ++ ")"
 
+        alreadyPublished =
+            "Version " ++ V.toString statedVersion
+            ++ " has already been published, but you are trying to publish\n"
+            ++ "it again! Run the following command to see what the new version should be.\n"
+            ++ "\n    elm-package bump-version\n"
+
         invalidBump =
             unlines
-            [ "Something is off with the version listed in " ++ Path.description ++ "."
-            , "The easiest way to bump versions is to let us do it automatically. If you set"
-            , "the version number in " ++ Path.description ++ " to the released version"
-            , "that you are improving upon, we will compute which version should come next"
-            , "when you run:"
+            [ "The version listed in " ++ Path.description ++ " is neither a previously"
+            , "published version, nor a valid version bump."
+            , ""
+            , "Set the version number in " ++ Path.description ++ " to the released version"
+            , "that you are improving upon. If you are working on the latest API, that means"
+            , "you are modifying version " ++ V.toString (last publishedVersions) ++ "."
+            , ""
+            , "From there, we can compute which version comes next based on the API changes"
+            , "when you run the following command."
             , ""
             , "    elm-package bump-version"
             ]
