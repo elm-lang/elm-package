@@ -40,14 +40,14 @@ bump =
 unbumpable :: [V.Version] -> String
 unbumpable validBumps =
     unlines
-    [ "To use version-bump you must start with an already published version number"
+    [ "To use bump-version you must start with an already published version number"
     , "in " ++ Path.description ++ ", giving us a starting point to bump from."
     , ""
     , "The version numbers that can be bumped include the following subset of"
     , "published versions:"
     , "  " ++ List.intercalate ", " (map V.toString validBumps)
     , ""
-    , "Switch back to one of these versions before running 'elm-package version-bump'"
+    , "Switch back to one of these versions before running 'elm-package bump-version'"
     , "again."
     ]
 
@@ -86,15 +86,15 @@ validateInitialVersion description =
             "The version number in " ++ Path.description ++ " is correct so you are all set!"
 
         badMsg =
-            unlines
-            [ "It looks like the version in " ++ Path.description ++ " has been changed though!"
+            concat
+            [ "It looks like the version in " ++ Path.description ++ " has been changed though!\n"
             , "Would you like me to change it back to " ++ V.toString V.initialVersion ++ "? (y/n) "
             ]
 
 
 changeVersion :: String -> Desc.Description -> V.Version -> Manager.Manager Validity
 changeVersion explanation description newVersion = 
-    do  Cmd.out explanation
+    do  liftIO $ putStr explanation
         yes <- liftIO Cmd.yesOrNo
         case yes of
             False -> do
@@ -123,12 +123,12 @@ suggestVersion newDocs name version description =
             let old = V.toString version
                 new = V.toString newVersion
             in
-            unlines
-            [ "Based on your new API, this should be a " ++ show (Compare.packageChangeMagnitude changes) ++ " change."
-            , "You are improving upon " ++ old ++ ", so the new version should be " ++ new ++ "."
-            , ""
-            , "Run 'elm-package diff' for a detailed overview of how your API has changed."
-            , ""
+            concat
+            [ "Based on your new API, this should be a " ++ show (Compare.packageChangeMagnitude changes) ++ " change.\n"
+            , "You are improving upon " ++ old ++ ", so the new version should be " ++ new ++ ".\n"
+            , "\n"
+            , "Run 'elm-package diff' for a detailed overview of how your API has changed.\n"
+            , "\n"
             , "Should I change " ++ old ++ " to " ++ new ++ " in " ++ Path.description ++ "? (y/n) "
             ]
 
@@ -170,7 +170,7 @@ validateVersion newDocs name statedVersion publishedVersions =
             , "that you are improving upon, we will compute which version should come next"
             , "when you run:"
             , ""
-            , "    elm-package version-bump"
+            , "    elm-package bump-version"
             ]
 
         badBump old new realNew magnitude changes =
@@ -189,7 +189,7 @@ validateVersion newDocs name statedVersion publishedVersions =
             , "that you are improving upon, we will compute which version should come next"
             , "when you run:"
             , ""
-            , "    elm-package version-bump"
+            , "    elm-package bump-version"
             ]
 
 
