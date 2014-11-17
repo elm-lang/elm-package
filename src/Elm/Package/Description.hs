@@ -3,6 +3,7 @@
 module Elm.Package.Description where
 
 import Prelude hiding (read)
+import Control.Applicative ((<$>))
 import Control.Arrow (first)
 import Control.Monad.Error (MonadError, throwError, MonadIO, liftIO, when, mzero, forM)
 import Data.Aeson
@@ -32,6 +33,7 @@ data Description = Description
     , license :: String
     , sourceDirs :: [FilePath]
     , exposed :: [Module.Name]
+    , natives :: Bool
     , dependencies :: [(N.Name, C.Constraint)]
     }
 
@@ -46,6 +48,7 @@ defaultDescription =
     , license = "BSD3"
     , sourceDirs = [ "." ]
     , exposed = []
+    , natives = False
     , dependencies = []
     }
 
@@ -139,6 +142,7 @@ prettyJSON description =
         , "license"
         , "source-directories"
         , "exposed-modules"
+        , "native-modules"
         , "dependencies"
         ]
 
@@ -153,7 +157,7 @@ instance ToJSON Description where
       , "source-directories" .= sourceDirs d
       , "exposed-modules" .= exposed d
       , "dependencies" .= jsonDeps (dependencies d)
-      ]
+      ] ++ if natives d then ["native-modules" .= True] else []
     where
       jsonDeps deps =
           Map.fromList $ map (first (T.pack . N.toString)) deps
@@ -180,7 +184,9 @@ instance FromJSON Description where
 
             deps <- getDependencies obj
 
-            return $ Description name repo version summary license sourceDirs exposed deps
+            natives <- maybe False id <$> obj .:? "native-modules"
+
+            return $ Description name repo version summary license sourceDirs exposed natives deps
 
     parseJSON _ = mzero
 
