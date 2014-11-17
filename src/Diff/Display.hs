@@ -21,20 +21,19 @@ packageChanges pkgChanges@(D.PackageChanges added changed removed) =
         | otherwise =
             "------ Removed modules - MAJOR ------\n"
             ++ concatMap ("\n    " ++) removed
-            ++ "\n\n"
+            ++ "\n\n\n"
 
     showAdded
         | null added = ""
         | otherwise =
             "------ Added modules - MINOR ------\n"
             ++ concatMap ("\n    " ++) added
-            ++ "\n\n"
+            ++ "\n\n\n"
 
     showChanged
         | Map.null changed = ""
         | otherwise =
             concatMap moduleChanges (Map.toList changed)
-            ++ "\n"
 
 
 moduleChanges :: (String, D.ModuleChanges) -> String
@@ -43,6 +42,7 @@ moduleChanges (name, changes) =
     ++ display "Added" adtAdd aliasAdd valueAdd
     ++ display "Removed" adtRemove aliasRemove valueRemove
     ++ display "Changed" adtChange aliasChange valueChange
+    ++ "\n\n\n"
   where
     magnitude =
         D.moduleChangeMagnitude changes
@@ -94,7 +94,7 @@ adtDoc name (tvars, ctors) =
     P.hang setup 4 (P.sep (zipWith (<+>) separators ctorDocs))
   where
     setup =
-        P.text "data" <+> P.text name <+> P.hsep (map P.text tvars)
+        P.text "type" <+> P.text name <+> P.hsep (map P.text tvars)
 
     separators =
         map P.text ("=" : repeat "|")
@@ -111,7 +111,7 @@ aliasDoc name (tvars, tipe) =
     P.hang (setup <+> P.equals) 4 (typeDoc tipe)
   where
     setup =
-        P.text "type" <+> P.text name <+> P.hsep (map P.text tvars)
+        P.text "type" <+> P.text "alias" <+> P.text name <+> P.hsep (map P.text tvars)
 
 
 valueDoc :: String -> Docs.Type -> P.Doc
