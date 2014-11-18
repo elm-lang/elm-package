@@ -7,24 +7,24 @@ import qualified Elm.Package.Version as V
 
 
 {-| Name of directory for all of a project's dependencies. -}
-packagesDirectory :: FilePath
-packagesDirectory =
-	"elm_packages"
+stuffDirectory :: FilePath
+stuffDirectory =
+    "elm-stuff"
 
 
-{-| Describes the exact versions of every library used for your project. This
+{-| Describes the exact versions of every package used for your project. This
 information is written by elm-package when it solves and installs dependencies.
 -}
 solvedDependencies :: FilePath
 solvedDependencies =
-    packagesDirectory </> "solved-dependencies.json"
+    "exact-dependencies.json"
 
 
 {-| Documentation for all the exposed modules in this package.
 -}
 documentation :: FilePath
 documentation =
-    packagesDirectory </> "documentation.json"
+    stuffDirectory </> "documentation.json"
 
 
 {-| Name of the dependency file, specifying dependencies and other metadata
@@ -32,7 +32,14 @@ for building and sharing projects.
 -}
 description :: FilePath
 description =
-    "elm_package.json"
+    "elm-package.json"
+
+
+{-| Directory for all packages needed to build your project.
+-}
+packagesDirectory :: FilePath
+packagesDirectory =
+    stuffDirectory </> "packages"
 
 
 {-| Path to a particular package. -}
