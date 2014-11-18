@@ -17,7 +17,7 @@ information is written by elm-package when it solves and installs dependencies.
 -}
 solvedDependencies :: FilePath
 solvedDependencies =
-    "exact-dependencies.json"
+    stuffDirectory </> "exact-dependencies.json"
 
 
 {-| Documentation for all the exposed modules in this package.
