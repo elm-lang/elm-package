@@ -29,27 +29,32 @@ data Args
 
 install :: Bool -> Args -> Manager.Manager ()
 install autoYes args =
-    case args of
-      Everything ->
-          upgrade autoYes
+  do  exists <- liftIO (doesFileExist Path.description)
 
-      Latest name ->
-          do  version <- latestVersion name
-              updateDescription autoYes name version
-              upgrade autoYes
+      description <-
+          case exists of
+            True -> Desc.read Path.description
+            False -> initialDescription
 
-      Exactly name version ->
-          do  updateDescription autoYes name version
-              upgrade autoYes
+      case args of
+        Everything ->
+            upgrade autoYes description
+
+        Latest name ->
+            do  version <- latestVersion name
+                addConstraint autoYes name version description
+                upgrade autoYes description
+
+        Exactly name version ->
+            do  addConstraint autoYes name version description
+                upgrade autoYes description
 
 
 -- INSTALL EVERYTHING
 
-upgrade :: Bool -> Manager.Manager ()
-upgrade autoYes =
-  do  description <- Desc.read Path.description
-
-      newSolution <- Solver.solve (Desc.dependencies description)
+upgrade :: Bool -> Desc.Description -> Manager.Manager ()
+upgrade autoYes description =
+  do  newSolution <- Solver.solve (Desc.dependencies description)
 
       exists <- liftIO (doesFileExist Path.solvedDependencies)
       oldSolution <-
@@ -73,7 +78,7 @@ getApproval autoYes plan =
       return True
 
     False ->
-      do  putStrLn "To install we must make the following changes:"
+      do  putStrLn "Some new packages are needed. Here is the upgrade plan."
           putStrLn (Plan.display plan)
           putStr "Do you approve of this plan? (y/n) "
           Cmd.yesOrNo
@@ -108,18 +113,6 @@ runPlan solution plan =
 
 -- MODIFY DESCRIPTION
 
-updateDescription :: Bool -> N.Name -> V.Version -> Manager.Manager ()
-updateDescription autoYes name version =
-  do  exists <- liftIO (doesFileExist Path.description)
-
-      desc <-
-          case exists of
-            True -> Desc.read Path.description
-            False -> return Desc.defaultDescription
-
-      addConstraint autoYes desc name version
-
-
 latestVersion :: N.Name -> Manager.Manager V.Version
 latestVersion name =
   do  versionCache <- Store.readVersionCache
@@ -140,18 +133,34 @@ latestVersion name =
             ]
 
 
-addConstraint :: Bool -> Desc.Description -> N.Name -> V.Version -> Manager.Manager ()
-addConstraint autoYes description name version =
+addConstraint :: Bool -> N.Name -> V.Version -> Desc.Description -> Manager.Manager ()
+addConstraint autoYes name version description =
+  case List.lookup name (Desc.dependencies description) of
+    Nothing ->
+      addNewDependency autoYes name version description
+
+    Just constraint
+      | Constraint.isSatisfied constraint version ->
+          return ()
+
+      | otherwise ->
+          throwError $
+            "You are trying to install " ++ N.toString name ++ " " ++ V.toString version ++ " but that\n"
+            ++ "version does not satisfy the constraint listed in " ++ Path.description ++ "\n"
+            ++ "I recommend changing the constraint manually to be exactly what you want."
+
+
+addNewDependency :: Bool -> N.Name -> V.Version -> Desc.Description -> Manager.Manager ()
+addNewDependency autoYes name version description =
   do  confirm <-
           case autoYes of
             True -> return True
-            False -> liftIO confirmChange
+            False -> liftIO confirmNewAddition
 
       case confirm of
         False -> throwError noConfirmation
         True ->
             liftIO $ Desc.write $ description { Desc.dependencies = newConstraints }
-
   where
     newConstraints =
         List.insertBy
@@ -163,12 +172,18 @@ addConstraint autoYes description name version =
         "Cannot install the new package without changing " ++ Path.description ++ ".\n" ++
         "It may be easiest to modify it manually and then run 'elm-package install'."
 
-    confirmChange =
-        do  putStrLn $ "I am about to add " ++ N.toString name ++ " " ++ V.toString version ++ " to " ++ Path.description
-            case List.lookup name (Desc.dependencies description) of
-              Nothing -> return ()
-              Just constraint ->
-                  putStrLn $ "This will replace the existing constraint \"" ++ Constraint.toString constraint ++ "\""
+    confirmNewAddition =
+      do  putStrLn $ "I need to add " ++ N.toString name ++ " " ++ V.toString version ++ " as a dependency."
+          putStr $ "Is it okay if I add that to " ++ Path.description ++ " automatically? (y/n) "
+          Cmd.yesOrNo
 
-            putStr "Would you like to proceed? (y/n) "
-            Cmd.yesOrNo
+
+initialDescription :: Manager.Manager Desc.Description
+initialDescription =
+  do  let core = N.Name "elm-lang" "core"
+      version <- latestVersion core
+      let desc = Desc.defaultDescription {
+          Desc.dependencies = [ (core, Constraint.exactly version) ]
+      }
+      liftIO (Desc.write desc)
+      return desc
