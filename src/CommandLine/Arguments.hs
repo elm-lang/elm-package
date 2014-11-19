@@ -1,4 +1,4 @@
-module CommandLine.Options (parse) where
+module CommandLine.Arguments (parse) where
 
 import Control.Applicative (pure, optional, (<$>), (<*>), (<|>))
 import Control.Monad.Error (throwError)

@@ -4,14 +4,14 @@ import System.Directory (findExecutable)
 import System.Exit (exitFailure)
 import System.IO
 
-import qualified CommandLine.Options as Options
+import qualified CommandLine.Arguments as Arguments
 import qualified Manager
 
 
 main :: IO ()
 main =
   do  requireGit
-      manager <- Options.parse
+      manager <- Arguments.parse
       env <- Manager.defaultEnvironment
       result <- Manager.run env manager
       case result of

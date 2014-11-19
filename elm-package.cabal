@@ -91,8 +91,8 @@ Executable elm-package
 
     other-modules:
         Catalog,
+        CommandLine.Arguments,
         CommandLine.Helpers,
-        CommandLine.Options,
         Diff.Compare,
         Diff.Display,
         Elm.Package.Constraint,
