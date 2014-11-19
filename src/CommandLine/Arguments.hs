@@ -124,18 +124,18 @@ installInfo =
     Opt.info args infoModifier
   where
     args =
-        installWith <$> optional package <*> optional version
+        installWith <$> optional package <*> optional version <*> yes
 
-    installWith maybeName maybeVersion =
+    installWith maybeName maybeVersion autoYes =
         case (maybeName, maybeVersion) of
           (Nothing, Nothing) ->
-              Install.install Install.Everything
+              Install.install autoYes Install.Everything
 
           (Just name, Nothing) ->
-              Install.install (Install.Latest name)
+              Install.install autoYes (Install.Latest name)
 
           (Just name, Just version) ->
-              Install.install (Install.Exactly name version)
+              Install.install autoYes (Install.Exactly name version)
 
           (Nothing, Just version) ->
               throwError $
@@ -174,4 +174,13 @@ version =
         mconcat
         [ Opt.metavar "VERSION"
         , Opt.help "Specific version of a package (e.g. 1.2.0)"
+        ]
+
+yes :: Opt.Parser Bool
+yes =
+    Opt.switch $
+        mconcat
+        [ Opt.long "yes"
+        , Opt.short 'y'
+        , Opt.help "Reply 'yes' to all automated prompts."
         ]

@@ -27,26 +27,26 @@ data Args
     | Exactly N.Name V.Version
 
 
-install :: Args -> Manager.Manager ()
-install args =
+install :: Bool -> Args -> Manager.Manager ()
+install autoYes args =
     case args of
       Everything ->
-          upgrade
+          upgrade autoYes
 
       Latest name ->
           do  version <- latestVersion name
-              updateDescription name version
-              upgrade
+              updateDescription autoYes name version
+              upgrade autoYes
 
       Exactly name version ->
-          do  updateDescription name version
-              upgrade
+          do  updateDescription autoYes name version
+              upgrade autoYes
 
 
 -- INSTALL EVERYTHING
 
-upgrade :: Manager.Manager ()
-upgrade =
+upgrade :: Bool -> Manager.Manager ()
+upgrade autoYes =
   do  description <- Desc.read Path.description
 
       newSolution <- Solver.solve (Desc.dependencies description)
@@ -59,21 +59,24 @@ upgrade =
 
       let plan = Plan.create oldSolution newSolution
 
-      approve <- liftIO (getApproval plan)
+      approve <- liftIO (getApproval autoYes plan)
 
       if approve
           then runPlan newSolution plan
           else liftIO $ putStrLn "Okay, I did not change anything!"            
 
 
-getApproval :: Plan.Plan -> IO Bool
-getApproval plan
-    | Plan.isEmpty plan = return True
-    | otherwise =
-        do  putStrLn "To install we must make the following changes:"
-            putStrLn (Plan.display plan)
-            putStr "Do you approve of this plan? (y/n) "
-            Cmd.yesOrNo
+getApproval :: Bool -> Plan.Plan -> IO Bool
+getApproval autoYes plan =
+  case autoYes || Plan.isEmpty plan of
+    True ->
+      return True
+
+    False ->
+      do  putStrLn "To install we must make the following changes:"
+          putStrLn (Plan.display plan)
+          putStr "Do you approve of this plan? (y/n) "
+          Cmd.yesOrNo
 
 
 runPlan :: Solution.Solution -> Plan.Plan -> Manager.Manager ()
@@ -105,11 +108,16 @@ runPlan solution plan =
 
 -- MODIFY DESCRIPTION
 
-updateDescription :: N.Name -> V.Version -> Manager.Manager ()
-updateDescription name version =
+updateDescription :: Bool -> N.Name -> V.Version -> Manager.Manager ()
+updateDescription autoYes name version =
   do  exists <- liftIO (doesFileExist Path.description)
-      desc <- if exists then Desc.read Path.description else return Desc.defaultDescription
-      addConstraint desc name version
+
+      desc <-
+          case exists of
+            True -> Desc.read Path.description
+            False -> return Desc.defaultDescription
+
+      addConstraint autoYes desc name version
 
 
 latestVersion :: N.Name -> Manager.Manager V.Version
@@ -132,13 +140,18 @@ latestVersion name =
             ]
 
 
-addConstraint :: Desc.Description -> N.Name -> V.Version -> Manager.Manager ()
-addConstraint description name version =
-  do  confirm <- liftIO confirmChange
+addConstraint :: Bool -> Desc.Description -> N.Name -> V.Version -> Manager.Manager ()
+addConstraint autoYes description name version =
+  do  confirm <-
+          case autoYes of
+            True -> return True
+            False -> liftIO confirmChange
+
       case confirm of
         False -> throwError noConfirmation
         True ->
             liftIO $ Desc.write $ description { Desc.dependencies = newConstraints }
+
   where
     newConstraints =
         List.insertBy

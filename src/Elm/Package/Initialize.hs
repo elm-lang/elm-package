@@ -10,21 +10,25 @@ import qualified Install
 import qualified Manager
 
 
-descriptionAndSolution :: (MonadError String m, MonadIO m) => m S.Solution
-descriptionAndSolution =
-    runInstall (Install.Latest (N.Name "elm-lang" "core"))
+descriptionAndSolution :: (MonadError String m, MonadIO m) => Bool -> m S.Solution
+descriptionAndSolution autoYes =
+    runInstall autoYes (Install.Latest (N.Name "elm-lang" "core"))
 
 
-solution :: (MonadError String m, MonadIO m) => m S.Solution
-solution =
-    runInstall Install.Everything
+solution :: (MonadError String m, MonadIO m) => Bool -> m S.Solution
+solution autoYes =
+    runInstall autoYes Install.Everything
 
 
-runInstall :: (MonadError String m, MonadIO m) => Install.Args -> m S.Solution
-runInstall args =
+runInstall
+    :: (MonadError String m, MonadIO m)
+    => Bool
+    -> Install.Args
+    -> m S.Solution
+runInstall autoYes args =
   do  either <- liftIO $ do
           env <- Manager.defaultEnvironment
-          Manager.run env (Install.install args)
+          Manager.run env (Install.install autoYes args)
 
       case either of
         Left err -> throwError err
