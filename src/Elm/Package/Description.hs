@@ -9,8 +9,7 @@ import Control.Monad.Error (MonadError, throwError, MonadIO, liftIO, when, mzero
 import Data.Aeson
 import Data.Aeson.Types (Parser)
 import Data.Aeson.Encode.Pretty (encodePretty', defConfig, confCompare, keyOrder)
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as LBS
+import qualified Data.ByteString.Lazy.Char8 as BS
 import qualified Data.HashMap.Strict as Map
 import qualified Data.List as List
 import qualified Data.Maybe as Maybe
@@ -57,7 +56,7 @@ defaultDescription =
 
 read :: (MonadIO m, MonadError String m) => FilePath -> m Description
 read path =
-    do json <- liftIO (LBS.readFile path)
+    do json <- liftIO (BS.readFile path)
        case eitherDecode json of
          Left err -> throwError $ "Error reading file " ++ path ++ ":\n    " ++ err
          Right ds -> return ds
@@ -69,22 +68,22 @@ write :: Description -> IO ()
 write description =
     BS.writeFile Path.description json
   where
-    rawJson = LBS.toStrict (prettyJSON description)
-    json =
-        replace "\\u003e" ">" (replace "\\u003c" "<" rawJson)
+    json = prettyAngles (prettyJSON description)
 
 
-replace :: BS.ByteString -> BS.ByteString -> BS.ByteString -> BS.ByteString
-replace old new string =
+prettyAngles :: BS.ByteString -> BS.ByteString
+prettyAngles string =
     BS.concat $ replaceChunks string
   where
-    replaceChunks hs =
-        let (before, after) = BS.breakSubstring old hs
+    replaceChunks str =
+        let (before, after) = BS.break (=='\\') str
         in
-            case BS.null after of
-              True -> [hs]
-              False ->
-                  before : new : replaceChunks (BS.drop (BS.length old) after)
+            case BS.take 5 after of
+              "\\u003e" -> before : ">" : replaceChunks (BS.drop 5 after)
+              "\\u003c" -> before : "<" : replaceChunks (BS.drop 5 after)
+              "" -> []
+              _ ->
+                  before : "\\" : replaceChunks (BS.tail after)
 
 
 -- FIND MODULE FILE PATHS
@@ -129,7 +128,7 @@ locateExposedModules desc =
 
 -- JSON
 
-prettyJSON :: Description -> LBS.ByteString
+prettyJSON :: Description -> BS.ByteString
 prettyJSON description =
     encodePretty' config description
   where
