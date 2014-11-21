@@ -9,6 +9,7 @@ import qualified Data.Set as Set
 
 import qualified Catalog
 import qualified Elm.Compiler.Module as Module
+import qualified Elm.Compiler.Type as Type
 import qualified Elm.Docs as Docs
 import qualified Elm.Package.Name as N
 import qualified Elm.Package.Version as V
@@ -84,9 +85,9 @@ data PackageChanges = PackageChanges
     }
 
 data ModuleChanges = ModuleChanges
-    { adtChanges :: Changes String ([String], Map.Map String [Docs.Type])
-    , aliasChanges :: Changes String ([String], Docs.Type)
-    , valueChanges :: Changes String Docs.Type
+    { adtChanges :: Changes String ([String], Map.Map String [Type.Type])
+    , aliasChanges :: Changes String ([String], Type.Type)
+    , valueChanges :: Changes String Type.Type
     }
 
 data Changes k v = Changes
@@ -114,9 +115,9 @@ diffPackages oldDocs newDocs =
 
 
 data Module = Module
-    { adts :: Map.Map String ([String], Map.Map String [Docs.Type])
-    , aliases :: Map.Map String ([String], Docs.Type)
-    , values :: Map.Map String Docs.Type
+    { adts :: Map.Map String ([String], Map.Map String [Type.Type])
+    , aliases :: Map.Map String ([String], Type.Type)
+    , values :: Map.Map String Type.Type
     }
 
 
@@ -167,15 +168,15 @@ getChanges isEquivalent old new =
 
 
 isEquivalentAdt
-    :: ([String], Map.Map String [Docs.Type])
-    -> ([String], Map.Map String [Docs.Type])
+    :: ([String], Map.Map String [Type.Type])
+    -> ([String], Map.Map String [Type.Type])
     -> Bool
 isEquivalentAdt (oldVars, oldCtors) (newVars, newCtors) =
     Map.size oldCtors == Map.size newCtors
     && and (zipWith (==) (Map.keys oldCtors) (Map.keys newCtors))
     && and (Map.elems (Map.intersectionWith equiv oldCtors newCtors))
   where
-    equiv :: [Docs.Type] -> [Docs.Type] -> Bool
+    equiv :: [Type.Type] -> [Type.Type] -> Bool
     equiv oldTypes newTypes =
         let allEquivalent =
                 zipWith
@@ -187,7 +188,7 @@ isEquivalentAdt (oldVars, oldCtors) (newVars, newCtors) =
             && and allEquivalent
 
 
-isEquivalentType :: ([String], Docs.Type) -> ([String], Docs.Type) -> Bool
+isEquivalentType :: ([String], Type.Type) -> ([String], Type.Type) -> Bool
 isEquivalentType (oldVars, oldType) (newVars, newType) =
     case diffType oldType newType of
       Nothing -> False
@@ -198,23 +199,23 @@ isEquivalentType (oldVars, oldType) (newVars, newType) =
 
 -- TYPES
 
-diffType :: Docs.Type -> Docs.Type -> Maybe [(String,String)]
+diffType :: Type.Type -> Type.Type -> Maybe [(String,String)]
 diffType oldType newType =
     case (oldType, newType) of
-      (Docs.Var oldName, Docs.Var newName) ->
+      (Type.Var oldName, Type.Var newName) ->
           Just [(oldName, newName)]
 
-      (Docs.Type oldName, Docs.Type newName) ->
+      (Type.Type oldName, Type.Type newName) ->
           if oldName == newName
               then Just []
               else Nothing
 
-      (Docs.Lambda a b, Docs.Lambda a' b') ->
+      (Type.Lambda a b, Type.Lambda a' b') ->
           (++)
               <$> diffType a a'
               <*> diffType b b'
 
-      (Docs.App t ts, Docs.App t' ts') ->
+      (Type.App t ts, Type.App t' ts') ->
           if length ts /= length ts'
             then Nothing
             else
@@ -222,7 +223,7 @@ diffType oldType newType =
                     <$> diffType t t'
                     <*> (concat <$> zipWithM diffType ts ts')
 
-      (Docs.Record fields maybeExt, Docs.Record fields' maybeExt') ->
+      (Type.Record fields maybeExt, Type.Record fields' maybeExt') ->
           case (maybeExt, maybeExt') of
             (Nothing, Just _) -> Nothing
             (Just _, Nothing) -> Nothing
@@ -236,7 +237,7 @@ diffType oldType newType =
           Nothing
 
 
-diffFields :: [(String, Docs.Type)] -> [(String, Docs.Type)] -> Maybe [(String,String)]
+diffFields :: [(String, Type.Type)] -> [(String, Type.Type)] -> Maybe [(String,String)]
 diffFields rawFields rawFields'
     | length rawFields /= length rawFields' = Nothing
     | or (zipWith ((/=) `on` fst) fields fields') = Nothing
