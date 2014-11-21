@@ -81,7 +81,7 @@ prettyAngles string =
             case BS.take 5 after of
               "\\u003e" -> before : ">" : replaceChunks (BS.drop 5 after)
               "\\u003c" -> before : "<" : replaceChunks (BS.drop 5 after)
-              "" -> []
+              "" -> [before]
               _ ->
                   before : "\\" : replaceChunks (BS.tail after)
 
