@@ -210,7 +210,7 @@ getDependencies obj =
             case (N.fromString f, C.fromString c) of
               (Just name, Just constr) -> return (name, constr)
               (Nothing, _) -> fail $ N.errorMsg f
-              (_, Nothing) -> fail $ "Invalid constraint: " ++ c
+              (_, Nothing) -> fail $ C.errorMessage c
 
 
 repoToName :: String -> Either String N.Name

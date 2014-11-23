@@ -165,7 +165,7 @@ addNewDependency autoYes name version description =
     newConstraints =
         List.insertBy
             (compare `on` fst)
-            (name, Constraint.exactly version)
+            (name, Constraint.minimalRangeFrom version)
             (Desc.dependencies description)
 
     noConfirmation =
@@ -183,7 +183,7 @@ initialDescription =
   do  let core = N.Name "elm-lang" "core"
       version <- latestVersion core
       let desc = Desc.defaultDescription {
-          Desc.dependencies = [ (core, Constraint.exactly version) ]
+          Desc.dependencies = [ (core, Constraint.minimalRangeFrom version) ]
       }
       liftIO (Desc.write desc)
       return desc
