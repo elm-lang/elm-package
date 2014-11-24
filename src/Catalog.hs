@@ -103,42 +103,50 @@ register name version =
 
 description
     :: (MonadIO m, MonadReader Manager.Environment m, MonadError String m)
-    => N.Name -> V.Version -> m Desc.Description
+    => N.Name
+    -> V.Version
+    -> m Desc.Description
 description name version =
-  getJson "description" name version
+  getJson "description" P.description name version
 
 
 documentation
     :: (MonadIO m, MonadReader Manager.Environment m, MonadError String m)
-    => N.Name -> V.Version -> m [Docs.Documentation]
+    => N.Name
+    -> V.Version
+    -> m [Docs.Documentation]
 documentation name version =
-  getJson "documentation" name version
+  getJson "documentation" "documentation.json" name version
 
 
 getJson
     :: (MonadIO m, MonadReader Manager.Environment m, MonadError String m, Json.FromJSON a)
-    => String -> N.Name -> V.Version -> m a
-getJson metadata name version =
+    => String
+    -> FilePath
+    -> N.Name
+    -> V.Version
+    -> m a
+getJson metadata metadataPath name version =
   do  cacheDir <- asks Manager.cacheDirectory
-      let metadataPath =
-            cacheDir </> N.toFilePath name </> V.toString version </> metadata <.> "json"
+      let fullMetadataPath =
+            cacheDir </> N.toFilePath name </> V.toString version </> metadataPath
 
-      exists <- liftIO (doesFileExist metadataPath)
+      exists <- liftIO (doesFileExist fullMetadataPath)
       
       content <-
         case exists of
-          True -> liftIO (LBS.readFile metadataPath)
+          True -> liftIO (LBS.readFile fullMetadataPath)
           False ->
             do  url <- catalog metadata [("name", N.toString name), ("version", V.toString version)]
                 Http.send url $ \request manager ->
                     do  response <- Client.httpLbs request manager
-                        createDirectoryIfMissing True (dropFileName metadataPath)
-                        LBS.writeFile metadataPath (Client.responseBody response)
+                        createDirectoryIfMissing True (dropFileName fullMetadataPath)
+                        LBS.writeFile fullMetadataPath (Client.responseBody response)
                         return (Client.responseBody response)
                       
       case Json.eitherDecode content of
         Right value -> return value
         Left err ->
           throwError $
-            "Unable to get " ++ metadata ++ " for "
+            "Unable to get " ++ metadataPath ++ " for "
             ++ N.toString name ++ " " ++ V.toString version ++ "\n" ++ err
