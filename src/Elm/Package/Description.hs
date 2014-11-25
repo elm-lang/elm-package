@@ -78,9 +78,9 @@ prettyAngles string =
     replaceChunks str =
         let (before, after) = BS.break (=='\\') str
         in
-            case BS.take 5 after of
-              "\\u003e" -> before : ">" : replaceChunks (BS.drop 5 after)
-              "\\u003c" -> before : "<" : replaceChunks (BS.drop 5 after)
+            case BS.take 6 after of
+              "\\u003e" -> before : ">" : replaceChunks (BS.drop 6 after)
+              "\\u003c" -> before : "<" : replaceChunks (BS.drop 6 after)
               "" -> [before]
               _ ->
                   before : "\\" : replaceChunks (BS.tail after)
