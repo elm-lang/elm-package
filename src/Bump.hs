@@ -40,14 +40,14 @@ bump =
 unbumpable :: [V.Version] -> String
 unbumpable validBumps =
     unlines
-    [ "To use bump-version you must start with an already published version number"
-    , "in " ++ Path.description ++ ", giving us a starting point to bump from."
+    [ "To bump you must start with an already published version number in"
+    , Path.description ++ ", giving us a starting point to bump from."
     , ""
     , "The version numbers that can be bumped include the following subset of"
     , "published versions:"
     , "  " ++ List.intercalate ", " (map V.toString validBumps)
     , ""
-    , "Switch back to one of these versions before running 'elm-package bump-version'"
+    , "Switch back to one of these versions before running 'elm-package bump'"
     , "again."
     ]
 
@@ -71,12 +71,13 @@ validateInitialVersion description =
             , ""
             , "  * Versions all have exactly three parts: MAJOR.MINOR.PATCH"
             , ""
+            , "  * All packages start with initial version " ++ V.toString V.initialVersion
+            , ""
             , "  * Versions are incremented based on how the API changes:"
+            , ""
             , "        PATCH - the API is the same, no risk of breaking code"
             , "        MINOR - values have been added, existing values are unchanged"
             , "        MAJOR - existing values have been changed or removed"
-            , ""
-            , "  * All packages start with initial version " ++ V.toString V.initialVersion
             , ""
             , "  * I will bump versions for you, automatically enforcing these rules"
             , ""
@@ -166,7 +167,7 @@ validateVersion newDocs name statedVersion publishedVersions =
             "Version " ++ V.toString statedVersion
             ++ " has already been published, but you are trying to publish\n"
             ++ "it again! Run the following command to see what the new version should be.\n"
-            ++ "\n    elm-package bump-version\n"
+            ++ "\n    elm-package bump\n"
 
         invalidBump =
             unlines
@@ -180,7 +181,7 @@ validateVersion newDocs name statedVersion publishedVersions =
             , "From there, we can compute which version comes next based on the API changes"
             , "when you run the following command."
             , ""
-            , "    elm-package bump-version"
+            , "    elm-package bump"
             ]
 
         badBump old new realNew magnitude changes =
@@ -199,7 +200,7 @@ validateVersion newDocs name statedVersion publishedVersions =
             , "that you are improving upon, we will compute which version should come next"
             , "when you run:"
             , ""
-            , "    elm-package bump-version"
+            , "    elm-package bump"
             ]
 
 
