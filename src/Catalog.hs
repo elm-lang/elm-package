@@ -14,7 +14,7 @@ import Network.HTTP
 import qualified Network.HTTP.Client as Client
 import qualified Network.HTTP.Client.MultipartFormData as Multi
 import System.Directory (createDirectoryIfMissing, doesFileExist)
-import System.FilePath ((</>), (<.>), dropFileName)
+import System.FilePath ((</>), dropFileName)
 
 import qualified Elm.Docs as Docs
 import qualified Elm.Package.Description as Desc
