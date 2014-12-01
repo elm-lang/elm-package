@@ -3,6 +3,7 @@ module Elm.Package.Constraint
     , fromString
     , toString
     , minimalRangeFrom
+    , expand
     , isSatisfied
     , errorMessage
     ) where
@@ -27,6 +28,19 @@ data Op = Less | LessOrEqual
 minimalRangeFrom :: V.Version -> Constraint
 minimalRangeFrom version =
   Range version LessOrEqual Less (V.bumpMajor version)
+
+
+expand :: Constraint -> V.Version -> Constraint
+expand constraint@(Range lower lowerOp upperOp upper) version
+  | version < lower =
+      Range version LessOrEqual upperOp upper
+
+  | version > upper = 
+      Range lower lowerOp Less (V.bumpMajor version)
+
+  | otherwise =
+      constraint
+
 
 
 -- CHECK IF SATISFIED

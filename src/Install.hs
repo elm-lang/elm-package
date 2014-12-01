@@ -144,9 +144,12 @@ addConstraint autoYes name version description =
 
       | otherwise ->
           throwError $
-            "You are trying to install " ++ N.toString name ++ " " ++ V.toString version ++ " but that\n"
-            ++ "version does not satisfy the constraint listed in " ++ Path.description ++ "\n"
-            ++ "I recommend changing the constraint manually to be exactly what you want."
+            "This is a tricky update, you should modify " ++ Path.description ++ " yourself.\n"
+            ++ "Package " ++ N.toString name ++ " is already listed as a dependency:\n\n    "
+            ++ showDependency name constraint ++ "\n\n"
+            ++ "You probably want one of the following constraints instead:\n\n    "
+            ++ Constraint.toString (Constraint.expand constraint version) ++ "\n    "
+            ++ Constraint.toString (Constraint.minimalRangeFrom version) ++ "\n"
 
 
 addNewDependency :: Bool -> N.Name -> V.Version -> Desc.Description -> Manager.Manager Desc.Description
@@ -184,11 +187,16 @@ addNewDependency autoYes name version description =
       do  putStrLn $
             "To install " ++ N.toString name ++ " I would like to add the following\n"
             ++ "dependency to " ++ Path.description ++ ":\n\n    "
-            ++ show (N.toString name) ++ ": " ++ show (Constraint.toString newConstraint)
+            ++ showDependency name newConstraint
             ++ "\n"
 
           putStr $ "May I add that to " ++ Path.description ++ " for you? (y/n) "
           Cmd.yesOrNo
+
+
+showDependency :: N.Name -> Constraint.Constraint -> String
+showDependency name constraint =
+    show (N.toString name) ++ ": " ++ show (Constraint.toString constraint)
 
 
 initialDescription :: Manager.Manager Desc.Description
