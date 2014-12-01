@@ -1,7 +1,6 @@
 module Install where
 
 import Control.Monad.Error
-import Data.Function (on)
 import qualified Data.List as List
 import qualified Data.Map as Map
 import System.Directory (doesFileExist, removeDirectoryRecursive)
@@ -42,12 +41,12 @@ install autoYes args =
 
         Latest name ->
             do  version <- latestVersion name
-                addConstraint autoYes name version description
-                upgrade autoYes description
+                newDescription <- addConstraint autoYes name version description
+                upgrade autoYes newDescription
 
         Exactly name version ->
-            do  addConstraint autoYes name version description
-                upgrade autoYes description
+            do  newDescription <- addConstraint autoYes name version description
+                upgrade autoYes newDescription
 
 
 -- INSTALL EVERYTHING
@@ -133,7 +132,7 @@ latestVersion name =
             ]
 
 
-addConstraint :: Bool -> N.Name -> V.Version -> Desc.Description -> Manager.Manager ()
+addConstraint :: Bool -> N.Name -> V.Version -> Desc.Description -> Manager.Manager Desc.Description
 addConstraint autoYes name version description =
   case List.lookup name (Desc.dependencies description) of
     Nothing ->
@@ -141,7 +140,7 @@ addConstraint autoYes name version description =
 
     Just constraint
       | Constraint.isSatisfied constraint version ->
-          return ()
+          return description
 
       | otherwise ->
           throwError $
@@ -150,31 +149,45 @@ addConstraint autoYes name version description =
             ++ "I recommend changing the constraint manually to be exactly what you want."
 
 
-addNewDependency :: Bool -> N.Name -> V.Version -> Desc.Description -> Manager.Manager ()
+addNewDependency :: Bool -> N.Name -> V.Version -> Desc.Description -> Manager.Manager Desc.Description
 addNewDependency autoYes name version description =
   do  confirm <-
           case autoYes of
             True -> return True
-            False -> liftIO confirmNewAddition
+            False ->
+              do  answer <- liftIO confirmNewAddition
+                  liftIO (putStrLn "")
+                  return answer
 
       case confirm of
-        False -> throwError noConfirmation
+        False ->
+          do  liftIO $ putStrLn noConfirmation
+              return description
         True ->
-            liftIO $ Desc.write $ description { Desc.dependencies = newConstraints }
+          do  let newDescription = description { Desc.dependencies = newConstraints }
+              liftIO $ Desc.write newDescription
+              return newDescription
   where
+    newConstraint =
+        Constraint.minimalRangeFrom version
+
     newConstraints =
-        List.insertBy
-            (compare `on` fst)
-            (name, Constraint.minimalRangeFrom version)
-            (Desc.dependencies description)
+        (name, newConstraint) : Desc.dependencies description
 
     noConfirmation =
-        "Cannot install the new package without changing " ++ Path.description ++ ".\n" ++
-        "It may be easiest to modify it manually and then run 'elm-package install'."
+        "Cannot install the new package unless it appears in " ++ Path.description ++ ".\n" ++
+        "If you do not like the constraint I suggested, change it manually and then run:\n" ++
+        "\n    elm-package install\n\n" ++
+        "This will install everything listed in " ++ Path.description ++ "."
 
     confirmNewAddition =
-      do  putStrLn $ "I need to add " ++ N.toString name ++ " " ++ V.toString version ++ " as a dependency."
-          putStr $ "Is it okay if I add that to " ++ Path.description ++ " automatically? (y/n) "
+      do  putStrLn $
+            "To install " ++ N.toString name ++ " I would like to add the following\n"
+            ++ "dependency to " ++ Path.description ++ ":\n\n    "
+            ++ show (N.toString name) ++ ": " ++ show (Constraint.toString newConstraint)
+            ++ "\n"
+
+          putStr $ "May I add that to " ++ Path.description ++ " for you? (y/n) "
           Cmd.yesOrNo
 
 
