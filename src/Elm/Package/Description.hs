@@ -10,6 +10,7 @@ import Data.Aeson
 import Data.Aeson.Types (Parser)
 import Data.Aeson.Encode.Pretty (encodePretty', defConfig, confCompare, keyOrder)
 import qualified Data.ByteString.Lazy.Char8 as BS
+import Data.Function (on)
 import qualified Data.HashMap.Strict as Map
 import qualified Data.List as List
 import qualified Data.Maybe as Maybe
@@ -22,6 +23,7 @@ import qualified Elm.Package.Name as N
 import qualified Elm.Package.Version as V
 import qualified Elm.Package.Constraint as C
 import qualified Elm.Package.Paths as Path
+import Elm.Utils ((|>))
 
 
 data Description = Description
@@ -132,9 +134,10 @@ prettyJSON :: Description -> BS.ByteString
 prettyJSON description =
     encodePretty' config description
   where
-    config = defConfig { confCompare = order }
-    order =
-        keyOrder
+    config =
+        defConfig { confCompare = keyOrder (normalKeys ++ dependencyKeys) }
+
+    normalKeys =
         [ "version"
         , "summary"
         , "repository"
@@ -144,6 +147,12 @@ prettyJSON description =
         , "native-modules"
         , "dependencies"
         ]
+
+    dependencyKeys =
+        dependencies description
+          |> map fst
+          |> List.sort
+          |> map (T.pack . N.toString)
 
 
 instance ToJSON Description where
