@@ -85,7 +85,15 @@ getApproval autoYes plan =
 
 runPlan :: Solution.Solution -> Plan.Plan -> Manager.Manager ()
 runPlan solution plan =
-  do  -- fetch new dependencies
+  do  let installs =
+            Map.toList (Plan.installs plan)
+            ++ Map.toList (Map.map snd (Plan.upgrades plan))
+
+      let removals =
+            Map.toList (Plan.removals plan)
+            ++ Map.toList (Map.map fst (Plan.upgrades plan))
+
+      -- fetch new dependencies
       Cmd.inDir Path.packagesDirectory $
           forM_ installs $ \(name, version) ->
               do  liftIO (putStrLn ("Downloading " ++ N.toString name))
@@ -96,20 +104,10 @@ runPlan solution plan =
 
       -- remove dependencies that are not needed
       Cmd.inDir Path.packagesDirectory $
-          liftIO $ mapM_ remove removals
+          forM_ removals $ \(name, version) ->
+              liftIO $ removeDirectoryRecursive (N.toFilePath name </> V.toString version)
 
       liftIO $ putStrLn "Packages configured successfully!"
-  where
-    installs =
-        Map.toList (Plan.installs plan)
-        ++ Map.toList (Map.map snd (Plan.upgrades plan))
-
-    removals =
-        Map.toList (Plan.removals plan)
-        ++ Map.toList (Map.map fst (Plan.upgrades plan))
-
-    remove (name, version) =
-        removeDirectoryRecursive (N.toFilePath name </> V.toString version)
 
 
 -- MODIFY DESCRIPTION
