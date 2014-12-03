@@ -10,7 +10,6 @@ import Data.Aeson
 import Data.Aeson.Types (Parser)
 import Data.Aeson.Encode.Pretty (encodePretty', defConfig, confCompare, keyOrder)
 import qualified Data.ByteString.Lazy.Char8 as BS
-import Data.Function (on)
 import qualified Data.HashMap.Strict as Map
 import qualified Data.List as List
 import qualified Data.Maybe as Maybe
