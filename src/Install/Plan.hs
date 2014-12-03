@@ -57,7 +57,7 @@ display (Plan installs upgrades removals) =
         N.toString name ++ " " ++ V.toString version
 
     displayUpgrade (name, (old, new)) =
-        N.toString name ++ " (" ++ V.toString old ++ " -> " ++ V.toString new ++ ")"
+        N.toString name ++ " (" ++ V.toString old ++ " => " ++ V.toString new ++ ")"
 
     displayRemove (name, _version) =
         N.toString name
