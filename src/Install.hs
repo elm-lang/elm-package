@@ -87,7 +87,9 @@ runPlan :: Solution.Solution -> Plan.Plan -> Manager.Manager ()
 runPlan solution plan =
   do  -- fetch new dependencies
       Cmd.inDir Path.packagesDirectory $
-          mapM_ (uncurry Fetch.package) installs
+          forM_ installs $ \(name, version) ->
+              do  liftIO (putStrLn ("Downloading " ++ N.toString name))
+                  Fetch.package name version
 
       -- try to build new dependencies
       liftIO (Solution.write Path.solvedDependencies solution)
