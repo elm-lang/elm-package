@@ -21,10 +21,7 @@ solve constraints =
           Just solution -> return solution
           Nothing ->
               throwError $
-              "Unable to find a set of packages that will work with your constraints.\n\
-              \Try running the following command to get the latest list of packages:\n\n\
-              \    elm-package update\n\n\
-              \This may pull in additional versions that will make it possible to install."
+              "Unable to find a set of packages that will work with your constraints."
 
 
 -- EXPLORE CONSTRAINTS

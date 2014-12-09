@@ -123,12 +123,7 @@ latestVersion name =
             throwError $
             unlines
             [ "No versions of package '" ++ N.toString name ++ "' were found!"
-            , "Is it spelled correctly? If so, try running the following command to download"
-            , "the latest package listing to your computer:"
-            , ""
-            , "    elm-package update"
-            , ""
-            , "After that, try installing again."
+            , "Is it spelled correctly?"
             ]
 
 

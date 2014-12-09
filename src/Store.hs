@@ -114,11 +114,4 @@ getVersions name =
             throwError noLocalVersions
   where
     noLocalVersions =
-        unlines
-        [ "There are no versions of package '" ++ N.toString name ++ "' on your computer."
-        , "Run the following command to update your local package listing:"
-        , ""
-        , "    elm-package update"
-        , ""
-        , "Then try to install again."
-        ]
+        "There are no versions of package '" ++ N.toString name ++ "' on your computer."
