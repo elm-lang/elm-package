@@ -90,23 +90,29 @@ Executable elm-package
         Main.hs
 
     other-modules:
+        Bump,
         Catalog,
         CommandLine.Arguments,
         CommandLine.Helpers,
+        Diff,
         Diff.Compare,
         Diff.Display,
+        Docs,
         Elm.Package.Constraint,
         Elm.Package.Description,
+        Elm.Package.Initialize,
         Elm.Package.Name,
         Elm.Package.Paths,
         Elm.Package.Solution,
         Elm.Package.Version,
+        Github,
         Install,
         Install.Fetch,
         Install.Plan,
         Install.Solver,
         Manager,
         Publish,
+        Store,
         Utils.Http,
         Utils.Paths
 
