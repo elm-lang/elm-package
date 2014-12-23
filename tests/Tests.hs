@@ -2,7 +2,7 @@ module Main where
 
 import qualified Test.Framework as TF
 
-import SolverTests
+--import SolverTests
 import ComparisonTests
 
-main = TF.defaultMain [ solverTests, comparisonTests ]
+main = TF.defaultMain [ comparisonTests ]

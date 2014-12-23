@@ -2,7 +2,7 @@ module CommandLine.Arguments (parse) where
 
 import Control.Applicative (pure, optional, (<$>), (<*>), (<|>))
 import Control.Monad (mzero)
-import Control.Monad.Error (throwError)
+import Control.Monad.Except (throwError)
 import Control.Monad.Reader.Class (ask)
 import Data.Monoid ((<>), mconcat, mempty)
 import Data.Version (showVersion)

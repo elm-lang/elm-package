@@ -5,7 +5,7 @@ module Elm.Package.Description where
 import Prelude hiding (read)
 import Control.Applicative ((<$>))
 import Control.Arrow (first)
-import Control.Monad.Error (MonadError, throwError, MonadIO, liftIO, when, mzero, forM)
+import Control.Monad.Except (MonadError, throwError, MonadIO, liftIO, when, mzero, forM)
 import Data.Aeson
 import Data.Aeson.Types (Parser)
 import Data.Aeson.Encode.Pretty (encodePretty', defConfig, confCompare, keyOrder)

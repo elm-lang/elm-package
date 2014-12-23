@@ -7,17 +7,17 @@ import Control.Monad.State
 import Test.HUnit ((@?), Assertion)
 import qualified Test.Framework as TF
 import qualified Test.Framework.Providers.HUnit as TH
-import qualified Utils.ResolveDeps as Deps
+--import qualified Utils.ResolveDeps as Deps
 import Data.Map (Map)
 import qualified Data.Map as Map
-import qualified Elm.Internal.Constraint as C
+import qualified Elm.Package.Constraint as C
 import qualified Elm.Internal.Version as V
 import qualified Elm.Internal.Name as N
 
 
 -- SETUP
 
-type FakeDB = Map N.Name [(V.Version, Deps.Constraints)]
+type FakeDB = Map N.Name [(V.Version, [C.Constraint])]
 
 db1 :: FakeDB
 db1 = Map.fromList [ base, transformers, mtl, conduit, http ]

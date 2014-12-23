@@ -1,6 +1,6 @@
 module Install where
 
-import Control.Monad.Error
+import Control.Monad.Except
 import qualified Data.List as List
 import qualified Data.Map as Map
 import System.Directory (doesFileExist, removeDirectoryRecursive)

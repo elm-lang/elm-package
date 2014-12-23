@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module GitHub (getVersionTags) where
 
-import Control.Monad.Error
+import Control.Monad.Except
 import Data.Aeson as Json
 import qualified Data.Maybe as Maybe
 import Data.Monoid ((<>))

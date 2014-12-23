@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 module CommandLine.Helpers where
 
-import Control.Monad.Error
+import Control.Monad.Except
 import System.Directory
 import System.IO
 
