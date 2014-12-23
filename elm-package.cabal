@@ -142,45 +142,45 @@ Executable elm-package
         vector >= 0.10 && < 0.11,
         zip-archive
 
-Test-suite unit-test
-    Type:
-        exitcode-stdio-1.0
+-- Test-suite unit-test
+--     Type:
+--         exitcode-stdio-1.0
 
-    Hs-Source-Dirs:
-        tests, src
+--     Hs-Source-Dirs:
+--         tests, src
 
-    Main-is:
-        Tests.hs
+--     Main-is:
+--         Tests.hs
 
-    Other-modules:
-        SolverTests
+--     Other-modules:
+--         ComparisonTests
+--         SolverTests
 
-    Build-depends:
-        aeson,
-        aeson-pretty,
-        ansi-wl-pprint,
-        base >=4.2 && <5,
-        binary,
-        bytestring,
-        containers,
-        directory,
-        elm-compiler >= 0.14 && < 0.15,
-        filepath,
-        HTTP,
-        HUnit,
-        http-client >= 0.3,
-        http-client-tls,
-        http-types,
-        json,
-        mtl,
-        network,
-        optparse-applicative,
-        pretty,
-        process,
-        resourcet,
-        test-framework,
-        test-framework-hunit,
-        text,
-        time,
-        unordered-containers,
-        vector
+--     Build-depends:
+--         aeson,
+--         aeson-pretty,
+--         ansi-wl-pprint,
+--         base >=4.2 && <5,
+--         binary,
+--         bytestring,
+--         containers,
+--         directory,
+--         elm-compiler >= 0.14 && < 0.15,
+--         filepath,
+--         HTTP,
+--         HUnit,
+--         http-client >= 0.3,
+--         http-client-tls,
+--         http-types,
+--         json,
+--         mtl,
+--         network,
+--         optparse-applicative,
+--         pretty,
+--         process,
+--         test-framework,
+--         test-framework-hunit,
+--         text,
+--         time,
+--         unordered-containers,
+--         vector
