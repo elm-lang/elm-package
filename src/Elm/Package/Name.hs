@@ -1,7 +1,8 @@
+{-# LANGUAGE FlexibleContexts #-}
 module Elm.Package.Name where
 
 import Control.Applicative ((<$>), (<*>))
-import Control.Monad.Error
+import Control.Monad.Except
 import Data.Aeson
 import Data.Binary
 import qualified Data.Text as T
@@ -44,7 +45,7 @@ fromString string =
       _ -> Nothing
 
 
-fromString' :: String -> ErrorT String IO Name
+fromString' :: (MonadError String m) => String -> m Name
 fromString' string =
     Maybe.maybe (throwError $ errorMsg string) return (fromString string)
 
