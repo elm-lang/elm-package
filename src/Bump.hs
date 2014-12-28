@@ -214,5 +214,5 @@ validBumps publishedVersions =
   where
     patchPoints = V.filterLatest V.majorAndMinor publishedVersions
     minorPoints = V.filterLatest V.major publishedVersions
-    majorPoint = last publishedVersions
+    majorPoint = head publishedVersions
 
