@@ -29,23 +29,25 @@ bump =
                 validateInitialVersion description
 
             Just publishedVersions ->
-                let bumps = map (\(old, _, _) -> old) (validBumps publishedVersions) in
-                if statedVersion `elem` bumps
+                let baseVersions = map (\(old, _, _) -> old) (validBumps publishedVersions) in
+                if statedVersion `elem` baseVersions
                     then suggestVersion newDocs name statedVersion description
-                    else throwError (unbumpable bumps)
+                    else throwError (unbumpable baseVersions)
 
         return ()
 
 
 unbumpable :: [V.Version] -> String
-unbumpable validBumps =
+unbumpable baseVersions =
+  let versions = map head (List.group (List.sort baseVersions))
+  in
     unlines
     [ "To bump you must start with an already published version number in"
     , Path.description ++ ", giving us a starting point to bump from."
     , ""
     , "The version numbers that can be bumped include the following subset of"
     , "published versions:"
-    , "  " ++ List.intercalate ", " (map V.toString validBumps)
+    , "  " ++ List.intercalate ", " (map V.toString versions)
     , ""
     , "Switch back to one of these versions before running 'elm-package bump'"
     , "again."
