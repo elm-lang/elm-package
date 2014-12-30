@@ -1,9 +1,7 @@
 module CommandLine.Arguments (parse) where
 
 import Control.Applicative (pure, optional, (<$>), (<*>), (<|>))
-import Control.Monad (mzero)
 import Control.Monad.Error (throwError)
-import Control.Monad.Reader.Class (ask)
 import Data.Monoid ((<>), mconcat, mempty)
 import Data.Version (showVersion)
 import qualified Options.Applicative as Opt
@@ -162,14 +160,9 @@ installInfo =
 
 -- ARGUMENT PARSERS
 
-mkParser :: (String -> Maybe a) -> Opt.ReadM a
-mkParser p =
-  do  s <- Opt.str
-      maybe mzero return . p $ s
-
 package :: Opt.Parser N.Name
 package =
-    Opt.argument (mkParser N.fromString) $
+    Opt.argument N.fromString $
         mconcat
         [ Opt.metavar "PACKAGE"
         , Opt.help "A specific package name (e.g. evancz/automaton)"
@@ -177,7 +170,7 @@ package =
 
 version :: Opt.Parser V.Version
 version =
-    Opt.argument (mkParser V.fromString) $
+    Opt.argument V.fromString $
         mconcat
         [ Opt.metavar "VERSION"
         , Opt.help "Specific version of a package (e.g. 1.2.0)"
