@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Store (Store, getConstraints, getVersions, initialStore, readVersionCache) where
 
-import Control.Monad.Except (MonadError, throwError)
+import Control.Monad.Error (MonadError, throwError)
 import Control.Monad.RWS (MonadIO, liftIO, MonadReader, asks, MonadState, gets, modify)
 import qualified Data.Binary as Binary
 import qualified Data.ByteString.Lazy as BS

@@ -1,6 +1,6 @@
 module Bump where
 
-import Control.Monad.Except (throwError, liftIO)
+import Control.Monad.Error (throwError, liftIO)
 import qualified Data.List as List
 
 import qualified Catalog

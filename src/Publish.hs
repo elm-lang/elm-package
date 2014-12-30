@@ -1,6 +1,6 @@
 module Publish where
 
-import Control.Monad.Except (throwError)
+import Control.Monad.Error (throwError)
 import qualified Data.Maybe as Maybe
 
 import qualified Bump

@@ -1,6 +1,6 @@
 module Diff where
 
-import Control.Monad.Except (throwError)
+import Control.Monad.Error (throwError)
 
 import qualified Catalog
 import qualified CommandLine.Helpers as Cmd

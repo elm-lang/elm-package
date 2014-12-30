@@ -3,7 +3,7 @@
 module Elm.Package.Solution (Solution, write, read) where
 
 import Prelude hiding (read)
-import Control.Monad.Except (MonadError, throwError, MonadIO, liftIO)
+import Control.Monad.Error (MonadError, throwError, MonadIO, liftIO)
 import Data.Aeson
 import Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy as BS
