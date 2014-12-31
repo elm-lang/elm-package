@@ -2,7 +2,7 @@
 module Elm.Package.Name where
 
 import Control.Applicative ((<$>), (<*>))
-import Control.Monad.Except
+import Control.Monad.Error
 import Data.Aeson
 import Data.Binary
 import qualified Data.Text as T
