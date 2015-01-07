@@ -82,7 +82,7 @@ useful, easy to learn, and pleasant to use.
 Before publishing, look through the [design guidelines][guidelines].
 Some key takeaways are:
 
-[guidelines]: http://library.elm-lang.org/DesignGuidelines.html
+[guidelines]: http://package.elm-lang.org/help/design-guidelines
 
   * Design for a concrete use case
   * Always give functions human readable names
@@ -111,7 +111,7 @@ Finally, you should document all of the publicly exposed modules and functions
 based on [this format][docs]. Examples are one of the most powerful ways to
 learn new APIs so do not be lazy, make your users life easy!
 
-[docs]: http://library.elm-lang.org/Documentation.html
+[docs]: http://package.elm-lang.org/help/documentation-format
 
 ### Publishing for the First Time
 
