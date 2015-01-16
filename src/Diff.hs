@@ -31,7 +31,7 @@ diff range =
 
                 maybeVersions <- Catalog.versions name
                 latestVersion <-
-                    maybe (throwError noVersions) (return . last) maybeVersions
+                    maybe (throwError noVersions) (return . maximum) maybeVersions
 
                 computeDiff name latestVersion newDocs Nothing
 
