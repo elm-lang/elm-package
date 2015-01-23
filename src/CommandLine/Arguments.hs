@@ -13,6 +13,7 @@ import qualified Install
 import qualified Manager
 import qualified Publish
 import qualified Paths_elm_package as This
+import qualified Elm.Compiler as Compiler
 import qualified Elm.Package.Name as N
 import qualified Elm.Package.Paths as Path
 import qualified Elm.Package.Version as V
@@ -46,7 +47,7 @@ infoModifier =
   where
     top =
         "Elm Package Manager " ++ showVersion This.version
-        ++ ", (c) Evan Czaplicki 2013-2014\n"
+        ++ " (Elm Platform " ++ Compiler.version ++ ")\n"
 
     moreHelp =
         linesToDoc
