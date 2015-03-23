@@ -149,8 +149,8 @@ prettyJSON description =
         , "source-directories"
         , "exposed-modules"
         , "native-modules"
-        , "elm-version"
         , "dependencies"
+        , "elm-version"
         ]
 
     dependencyKeys =
@@ -169,8 +169,8 @@ instance ToJSON Description where
         , "license" .= license d
         , "source-directories" .= sourceDirs d
         , "exposed-modules" .= exposed d
-        , "elm-version" .= elmVersion d
         , "dependencies" .= jsonDeps (dependencies d)
+        , "elm-version" .= elmVersion d
         ] ++ if natives d then ["native-modules" .= True] else []
     where
       jsonDeps deps =
