@@ -29,6 +29,7 @@ data Description = Description
     { name :: N.Name
     , repo :: String
     , version :: V.Version
+    , elmVersion :: C.Constraint
     , summary :: String
     , license :: String
     , sourceDirs :: [FilePath]
@@ -44,6 +45,7 @@ defaultDescription =
     { name = N.Name "USER" "PROJECT"
     , repo = "https://github.com/USER/PROJECT.git"
     , version = V.initialVersion
+    , elmVersion = C.defaultElmVersion
     , summary = "helpful summary of your project, less than 80 characters"
     , license = "BSD3"
     , sourceDirs = [ "." ]
@@ -57,10 +59,13 @@ defaultDescription =
 
 read :: (MonadIO m, MonadError String m) => FilePath -> m Description
 read path =
-    do json <- liftIO (BS.readFile path)
-       case eitherDecode json of
-         Left err -> throwError $ "Error reading file " ++ path ++ ":\n    " ++ err
-         Right ds -> return ds
+  do  json <- liftIO (BS.readFile path)
+      case eitherDecode json of
+        Left err ->
+            throwError $ "Error reading file " ++ path ++ ":\n    " ++ err
+
+        Right ds ->
+            return ds
 
 
 -- WRITE
@@ -144,6 +149,7 @@ prettyJSON description =
         , "source-directories"
         , "exposed-modules"
         , "native-modules"
+        , "elm-version"
         , "dependencies"
         ]
 
@@ -157,14 +163,15 @@ prettyJSON description =
 instance ToJSON Description where
   toJSON d =
       object $
-      [ "repository" .= repo d
-      , "version" .= version d
-      , "summary" .= summary d
-      , "license" .= license d
-      , "source-directories" .= sourceDirs d
-      , "exposed-modules" .= exposed d
-      , "dependencies" .= jsonDeps (dependencies d)
-      ] ++ if natives d then ["native-modules" .= True] else []
+        [ "repository" .= repo d
+        , "version" .= version d
+        , "summary" .= summary d
+        , "license" .= license d
+        , "source-directories" .= sourceDirs d
+        , "exposed-modules" .= exposed d
+        , "elm-version" .= elmVersion d
+        , "dependencies" .= jsonDeps (dependencies d)
+        ] ++ if natives d then ["native-modules" .= True] else []
     where
       jsonDeps deps =
           Map.fromList $ map (first (T.pack . N.toString)) deps
@@ -173,6 +180,8 @@ instance ToJSON Description where
 instance FromJSON Description where
     parseJSON (Object obj) =
         do  version <- get obj "version" "your projects version number"
+
+            elmVersion <- getElmVersion obj
 
             summary <- get obj "summary" "a short summary of your project"
             when (length summary >= 80) $
@@ -193,7 +202,7 @@ instance FromJSON Description where
 
             natives <- maybe False id <$> obj .:? "native-modules"
 
-            return $ Description name repo version summary license sourceDirs exposed natives deps
+            return $ Description name repo version elmVersion summary license sourceDirs exposed natives deps
 
     parseJSON _ = mzero
 
@@ -203,22 +212,45 @@ get :: FromJSON a => Object -> T.Text -> String -> Parser a
 get obj field desc =
     do maybe <- obj .:? field
        case maybe of
-         Just value -> return value
-         Nothing -> fail $ "Missing field " ++ show field ++ ", " ++ desc ++ ".\n" ++
-                           "    Check out an example " ++ Path.description ++ " file here:" ++
-                           "    <https://github.com/evancz/elm-html/blob/master/elm_dependencies.json>"
+         Just value ->
+            return value
+
+         Nothing ->
+            fail $
+              "Missing field " ++ show field ++ ", " ++ desc ++ ".\n" ++
+              "    Check out an example " ++ Path.description ++ " file here:\n" ++
+              "    <https://github.com/evancz/elm-html/blob/master/elm_dependencies.json>"
 
 
 getDependencies :: Object -> Parser [(N.Name, C.Constraint)]
 getDependencies obj =
-    toDeps =<< get obj "dependencies" "a listing of your project's dependencies"
-  where
-    toDeps deps =
-        forM (Map.toList deps) $ \(f, c) ->
-            case (N.fromString f, C.fromString c) of
-              (Just name, Just constr) -> return (name, constr)
-              (Nothing, _) -> fail $ N.errorMsg f
-              (_, Nothing) -> fail $ C.errorMessage c
+  do  deps <- get obj "dependencies" "a listing of your project's dependencies"
+      forM (Map.toList deps) $ \(rawName, rawConstraint) ->
+          case (N.fromString rawName, C.fromString rawConstraint) of
+            (Just name, Just constraint) ->
+                return (name, constraint)
+
+            (Nothing, _) ->
+                fail (N.errorMsg rawName)
+
+            (_, Nothing) ->
+                fail (C.errorMessage rawConstraint)
+
+
+getElmVersion :: Object -> Parser C.Constraint
+getElmVersion obj =
+  do  rawConstraint <- get obj "elm-version" elmVersionDescription
+      case C.fromString rawConstraint of
+        Just constraint ->
+            return constraint
+        Nothing ->
+            fail (C.errorMessage rawConstraint)
+
+
+elmVersionDescription :: String
+elmVersionDescription =
+  "acceptable versions of the Elm Platform (e.g. \""
+  ++ C.toString C.defaultElmVersion ++ "\")"
 
 
 repoToName :: String -> Either String N.Name
