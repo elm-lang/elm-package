@@ -2,8 +2,10 @@ module Elm.Package.Constraint
     ( Constraint
     , fromString
     , toString
-    , minimalRangeFrom
+    , untilNextMajor
+    , untilNextMinor
     , expand
+    , defaultElmVersion
     , isSatisfied
     , errorMessage
     ) where
@@ -25,9 +27,14 @@ data Op = Less | LessOrEqual
 
 -- CREATE CONSTRAINTS
 
-minimalRangeFrom :: V.Version -> Constraint
-minimalRangeFrom version =
+untilNextMajor :: V.Version -> Constraint
+untilNextMajor version =
   Range version LessOrEqual Less (V.bumpMajor version)
+
+
+untilNextMinor :: V.Version -> Constraint
+untilNextMinor version =
+  Range version LessOrEqual Less (V.bumpMinor version)
 
 
 expand :: Constraint -> V.Version -> Constraint
@@ -35,12 +42,20 @@ expand constraint@(Range lower lowerOp upperOp upper) version
   | version < lower =
       Range version LessOrEqual upperOp upper
 
-  | version > upper = 
+  | version > upper =
       Range lower lowerOp Less (V.bumpMajor version)
 
   | otherwise =
       constraint
 
+
+-- ELM CONSTRAINT
+
+defaultElmVersion :: Constraint
+defaultElmVersion =
+  if V.major V.elm > 0
+    then untilNextMajor V.elm
+    else untilNextMinor V.elm
 
 
 -- CHECK IF SATISFIED

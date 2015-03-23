@@ -8,8 +8,23 @@ import Data.Function (on)
 import qualified Data.List as List
 import qualified Data.Text as T
 
-elmVersion :: Version
-elmVersion = error "Package.Version.elmVersion"
+import qualified Elm.Compiler as Elm
+
+
+elm :: Version
+elm =
+  case Elm.rawVersion of
+    major : minor : patch : _ ->
+        Version major minor patch
+
+    [major, minor] ->
+        Version major minor 0
+
+    [major] ->
+        Version major 0 0
+
+    [] ->
+        error "could not detect version of elm-compiler you are using"
 
 
 data Version = Version

@@ -67,7 +67,7 @@ upgrade autoYes description =
 
       if approve
           then runPlan newSolution plan
-          else liftIO $ putStrLn "Okay, I did not change anything!"            
+          else liftIO $ putStrLn "Okay, I did not change anything!"
 
 
 getApproval :: Bool -> Plan.Plan -> IO Bool
@@ -144,7 +144,7 @@ addConstraint autoYes name version description =
             ++ showDependency name constraint ++ "\n\n"
             ++ "You probably want one of the following constraints instead:\n\n    "
             ++ Constraint.toString (Constraint.expand constraint version) ++ "\n    "
-            ++ Constraint.toString (Constraint.minimalRangeFrom version) ++ "\n"
+            ++ Constraint.toString (Constraint.untilNextMajor version) ++ "\n"
 
 
 addNewDependency :: Bool -> N.Name -> V.Version -> Desc.Description -> Manager.Manager Desc.Description
@@ -167,7 +167,7 @@ addNewDependency autoYes name version description =
               return newDescription
   where
     newConstraint =
-        Constraint.minimalRangeFrom version
+        Constraint.untilNextMajor version
 
     newConstraints =
         (name, newConstraint) : Desc.dependencies description
@@ -199,7 +199,7 @@ initialDescription =
   do  let core = N.Name "elm-lang" "core"
       version <- latestVersion core
       let desc = Desc.defaultDescription {
-          Desc.dependencies = [ (core, Constraint.minimalRangeFrom version) ]
+          Desc.dependencies = [ (core, Constraint.untilNextMajor version) ]
       }
       liftIO (Desc.write desc)
       return desc
