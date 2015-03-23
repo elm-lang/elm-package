@@ -66,7 +66,9 @@ allPackages maybeTime =
         Nothing -> []
         Just time -> [("since", show time)]
 
+
 newtype PackageSummary = PackageSummary (N.Name, [V.Version])
+
 
 instance Json.FromJSON PackageSummary where
     parseJSON (Json.Object obj) =
@@ -76,8 +78,6 @@ instance Json.FromJSON PackageSummary where
 
     parseJSON _ =
       fail "package summary must be an object"
-
-
 
 
 register :: N.Name -> V.Version -> Manager.Manager ()
@@ -132,7 +132,7 @@ getJson metadata metadataPath name version =
             cacheDir </> N.toFilePath name </> V.toString version </> metadataPath
 
       exists <- liftIO (doesFileExist fullMetadataPath)
-      
+
       content <-
         case exists of
           True -> liftIO (LBS.readFile fullMetadataPath)
@@ -143,7 +143,7 @@ getJson metadata metadataPath name version =
                         createDirectoryIfMissing True (dropFileName fullMetadataPath)
                         LBS.writeFile fullMetadataPath (Client.responseBody response)
                         return (Client.responseBody response)
-                      
+
       case Json.eitherDecode content of
         Right value -> return value
         Left err ->
