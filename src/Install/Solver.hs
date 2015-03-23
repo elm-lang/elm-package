@@ -67,19 +67,24 @@ exploreVersionList name versions solution remainingPackages =
 
 exploreVersion :: N.Name -> V.Version -> S.Solution -> Packages -> Explorer (Maybe S.Solution)
 exploreVersion name version solution remainingPackages =
-  do  constraints <- Store.getConstraints name version
+  do  (elmVersion, constraints) <- Store.getConstraints name version
+      if C.isSatisfied elmVersion V.elm
+        then explore constraints
+        else return Nothing
 
-      let (overlappingConstraints, newConstraints) =
-              List.partition (\(name, _) -> Map.member name solution) constraints
+  where
+    explore constraints =
+      do  let (overlappingConstraints, newConstraints) =
+                  List.partition (\(name, _) -> Map.member name solution) constraints
 
-      case all (satisfiedBy solution) overlappingConstraints of
-        False -> return Nothing
-        True ->
-          do  maybePackages <- addConstraints remainingPackages newConstraints
-              case maybePackages of
-                Nothing -> return Nothing
-                Just extendedPackages ->
-                    explorePackages (Map.insert name version solution) extendedPackages
+          case all (satisfiedBy solution) overlappingConstraints of
+            False -> return Nothing
+            True ->
+              do  maybePackages <- addConstraints remainingPackages newConstraints
+                  case maybePackages of
+                    Nothing -> return Nothing
+                    Just extendedPackages ->
+                        explorePackages (Map.insert name version solution) extendedPackages
 
 
 satisfiedBy :: S.Solution -> (N.Name, C.Constraint) -> Bool

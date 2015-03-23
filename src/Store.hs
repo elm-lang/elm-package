@@ -25,8 +25,10 @@ data Store = Store
     , versionCache :: VersionCache
     }
 
+
 type ConstraintCache =
-    Map.Map (N.Name, V.Version) [(N.Name, C.Constraint)]
+    Map.Map (N.Name, V.Version) (C.Constraint, [(N.Name, C.Constraint)])
+
 
 type VersionCache =
     Map.Map N.Name [V.Version]
@@ -47,7 +49,7 @@ readVersionCache
 
 readVersionCache =
   do  cacheDirectory <- asks Manager.cacheDirectory
-      let versionsFile = cacheDirectory </> "versions.json"
+      let versionsFile = cacheDirectory </> "versions.dat"
       let lastUpdatedPath = cacheDirectory </> "last-updated"
 
       now <- liftIO Time.getCurrentTime
@@ -86,7 +88,7 @@ getConstraints
     :: (MonadIO m, MonadReader Manager.Environment m, MonadState Store m, MonadError String m)
     => N.Name
     -> V.Version
-    -> m [(N.Name, C.Constraint)]
+    -> m (C.Constraint, [(N.Name, C.Constraint)])
 
 getConstraints name version =
   do  cache <- gets constraintCache
@@ -94,7 +96,7 @@ getConstraints name version =
         Just constraints -> return constraints
         Nothing ->
           do  desc <- Catalog.description name version
-              let constraints = Desc.dependencies desc
+              let constraints = (Desc.elmVersion desc, Desc.dependencies desc)
               modify $ \store ->
                   store {
                       constraintCache =
