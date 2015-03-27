@@ -74,22 +74,7 @@ write :: Description -> IO ()
 write description =
     BS.writeFile Path.description json
   where
-    json = prettyAngles (prettyJSON description)
-
-
-prettyAngles :: BS.ByteString -> BS.ByteString
-prettyAngles string =
-    BS.concat $ replaceChunks string
-  where
-    replaceChunks str =
-        let (before, after) = BS.break (=='\\') str
-        in
-            case BS.take 6 after of
-              "\\u003e" -> before : ">" : replaceChunks (BS.drop 6 after)
-              "\\u003c" -> before : "<" : replaceChunks (BS.drop 6 after)
-              "" -> [before]
-              _ ->
-                  before : "\\" : replaceChunks (BS.tail after)
+    json = prettyJSON description
 
 
 -- FIND MODULE FILE PATHS
@@ -136,7 +121,7 @@ locateExposedModules desc =
 
 prettyJSON :: Description -> BS.ByteString
 prettyJSON description =
-    encodePretty' config description
+    prettyAngles (encodePretty' config description)
   where
     config =
         defConfig { confCompare = keyOrder (normalKeys ++ dependencyKeys) }
@@ -158,6 +143,21 @@ prettyJSON description =
           |> map fst
           |> List.sort
           |> map (T.pack . N.toString)
+
+
+prettyAngles :: BS.ByteString -> BS.ByteString
+prettyAngles string =
+    BS.concat $ replaceChunks string
+  where
+    replaceChunks str =
+        let (before, after) = BS.break (=='\\') str
+        in
+            case BS.take 6 after of
+              "\\u003e" -> before : ">" : replaceChunks (BS.drop 6 after)
+              "\\u003c" -> before : "<" : replaceChunks (BS.drop 6 after)
+              "" -> [before]
+              _ ->
+                  before : "\\" : replaceChunks (BS.tail after)
 
 
 instance ToJSON Description where
