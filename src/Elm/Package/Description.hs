@@ -219,7 +219,7 @@ get obj field desc =
             fail $
               "Missing field " ++ show field ++ ", " ++ desc ++ ".\n" ++
               "    Check out an example " ++ Path.description ++ " file here:\n" ++
-              "    <https://github.com/evancz/elm-html/blob/master/elm_dependencies.json>"
+              "    <https://raw.githubusercontent.com/evancz/elm-html/master/elm-package.json>"
 
 
 getDependencies :: Object -> Parser [(N.Name, C.Constraint)]
