@@ -1,7 +1,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Install.Fetch where
 
-import Control.Monad.Error (MonadError, MonadIO, liftIO, throwError)
+import Control.Monad.Error.Class (MonadError, throwError)
+import Control.Monad.Trans (MonadIO, liftIO)
 import qualified Codec.Archive.Zip as Zip
 import qualified Data.List as List
 import qualified Network.HTTP.Client as Client

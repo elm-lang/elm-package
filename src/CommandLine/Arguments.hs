@@ -1,7 +1,7 @@
 module CommandLine.Arguments (parse) where
 
 import Control.Applicative (pure, optional, (<$>), (<*>), (<|>))
-import Control.Monad.Error (throwError)
+import Control.Monad.Error.Class (throwError)
 import Data.Monoid ((<>), mconcat, mempty)
 import Data.Version (showVersion)
 import qualified Options.Applicative as Opt

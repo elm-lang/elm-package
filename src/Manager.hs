@@ -1,18 +1,18 @@
 module Manager where
 
-import Control.Monad.Error
+import Control.Monad.Except
 import Control.Monad.Reader
 import qualified System.Directory as Dir
 import System.FilePath ((</>))
 
 
 type Manager =
-    ErrorT String (ReaderT Environment IO)
+    ExceptT String (ReaderT Environment IO)
 
 
 run :: Environment -> Manager a -> IO (Either String a)
 run environment manager =
-    runReaderT (runErrorT manager) environment
+    runReaderT (runExceptT manager) environment
 
 
 data Environment = Environment
