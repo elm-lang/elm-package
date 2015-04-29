@@ -163,19 +163,21 @@ installInfo =
 
 package :: Opt.Parser N.Name
 package =
-    Opt.argument (maybeReader "Cannot parse PACKAGE name." N.fromString) $
+    Opt.argument (argReader "PACKAGE" N.fromString) $
         mconcat
         [ Opt.metavar "PACKAGE"
         , Opt.help "A specific package name (e.g. evancz/automaton)"
         ]
 
+
 version :: Opt.Parser V.Version
 version =
-    Opt.argument (maybeReader "Cannot parse package VERSION." V.fromString) $
+    Opt.argument (argReader "VERSION" V.fromString) $
         mconcat
         [ Opt.metavar "VERSION"
         , Opt.help "Specific version of a package (e.g. 1.2.0)"
         ]
+
 
 yes :: Opt.Parser Bool
 yes =
@@ -186,6 +188,13 @@ yes =
         , Opt.help "Reply 'yes' to all automated prompts."
         ]
 
-maybeReader :: String -> (String -> Maybe a) -> Opt.ReadM a
-maybeReader message f =
-    Opt.eitherReader $ maybe (Left message) Right . f
+
+argReader :: String -> (String -> Maybe a) -> Opt.ReadM a
+argReader argType fromString =
+  let reader arg =
+          case fromString arg of
+            Just a -> Right a
+            Nothing ->
+                "Uh oh, argument \"" ++ arg ++ "\" is not a valid " ++ argType
+  in
+      Opt.eitherReader reader
