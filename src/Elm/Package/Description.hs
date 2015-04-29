@@ -5,7 +5,7 @@ module Elm.Package.Description where
 import Prelude hiding (read)
 import Control.Applicative ((<$>))
 import Control.Arrow (first)
-import Control.Monad.IO.Class (MonadIO, liftIO)
+import Control.Monad.Trans (MonadIO, liftIO)
 import Control.Monad.Error.Class (MonadError, throwError)
 import Control.Monad (when, mzero, forM)
 import Data.Aeson
