@@ -163,7 +163,7 @@ installInfo =
 
 package :: Opt.Parser N.Name
 package =
-    Opt.argument N.fromString $
+    Opt.argument (maybeReader "Cannot parse PACKAGE name." N.fromString) $
         mconcat
         [ Opt.metavar "PACKAGE"
         , Opt.help "A specific package name (e.g. evancz/automaton)"
@@ -171,7 +171,7 @@ package =
 
 version :: Opt.Parser V.Version
 version =
-    Opt.argument V.fromString $
+    Opt.argument (maybeReader "Cannot parse package VERSION." V.fromString) $
         mconcat
         [ Opt.metavar "VERSION"
         , Opt.help "Specific version of a package (e.g. 1.2.0)"
@@ -185,3 +185,7 @@ yes =
         , Opt.short 'y'
         , Opt.help "Reply 'yes' to all automated prompts."
         ]
+
+maybeReader :: String -> (String -> Maybe a) -> Opt.ReadM a
+maybeReader message f =
+    Opt.eitherReader $ maybe (Left message) Right . f
