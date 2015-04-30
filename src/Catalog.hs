@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Catalog where
 
-import Control.Monad.Error (MonadError, throwError)
+import Control.Monad.Error.Class (MonadError, throwError)
 import Control.Monad.RWS (MonadIO, liftIO, MonadReader, asks)
 import Data.Aeson ((.:))
 import qualified Data.Aeson as Json

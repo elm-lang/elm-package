@@ -3,7 +3,8 @@
 module Utils.Http (send) where
 
 import qualified Control.Exception as E
-import Control.Monad.Error
+import Control.Monad.Error.Class (MonadError, throwError)
+import Control.Monad.Trans (MonadIO, liftIO)
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.List as List
 import Network (withSocketsDo)

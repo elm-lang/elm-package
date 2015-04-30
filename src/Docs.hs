@@ -1,7 +1,8 @@
 module Docs where
 
 import Control.Monad (forM)
-import Control.Monad.Error (liftIO, throwError)
+import Control.Monad.Error.Class (throwError)
+import Control.Monad.Trans (liftIO)
 import qualified Data.Aeson as Json
 import qualified Data.ByteString.Lazy.Char8 as BS
 import System.Directory (createDirectoryIfMissing)

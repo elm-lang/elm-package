@@ -1,6 +1,7 @@
 module Bump where
 
-import Control.Monad.Error (throwError, liftIO)
+import Control.Monad.Error.Class (throwError)
+import Control.Monad.Trans (liftIO)
 import qualified Data.List as List
 
 import qualified Catalog
@@ -25,7 +26,7 @@ bump =
 
         maybeVersions <- Catalog.versions name
         case maybeVersions of
-            Nothing -> 
+            Nothing ->
                 validateInitialVersion description
 
             Just publishedVersions ->
@@ -96,7 +97,7 @@ validateInitialVersion description =
 
 
 changeVersion :: String -> Desc.Description -> V.Version -> Manager.Manager Validity
-changeVersion explanation description newVersion = 
+changeVersion explanation description newVersion =
     do  liftIO $ putStr explanation
         yes <- liftIO Cmd.yesOrNo
         case yes of

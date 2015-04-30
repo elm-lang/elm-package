@@ -1,7 +1,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 module CommandLine.Helpers where
 
-import Control.Monad.Error
+import Control.Monad.Error.Class (MonadError)
+import Control.Monad.Trans (MonadIO, liftIO)
 import System.Directory
 import System.IO
 

@@ -1,6 +1,8 @@
 module Install where
 
-import Control.Monad.Error
+import Control.Monad.Error.Class (throwError)
+import Control.Monad.Trans (liftIO)
+import Control.Monad
 import qualified Data.List as List
 import qualified Data.Map as Map
 import System.Directory (doesFileExist, removeDirectoryRecursive)
