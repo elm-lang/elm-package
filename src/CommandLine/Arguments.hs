@@ -193,8 +193,10 @@ argReader :: String -> (String -> Maybe a) -> Opt.ReadM a
 argReader argType fromString =
   let reader arg =
           case fromString arg of
-            Just a -> Right a
+            Just a ->
+                Right a
+
             Nothing ->
-                "Uh oh, argument \"" ++ arg ++ "\" is not a valid " ++ argType
+                Left ("Uh oh, argument \"" ++ arg ++ "\" is not a valid " ++ argType)
   in
       Opt.eitherReader reader
