@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Elm.Package.Initialize (solution) where
 
-import Control.Monad.Error (MonadError, MonadIO, liftIO, throwError)
+import Control.Monad.Except (MonadError, MonadIO, liftIO, throwError)
 import qualified Data.Map as Map
 import System.Directory (doesFileExist)
 
