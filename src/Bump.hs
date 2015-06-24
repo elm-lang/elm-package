@@ -22,7 +22,7 @@ bump =
         let name = Desc.name description
         let statedVersion = Desc.version description
 
-        newDocs <- Docs.generate description
+        newDocs <- Docs.generate
 
         maybeVersions <- Catalog.versions name
         case maybeVersions of

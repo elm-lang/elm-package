@@ -25,9 +25,8 @@ diff :: Range -> Manager.Manager ()
 diff range =
     case range of
         LatestVsActual ->
-            do  desc <- Desc.read Path.description
-                let name = Desc.name desc
-                newDocs <- Docs.generate desc
+            do  name <- Desc.name `fmap` Desc.read Path.description
+                newDocs <- Docs.generate
 
                 maybeVersions <- Catalog.versions name
                 latestVersion <-
@@ -36,9 +35,9 @@ diff range =
                 computeDiff name latestVersion newDocs Nothing
 
         Since version ->
-            do  desc <- Desc.read Path.description
-                newDocs <- Docs.generate desc
-                computeDiff (Desc.name desc) version newDocs Nothing
+            do  name <- Desc.name `fmap` Desc.read Path.description
+                newDocs <- Docs.generate
+                computeDiff name version newDocs Nothing
 
         Between name old new ->
             do  newDocs <- Catalog.documentation name new
