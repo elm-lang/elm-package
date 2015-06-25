@@ -22,8 +22,8 @@ computeChanges
     -> V.Version
     -> Manager.Manager PackageChanges
 computeChanges newDocs name version =
-    do  oldDocs <- Catalog.documentation name version
-        return (diffPackages oldDocs newDocs)
+  do  oldDocs <- Catalog.documentation name version
+      return (diffPackages oldDocs newDocs)
 
 
 -- CHANGE MAGNITUDE
@@ -37,10 +37,15 @@ data Magnitude
 
 bumpBy :: PackageChanges -> V.Version -> V.Version
 bumpBy changes version =
-    case packageChangeMagnitude changes of
-      PATCH -> V.bumpPatch version
-      MINOR -> V.bumpMinor version
-      MAJOR -> V.bumpMajor version
+  case packageChangeMagnitude changes of
+    PATCH ->
+        V.bumpPatch version
+
+    MINOR ->
+        V.bumpMinor version
+
+    MAJOR ->
+        V.bumpMajor version
 
 
 packageChangeMagnitude :: PackageChanges -> Magnitude
@@ -48,25 +53,29 @@ packageChangeMagnitude pkgChanges =
     maximum (added : removed : map moduleChangeMagnitude moduleChanges)
   where
     moduleChanges =
-        Map.elems (modulesChanged pkgChanges)
+      Map.elems (modulesChanged pkgChanges)
 
     removed =
-        if null (modulesRemoved pkgChanges)
-            then PATCH
-            else MAJOR
+      if null (modulesRemoved pkgChanges) then
+        PATCH
+      else
+        MAJOR
 
     added =
-        if null (modulesAdded pkgChanges)
-            then PATCH
-            else MINOR
+      if null (modulesAdded pkgChanges) then
+        PATCH
+      else
+        MINOR
+
 
 moduleChangeMagnitude :: ModuleChanges -> Magnitude
 moduleChangeMagnitude moduleChanges =
-    maximum
-        [ changeMagnitude (adtChanges moduleChanges)
-        , changeMagnitude (aliasChanges moduleChanges)
-        , changeMagnitude (valueChanges moduleChanges)
-        ]
+  maximum
+    [ changeMagnitude (adtChanges moduleChanges)
+    , changeMagnitude (aliasChanges moduleChanges)
+    , changeMagnitude (valueChanges moduleChanges)
+    ]
+
 
 changeMagnitude :: Changes k v -> Magnitude
 changeMagnitude (Changes added changed removed)
@@ -84,11 +93,13 @@ data PackageChanges = PackageChanges
     , modulesRemoved :: [String]
     }
 
+
 data ModuleChanges = ModuleChanges
     { adtChanges :: Changes String ([String], Map.Map String [Type.Type])
     , aliasChanges :: Changes String ([String], Type.Type)
     , valueChanges :: Changes String Type.Type
     }
+
 
 data Changes k v = Changes
     { added :: Map.Map k v
@@ -99,19 +110,21 @@ data Changes k v = Changes
 
 diffPackages :: [Docs.Documentation] -> [Docs.Documentation] -> PackageChanges
 diffPackages oldDocs newDocs =
-    PackageChanges
-        (Map.keys added)
-        (filterOutPatches (Map.map (uncurry diffModule) changed))
-        (Map.keys removed)
-  where
+  let
     filterOutPatches chngs =
-        Map.filter (\chng -> moduleChangeMagnitude chng /= PATCH) chngs
+      Map.filter (\chng -> moduleChangeMagnitude chng /= PATCH) chngs
 
     (Changes added changed removed) =
-        getChanges
-            (\_ _ -> False)
-            (docsToModules oldDocs)
-            (docsToModules newDocs)
+      getChanges
+        (\_ _ -> False)
+        (docsToModules oldDocs)
+        (docsToModules newDocs)
+  in
+    PackageChanges
+      (Map.keys added)
+      (filterOutPatches (Map.map (uncurry diffModule) changed))
+      (Map.keys removed)
+
 
 
 data Module = Module
@@ -123,12 +136,12 @@ data Module = Module
 
 docsToModules :: [Docs.Documentation] -> Map.Map String Module
 docsToModules docs =
-    Map.fromList (map docToModule docs)
+  Map.fromList (map docToModule docs)
 
 
 docToModule :: Docs.Documentation -> (String, Module)
 docToModule (Docs.Documentation name _ aliases' unions' values') =
-    (,) (Module.nameToString name) $ Module
+  (,) (Module.nameToString name) $ Module
     { adts =
         Map.fromList $ flip map unions' $ \union ->
             ( Docs.unionName union
@@ -147,15 +160,15 @@ docToModule (Docs.Documentation name _ aliases' unions' values') =
 
 diffModule :: Module -> Module -> ModuleChanges
 diffModule (Module adts aliases values) (Module adts' aliases' values') =
-    ModuleChanges
-        (getChanges isEquivalentAdt adts adts')
-        (getChanges isEquivalentType aliases aliases')
-        (getChanges (\t t' -> isEquivalentType ([],t) ([],t')) values values')
+  ModuleChanges
+    (getChanges isEquivalentAdt adts adts')
+    (getChanges isEquivalentType aliases aliases')
+    (getChanges (\t t' -> isEquivalentType ([],t) ([],t')) values values')
 
 
 getChanges :: (Ord k) => (v -> v -> Bool) -> Map.Map k v -> Map.Map k v -> Changes k v
 getChanges isEquivalent old new =
-    Changes
+  Changes
     { added =
         Map.difference new old
     , changed =
@@ -190,51 +203,60 @@ isEquivalentAdt (oldVars, oldCtors) (newVars, newCtors) =
 
 isEquivalentType :: ([String], Type.Type) -> ([String], Type.Type) -> Bool
 isEquivalentType (oldVars, oldType) (newVars, newType) =
-    case diffType oldType newType of
-      Nothing -> False
-      Just renamings ->
-          length oldVars == length newVars
-          && isEquivalentRenaming (zip oldVars newVars ++ renamings)
+  case diffType oldType newType of
+    Nothing ->
+        False
+
+    Just renamings ->
+        length oldVars == length newVars
+        && isEquivalentRenaming (zip oldVars newVars ++ renamings)
 
 
 -- TYPES
 
 diffType :: Type.Type -> Type.Type -> Maybe [(String,String)]
 diffType oldType newType =
-    case (oldType, newType) of
-      (Type.Var oldName, Type.Var newName) ->
-          Just [(oldName, newName)]
+  case (oldType, newType) of
+    (Type.Var oldName, Type.Var newName) ->
+        Just [(oldName, newName)]
 
-      (Type.Type oldName, Type.Type newName) ->
-          if oldName == newName
-              then Just []
-              else Nothing
-
-      (Type.Lambda a b, Type.Lambda a' b') ->
-          (++)
-              <$> diffType a a'
-              <*> diffType b b'
-
-      (Type.App t ts, Type.App t' ts') ->
-          if length ts /= length ts'
-            then Nothing
-            else
-                (++)
-                    <$> diffType t t'
-                    <*> (concat <$> zipWithM diffType ts ts')
-
-      (Type.Record fields maybeExt, Type.Record fields' maybeExt') ->
-          case (maybeExt, maybeExt') of
-            (Nothing, Just _) -> Nothing
-            (Just _, Nothing) -> Nothing
-            (Nothing, Nothing) -> diffFields fields fields'
-            (Just ext, Just ext') ->
-                (++)
-                    <$> diffType ext ext'
-                    <*> diffFields fields fields'
-
-      (_, _) ->
+    (Type.Type oldName, Type.Type newName) ->
+        if oldName == newName then
+          Just []
+        else
           Nothing
+
+    (Type.Lambda a b, Type.Lambda a' b') ->
+        (++)
+          <$> diffType a a'
+          <*> diffType b b'
+
+    (Type.App t ts, Type.App t' ts') ->
+        if length ts /= length ts' then
+          Nothing
+        else
+          (++)
+            <$> diffType t t'
+            <*> (concat <$> zipWithM diffType ts ts')
+
+    (Type.Record fields maybeExt, Type.Record fields' maybeExt') ->
+        case (maybeExt, maybeExt') of
+          (Nothing, Just _) ->
+              Nothing
+
+          (Just _, Nothing) ->
+              Nothing
+
+          (Nothing, Nothing) ->
+              diffFields fields fields'
+
+          (Just ext, Just ext') ->
+              (++)
+                <$> diffType ext ext'
+                <*> diffFields fields fields'
+
+    (_, _) ->
+        Nothing
 
 
 diffFields :: [(String, Type.Type)] -> [(String, Type.Type)] -> Maybe [(String,String)]
@@ -255,10 +277,13 @@ diffFields rawFields rawFields'
 
 isEquivalentRenaming :: [(String,String)] -> Bool
 isEquivalentRenaming varPairs =
-    case mapM verify renamings of
-      Nothing -> False
-      Just verifiedRenamings ->
-          allUnique (map snd verifiedRenamings)
+  case mapM verify renamings of
+    Nothing ->
+        False
+
+    Just verifiedRenamings ->
+        allUnique (map snd verifiedRenamings)
+
   where
     renamings =
         Map.toList (foldr insert Map.empty varPairs)
@@ -270,9 +295,10 @@ isEquivalentRenaming varPairs =
         case news of
           [] -> Nothing
           new : rest ->
-              if all (new ==) rest
-                  then Just (old, new)
-                  else Nothing
+              if all (new ==) rest then
+                Just (old, new)
+              else
+                Nothing
 
     allUnique list =
         length list == Set.size (Set.fromList list)
@@ -280,17 +306,17 @@ isEquivalentRenaming varPairs =
 
 compatableVars :: String -> String -> Bool
 compatableVars old new =
-    case (categorizeVar old, categorizeVar new) of
-      (Comparable, Comparable) -> True
-      (Appendable, Appendable) -> True
-      (Number    , Number    ) -> True
+  case (categorizeVar old, categorizeVar new) of
+    (Comparable, Comparable) -> True
+    (Appendable, Appendable) -> True
+    (Number    , Number    ) -> True
 
-      (Comparable, Appendable) -> True
-      (Number    , Comparable) -> True
+    (Comparable, Appendable) -> True
+    (Number    , Comparable) -> True
 
-      (_, Var) -> True
+    (_, Var) -> True
 
-      (_, _) -> False
+    (_, _) -> False
 
 
 data TypeVarCategory
