@@ -140,7 +140,7 @@ docsToModules docs =
 
 
 docToModule :: Docs.Documentation -> (String, Module)
-docToModule (Docs.Documentation name _ aliases' unions' values') =
+docToModule (Docs.Documentation name _ aliases' unions' values' generatedByVersion) =
   (,) (Module.nameToString name) $ Module
     { adts =
         Map.fromList $ flip map unions' $ \union ->
