@@ -6,6 +6,7 @@ import Data.Function (on)
 import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import qualified Data.Text as Text
 
 import qualified Catalog
 import qualified Elm.Compiler.Module as Module
@@ -131,6 +132,7 @@ data Module = Module
     { adts :: Map.Map String ([String], Map.Map String [Type.Type])
     , aliases :: Map.Map String ([String], Type.Type)
     , values :: Map.Map String Type.Type
+    , version :: Docs.Version
     }
 
 
@@ -155,15 +157,24 @@ docToModule (Docs.Documentation name _ aliases' unions' values' generatedByVersi
     , values =
         Map.fromList $ flip map values' $ \value ->
             (Docs.valueName value, Docs.valueType value)
+    , version =
+        generatedByVersion
     }
 
 
 diffModule :: Module -> Module -> ModuleChanges
-diffModule (Module adts aliases values) (Module adts' aliases' values') =
-  ModuleChanges
-    (getChanges isEquivalentAdt adts adts')
-    (getChanges isEquivalentType aliases aliases')
-    (getChanges (\t t' -> isEquivalentType ([],t) ([],t')) values values')
+diffModule (Module adts aliases values version) (Module adts' aliases' values' version') =
+  let
+    ignoreOrigin =
+      case (version, version') of
+        (Docs.NonCanonicalTypes, _) -> True
+        (_, Docs.NonCanonicalTypes) -> True
+        (_, _) -> False
+  in
+    ModuleChanges
+      (getChanges (isEquivalentAdt ignoreOrigin) adts adts')
+      (getChanges (isEquivalentType ignoreOrigin) aliases aliases')
+      (getChanges (\t t' -> isEquivalentType ignoreOrigin ([],t) ([],t')) values values')
 
 
 getChanges :: (Ord k) => (v -> v -> Bool) -> Map.Map k v -> Map.Map k v -> Changes k v
@@ -181,29 +192,31 @@ getChanges isEquivalent old new =
 
 
 isEquivalentAdt
-    :: ([String], Map.Map String [Type.Type])
+    :: Bool
+    -> ([String], Map.Map String [Type.Type])
     -> ([String], Map.Map String [Type.Type])
     -> Bool
-isEquivalentAdt (oldVars, oldCtors) (newVars, newCtors) =
+isEquivalentAdt ignoreOrigin (oldVars, oldCtors) (newVars, newCtors) =
     Map.size oldCtors == Map.size newCtors
     && and (zipWith (==) (Map.keys oldCtors) (Map.keys newCtors))
     && and (Map.elems (Map.intersectionWith equiv oldCtors newCtors))
   where
     equiv :: [Type.Type] -> [Type.Type] -> Bool
     equiv oldTypes newTypes =
-        let allEquivalent =
-                zipWith
-                  isEquivalentType
-                  (map ((,) oldVars) oldTypes)
-                  (map ((,) newVars) newTypes)
+        let
+          allEquivalent =
+              zipWith
+                (isEquivalentType ignoreOrigin)
+                (map ((,) oldVars) oldTypes)
+                (map ((,) newVars) newTypes)
         in
-            length oldTypes == length newTypes
-            && and allEquivalent
+          length oldTypes == length newTypes
+          && and allEquivalent
 
 
-isEquivalentType :: ([String], Type.Type) -> ([String], Type.Type) -> Bool
-isEquivalentType (oldVars, oldType) (newVars, newType) =
-  case diffType oldType newType of
+isEquivalentType :: Bool -> ([String], Type.Type) -> ([String], Type.Type) -> Bool
+isEquivalentType ignoreOrigin (oldVars, oldType) (newVars, newType) =
+  case diffType ignoreOrigin oldType newType of
     Nothing ->
         False
 
@@ -214,30 +227,37 @@ isEquivalentType (oldVars, oldType) (newVars, newType) =
 
 -- TYPES
 
-diffType :: Type.Type -> Type.Type -> Maybe [(String,String)]
-diffType oldType newType =
+diffType :: Bool -> Type.Type -> Type.Type -> Maybe [(String,String)]
+diffType ignoreOrigin oldType newType =
+  let
+    go = diffType ignoreOrigin
+  in
   case (oldType, newType) of
     (Type.Var oldName, Type.Var newName) ->
         Just [(oldName, newName)]
 
     (Type.Type oldName, Type.Type newName) ->
-        if oldName == newName then
-          Just []
-        else
-          Nothing
+        let
+          format =
+            if ignoreOrigin then dropOrigin else id
+        in
+          if format oldName == format newName then
+            Just []
+          else
+            Nothing
 
     (Type.Lambda a b, Type.Lambda a' b') ->
         (++)
-          <$> diffType a a'
-          <*> diffType b b'
+          <$> go a a'
+          <*> go b b'
 
     (Type.App t ts, Type.App t' ts') ->
         if length ts /= length ts' then
           Nothing
         else
           (++)
-            <$> diffType t t'
-            <*> (concat <$> zipWithM diffType ts ts')
+            <$> go t t'
+            <*> (concat <$> zipWithM go ts ts')
 
     (Type.Record fields maybeExt, Type.Record fields' maybeExt') ->
         case (maybeExt, maybeExt') of
@@ -248,29 +268,34 @@ diffType oldType newType =
               Nothing
 
           (Nothing, Nothing) ->
-              diffFields fields fields'
+              diffFields ignoreOrigin fields fields'
 
           (Just ext, Just ext') ->
               (++)
-                <$> diffType ext ext'
-                <*> diffFields fields fields'
+                <$> go ext ext'
+                <*> diffFields ignoreOrigin fields fields'
 
     (_, _) ->
         Nothing
 
 
-diffFields :: [(String, Type.Type)] -> [(String, Type.Type)] -> Maybe [(String,String)]
-diffFields rawFields rawFields'
+diffFields :: Bool -> [(String, Type.Type)] -> [(String, Type.Type)] -> Maybe [(String,String)]
+diffFields ignoreOrigin rawFields rawFields'
     | length rawFields /= length rawFields' = Nothing
     | or (zipWith ((/=) `on` fst) fields fields') = Nothing
     | otherwise =
-        concat <$> zipWithM (diffType `on` snd) fields fields'
+        concat <$> zipWithM (diffType ignoreOrigin `on` snd) fields fields'
     where
       fields  = sort rawFields
       fields' = sort rawFields'
 
       sort =
           List.sortBy (compare `on` fst)
+
+
+dropOrigin :: String -> String
+dropOrigin name =
+    Text.unpack (snd (Text.breakOnEnd (Text.pack ".") (Text.pack name)))
 
 
 -- TYPE VARIABLES
