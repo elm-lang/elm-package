@@ -18,5 +18,6 @@ generate =
 
       either badJson return (Json.eitherDecode json)
   where
+    badJson :: String -> Manager.Manager [Docs.Documentation]
     badJson msg =
       throwError $ "Problem with generated documentation:\n" ++ msg
