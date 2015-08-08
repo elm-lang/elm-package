@@ -80,7 +80,7 @@ getApproval autoYes plan =
     False ->
       do  putStrLn "Some new packages are needed. Here is the upgrade plan."
           putStrLn (Plan.display plan)
-          putStr "Do you approve of this plan? (y/n) "
+          putStr "Do you approve of this plan? [Y/n] "
           Cmd.yesOrNo
 
 
