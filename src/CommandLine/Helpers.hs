@@ -15,7 +15,9 @@ yesOrNo =
       input <- getLine
       case input of
         "y" -> return True
+        "Y" -> return True
         "n" -> return False
+        ""  -> return True
         _   -> do putStr "Must type 'y' for yes or 'n' for no: "
                   yesOrNo
 

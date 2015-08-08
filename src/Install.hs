@@ -187,7 +187,7 @@ addNewDependency autoYes name version description =
             ++ showDependency name newConstraint
             ++ "\n"
 
-          putStr $ "May I add that to " ++ Path.description ++ " for you? (y/n) "
+          putStr $ "May I add that to " ++ Path.description ++ " for you? [Y/n] "
           Cmd.yesOrNo
 
 
