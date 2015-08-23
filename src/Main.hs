@@ -39,6 +39,6 @@ requireGit =
   where
     gitNotInstalledMessage =
         "\n\
-        \The REPL relies on git to download libraries and manage versions.\n\
+        \elm-package relies on git to download libraries and manage versions.\n\
         \    It appears that you do not have git installed though!\n\
         \    Get it from <http://git-scm.com/downloads> to continue."
