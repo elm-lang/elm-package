@@ -12,15 +12,14 @@ import qualified Catalog
 import qualified Elm.Compiler.Module as Module
 import qualified Elm.Compiler.Type as Type
 import qualified Elm.Docs as Docs
-import qualified Elm.Package.Name as N
-import qualified Elm.Package.Version as V
+import qualified Elm.Package as Package
 import qualified Manager
 
 
 computeChanges
     :: [Docs.Documentation]
-    -> N.Name
-    -> V.Version
+    -> Package.Name
+    -> Package.Version
     -> Manager.Manager PackageChanges
 computeChanges newDocs name version =
   do  oldDocs <- Catalog.documentation name version
@@ -36,17 +35,17 @@ data Magnitude
     deriving (Eq, Ord, Show)
 
 
-bumpBy :: PackageChanges -> V.Version -> V.Version
+bumpBy :: PackageChanges -> Package.Version -> Package.Version
 bumpBy changes version =
   case packageChangeMagnitude changes of
     PATCH ->
-        V.bumpPatch version
+        Package.bumpPatch version
 
     MINOR ->
-        V.bumpMinor version
+        Package.bumpMinor version
 
     MAJOR ->
-        V.bumpMajor version
+        Package.bumpMajor version
 
 
 packageChangeMagnitude :: PackageChanges -> Magnitude

@@ -10,9 +10,8 @@ import qualified Diff.Compare as Compare
 import qualified Docs
 import qualified Elm.Docs as Docs
 import qualified Elm.Package.Description as Desc
-import qualified Elm.Package.Name as N
+import qualified Elm.Package as Package
 import qualified Elm.Package.Paths as Path
-import qualified Elm.Package.Version as V
 import qualified Manager
 
 
@@ -38,7 +37,7 @@ bump =
         return ()
 
 
-unbumpable :: [V.Version] -> String
+unbumpable :: [Package.Version] -> String
 unbumpable baseVersions =
   let versions = map head (List.group (List.sort baseVersions))
   in
@@ -48,7 +47,7 @@ unbumpable baseVersions =
     , ""
     , "The version numbers that can be bumped include the following subset of"
     , "published versions:"
-    , "  " ++ List.intercalate ", " (map V.toString versions)
+    , "  " ++ List.intercalate ", " (map Package.versionToString versions)
     , ""
     , "Switch back to one of these versions before running 'elm-package bump'"
     , "again."
@@ -58,15 +57,15 @@ unbumpable baseVersions =
 data Validity
     = Valid
     | Invalid
-    | Changed V.Version
+    | Changed Package.Version
 
 
 validateInitialVersion :: Desc.Description -> Manager.Manager Validity
 validateInitialVersion description =
     do  Cmd.out explanation
-        if Desc.version description == V.initialVersion
+        if Desc.version description == Package.initialVersion
             then Cmd.out goodMsg >> return Valid
-            else changeVersion badMsg description V.initialVersion
+            else changeVersion badMsg description Package.initialVersion
     where
         explanation =
             unlines
@@ -74,7 +73,7 @@ validateInitialVersion description =
             , ""
             , "  * Versions all have exactly three parts: MAJOR.MINOR.PATCH"
             , ""
-            , "  * All packages start with initial version " ++ V.toString V.initialVersion
+            , "  * All packages start with initial version " ++ Package.versionToString Package.initialVersion
             , ""
             , "  * Versions are incremented based on how the API changes:"
             , ""
@@ -92,11 +91,11 @@ validateInitialVersion description =
         badMsg =
             concat
             [ "It looks like the version in " ++ Path.description ++ " has been changed though!\n"
-            , "Would you like me to change it back to " ++ V.toString V.initialVersion ++ "? (y/n) "
+            , "Would you like me to change it back to " ++ Package.versionToString Package.initialVersion ++ "? (y/n) "
             ]
 
 
-changeVersion :: String -> Desc.Description -> V.Version -> Manager.Manager Validity
+changeVersion :: String -> Desc.Description -> Package.Version -> Manager.Manager Validity
 changeVersion explanation description newVersion =
     do  liftIO $ putStr explanation
         yes <- liftIO Cmd.yesOrNo
@@ -107,14 +106,14 @@ changeVersion explanation description newVersion =
 
             True -> do
                 liftIO $ Desc.write (description { Desc.version = newVersion })
-                Cmd.out $ "Version changed to " ++ V.toString newVersion ++ "."
+                Cmd.out $ "Version changed to " ++ Package.versionToString newVersion ++ "."
                 return (Changed newVersion)
 
 
 suggestVersion
     :: [Docs.Documentation]
-    -> N.Name
-    -> V.Version
+    -> Package.Name
+    -> Package.Version
     -> Desc.Description
     -> Manager.Manager Validity
 suggestVersion newDocs name version description =
@@ -124,8 +123,8 @@ suggestVersion newDocs name version description =
 
     where
         infoMsg changes newVersion =
-            let old = V.toString version
-                new = V.toString newVersion
+            let old = Package.versionToString version
+                new = Package.versionToString newVersion
                 magnitude = show (Compare.packageChangeMagnitude changes)
             in
             concat
@@ -138,9 +137,9 @@ suggestVersion newDocs name version description =
 
 validateVersion
     :: [Docs.Documentation]
-    -> N.Name
-    -> V.Version
-    -> [V.Version]
+    -> Package.Name
+    -> Package.Version
+    -> [Package.Version]
     -> Manager.Manager Validity
 validateVersion newDocs name statedVersion publishedVersions =
     case List.find (\(_ ,new, _) -> statedVersion == new) bumps of
@@ -163,11 +162,11 @@ validateVersion newDocs name statedVersion publishedVersions =
         bumps = validBumps publishedVersions
 
         looksGood old new magnitude =
-            "Version number " ++ V.toString new ++ " verified (" ++ show magnitude
-            ++ " change, " ++ V.toString old ++ " => " ++ V.toString new ++ ")"
+            "Version number " ++ Package.versionToString new ++ " verified (" ++ show magnitude
+            ++ " change, " ++ Package.versionToString old ++ " => " ++ Package.versionToString new ++ ")"
 
         alreadyPublished =
-            "Version " ++ V.toString statedVersion
+            "Version " ++ Package.versionToString statedVersion
             ++ " has already been published, but you are trying to publish\n"
             ++ "it again! Run the following command to see what the new version should be.\n"
             ++ "\n    elm-package bump\n"
@@ -179,7 +178,7 @@ validateVersion newDocs name statedVersion publishedVersions =
             , ""
             , "Set the version number in " ++ Path.description ++ " to the released version"
             , "that you are improving upon. If you are working on the latest API, that means"
-            , "you are modifying version " ++ V.toString (last publishedVersions) ++ "."
+            , "you are modifying version " ++ Package.versionToString (last publishedVersions) ++ "."
             , ""
             , "From there, we can compute which version comes next based on the API changes"
             , "when you run the following command."
@@ -189,14 +188,14 @@ validateVersion newDocs name statedVersion publishedVersions =
 
         badBump old new realNew magnitude changes =
             unlines
-            [ "It looks like you are trying to bump from version " ++ V.toString old ++ " to " ++ V.toString new ++ "."
+            [ "It looks like you are trying to bump from version " ++ Package.versionToString old ++ " to " ++ Package.versionToString new ++ "."
             , "This implies you are making a " ++ show magnitude ++ " change, but when we compare"
-            , "the " ++ V.toString old ++ " API to the API you have now it seems that it should"
-            , "really be a " ++ show (Compare.packageChangeMagnitude changes) ++ " change (" ++ V.toString realNew ++ ")."
+            , "the " ++ Package.versionToString old ++ " API to the API you have now it seems that it should"
+            , "really be a " ++ show (Compare.packageChangeMagnitude changes) ++ " change (" ++ Package.versionToString realNew ++ ")."
             , ""
             , "Run the following command to see the API diff we are working from:"
             , ""
-            , "    elm-package diff " ++ V.toString old
+            , "    elm-package diff " ++ Package.versionToString old
             , ""
             , "The easiest way to bump versions is to let us do it automatically. If you set"
             , "the version number in " ++ Path.description ++ " to the released version"
@@ -209,13 +208,13 @@ validateVersion newDocs name statedVersion publishedVersions =
 
 -- VALID BUMPS
 
-validBumps :: [V.Version] -> [(V.Version, V.Version, Compare.Magnitude)]
+validBumps :: [Package.Version] -> [(Package.Version, Package.Version, Compare.Magnitude)]
 validBumps publishedVersions =
-    [ (majorPoint, V.bumpMajor majorPoint, Compare.MAJOR) ]
-    ++ map (\v -> (v, V.bumpMinor v, Compare.MINOR)) minorPoints
-    ++ map (\v -> (v, V.bumpPatch v, Compare.PATCH)) patchPoints
+    [ (majorPoint, Package.bumpMajor majorPoint, Compare.MAJOR) ]
+    ++ map (\v -> (v, Package.bumpMinor v, Compare.MINOR)) minorPoints
+    ++ map (\v -> (v, Package.bumpPatch v, Compare.PATCH)) patchPoints
   where
-    patchPoints = V.filterLatest V.majorAndMinor publishedVersions
-    minorPoints = V.filterLatest V.major publishedVersions
+    patchPoints = Package.filterLatest Package.majorAndMinor publishedVersions
+    minorPoints = Package.filterLatest Package.major publishedVersions
     majorPoint = head publishedVersions
 

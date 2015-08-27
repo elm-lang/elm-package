@@ -9,12 +9,11 @@ import System.Directory (doesFileExist, removeDirectoryRecursive)
 import System.FilePath ((</>))
 
 import qualified CommandLine.Helpers as Cmd
+import qualified Elm.Package as Package
 import qualified Elm.Package.Constraint as Constraint
 import qualified Elm.Package.Description as Desc
-import qualified Elm.Package.Name as N
 import qualified Elm.Package.Paths as Path
 import qualified Elm.Package.Solution as Solution
-import qualified Elm.Package.Version as V
 import qualified Install.Fetch as Fetch
 import qualified Install.Plan as Plan
 import qualified Install.Solver as Solver
@@ -24,8 +23,8 @@ import qualified Store
 
 data Args
     = Everything
-    | Latest N.Name
-    | Exactly N.Name V.Version
+    | Latest Package.Name
+    | Exactly Package.Name Package.Version
 
 
 install :: Bool -> Args -> Manager.Manager ()
@@ -98,7 +97,7 @@ runPlan solution plan =
       -- fetch new dependencies
       Cmd.inDir Path.packagesDirectory $
           forM_ installs $ \(name, version) ->
-              do  liftIO (putStrLn ("Downloading " ++ N.toString name))
+              do  liftIO (putStrLn ("Downloading " ++ Package.toString name))
                   Fetch.package name version
 
       -- try to build new dependencies
@@ -107,14 +106,15 @@ runPlan solution plan =
       -- remove dependencies that are not needed
       Cmd.inDir Path.packagesDirectory $
           forM_ removals $ \(name, version) ->
-              liftIO $ removeDirectoryRecursive (N.toFilePath name </> V.toString version)
+              liftIO $
+                removeDirectoryRecursive (Package.toFilePath name </> Package.versionToString version)
 
       liftIO $ putStrLn "Packages configured successfully!"
 
 
 -- MODIFY DESCRIPTION
 
-latestVersion :: N.Name -> Manager.Manager V.Version
+latestVersion :: Package.Name -> Manager.Manager Package.Version
 latestVersion name =
   do  versionCache <- Store.readVersionCache
       case Map.lookup name versionCache of
@@ -124,12 +124,12 @@ latestVersion name =
         Nothing ->
             throwError $
             unlines
-            [ "No versions of package '" ++ N.toString name ++ "' were found!"
+            [ "No versions of package '" ++ Package.toString name ++ "' were found!"
             , "Is it spelled correctly?"
             ]
 
 
-addConstraint :: Bool -> N.Name -> V.Version -> Desc.Description -> Manager.Manager Desc.Description
+addConstraint :: Bool -> Package.Name -> Package.Version -> Desc.Description -> Manager.Manager Desc.Description
 addConstraint autoYes name version description =
   case List.lookup name (Desc.dependencies description) of
     Nothing ->
@@ -142,14 +142,14 @@ addConstraint autoYes name version description =
       | otherwise ->
           throwError $
             "This is a tricky update, you should modify " ++ Path.description ++ " yourself.\n"
-            ++ "Package " ++ N.toString name ++ " is already listed as a dependency:\n\n    "
+            ++ "Package " ++ Package.toString name ++ " is already listed as a dependency:\n\n    "
             ++ showDependency name constraint ++ "\n\n"
             ++ "You probably want one of the following constraints instead:\n\n    "
             ++ Constraint.toString (Constraint.expand constraint version) ++ "\n    "
             ++ Constraint.toString (Constraint.untilNextMajor version) ++ "\n"
 
 
-addNewDependency :: Bool -> N.Name -> V.Version -> Desc.Description -> Manager.Manager Desc.Description
+addNewDependency :: Bool -> Package.Name -> Package.Version -> Desc.Description -> Manager.Manager Desc.Description
 addNewDependency autoYes name version description =
   do  confirm <-
           case autoYes of
@@ -182,7 +182,7 @@ addNewDependency autoYes name version description =
 
     confirmNewAddition =
       do  putStrLn $
-            "To install " ++ N.toString name ++ " I would like to add the following\n"
+            "To install " ++ Package.toString name ++ " I would like to add the following\n"
             ++ "dependency to " ++ Path.description ++ ":\n\n    "
             ++ showDependency name newConstraint
             ++ "\n"
@@ -191,14 +191,14 @@ addNewDependency autoYes name version description =
           Cmd.yesOrNo
 
 
-showDependency :: N.Name -> Constraint.Constraint -> String
+showDependency :: Package.Name -> Constraint.Constraint -> String
 showDependency name constraint =
-    show (N.toString name) ++ ": " ++ show (Constraint.toString constraint)
+    show (Package.toString name) ++ ": " ++ show (Constraint.toString constraint)
 
 
 initialDescription :: Manager.Manager Desc.Description
 initialDescription =
-  do  let core = N.Name "elm-lang" "core"
+  do  let core = Package.Name "elm-lang" "core"
       version <- latestVersion core
       let desc = Desc.defaultDescription {
           Desc.dependencies = [ (core, Constraint.untilNextMajor version) ]

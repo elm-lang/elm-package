@@ -37,10 +37,8 @@ Library
         Elm.Package.Constraint,
         Elm.Package.Description,
         Elm.Package.Initialize,
-        Elm.Package.Name,
         Elm.Package.Paths,
         Elm.Package.Solution,
-        Elm.Package.Version,
         GitHub
 
     other-modules:
@@ -101,10 +99,8 @@ Executable elm-package
         Elm.Package.Constraint,
         Elm.Package.Description,
         Elm.Package.Initialize,
-        Elm.Package.Name,
         Elm.Package.Paths,
         Elm.Package.Solution,
-        Elm.Package.Version,
         GitHub,
         Install,
         Install.Fetch,

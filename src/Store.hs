@@ -13,8 +13,7 @@ import System.FilePath ((</>))
 import qualified Catalog
 import qualified Elm.Package.Constraint as C
 import qualified Elm.Package.Description as Desc
-import qualified Elm.Package.Name as N
-import qualified Elm.Package.Version as V
+import qualified Elm.Package as Package
 import qualified Manager
 
 
@@ -27,11 +26,11 @@ data Store = Store
 
 
 type ConstraintCache =
-    Map.Map (N.Name, V.Version) (C.Constraint, [(N.Name, C.Constraint)])
+    Map.Map (Package.Name, Package.Version) (C.Constraint, [(Package.Name, C.Constraint)])
 
 
 type VersionCache =
-    Map.Map N.Name [V.Version]
+    Map.Map Package.Name [Package.Version]
 
 
 initialStore
@@ -86,9 +85,9 @@ readVersionCache =
 
 getConstraints
     :: (MonadIO m, MonadReader Manager.Environment m, MonadState Store m, MonadError String m)
-    => N.Name
-    -> V.Version
-    -> m (C.Constraint, [(N.Name, C.Constraint)])
+    => Package.Name
+    -> Package.Version
+    -> m (C.Constraint, [(Package.Name, C.Constraint)])
 
 getConstraints name version =
   do  cache <- gets constraintCache
@@ -107,7 +106,7 @@ getConstraints name version =
 
 -- VERSIONS
 
-getVersions :: (MonadIO m, MonadError String m, MonadState Store m) => N.Name -> m [V.Version]
+getVersions :: (MonadIO m, MonadError String m, MonadState Store m) => Package.Name -> m [Package.Version]
 getVersions name =
   do  cache <- gets versionCache
       case Map.lookup name cache of
@@ -116,4 +115,4 @@ getVersions name =
             throwError noLocalVersions
   where
     noLocalVersions =
-        "There are no versions of package '" ++ N.toString name ++ "' on your computer."
+        "There are no versions of package '" ++ Package.toString name ++ "' on your computer."

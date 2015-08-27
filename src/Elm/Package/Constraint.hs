@@ -13,13 +13,14 @@ module Elm.Package.Constraint
 import qualified Data.Aeson as Json
 import qualified Data.Text as Text
 
-import qualified Elm.Package.Version as V
+import qualified Elm.Package as Package
+import qualified Elm.Compiler.Version as Version
 
 
 -- CONSTRAINTS
 
 data Constraint
-    = Range V.Version Op Op V.Version
+    = Range Package.Version Op Op Package.Version
 
 
 data Op = Less | LessOrEqual
@@ -27,23 +28,23 @@ data Op = Less | LessOrEqual
 
 -- CREATE CONSTRAINTS
 
-untilNextMajor :: V.Version -> Constraint
+untilNextMajor :: Package.Version -> Constraint
 untilNextMajor version =
-  Range version LessOrEqual Less (V.bumpMajor version)
+  Range version LessOrEqual Less (Package.bumpMajor version)
 
 
-untilNextMinor :: V.Version -> Constraint
+untilNextMinor :: Package.Version -> Constraint
 untilNextMinor version =
-  Range version LessOrEqual Less (V.bumpMinor version)
+  Range version LessOrEqual Less (Package.bumpMinor version)
 
 
-expand :: Constraint -> V.Version -> Constraint
+expand :: Constraint -> Package.Version -> Constraint
 expand constraint@(Range lower lowerOp upperOp upper) version
   | version < lower =
       Range version LessOrEqual upperOp upper
 
   | version > upper =
-      Range lower lowerOp Less (V.bumpMajor version)
+      Range lower lowerOp Less (Package.bumpMajor version)
 
   | otherwise =
       constraint
@@ -53,14 +54,14 @@ expand constraint@(Range lower lowerOp upperOp upper) version
 
 defaultElmVersion :: Constraint
 defaultElmVersion =
-  if V.major V.elm > 0
-    then untilNextMajor V.elm
-    else untilNextMinor V.elm
+  if Package.major Version.elm > 0
+    then untilNextMajor Version.elm
+    else untilNextMinor Version.elm
 
 
 -- CHECK IF SATISFIED
 
-isSatisfied :: Constraint -> V.Version -> Bool
+isSatisfied :: Constraint -> Package.Version -> Bool
 isSatisfied constraint version =
   case constraint of
     Range lower lowerOp upperOp upper ->
@@ -83,11 +84,11 @@ toString constraint =
   case constraint of
     Range lower lowerOp upperOp upper ->
       unwords
-        [ V.toString lower
+        [ Package.versionToString lower
         , opToString lowerOp
         , "v"
         , opToString upperOp
-        , V.toString upper
+        , Package.versionToString upper
         ]
 
 
@@ -101,11 +102,11 @@ opToString op =
 fromString :: String -> Maybe Constraint
 fromString str =
   do  let (lowerString, rest) = break (==' ') str
-      lower <- V.fromString lowerString
+      lower <- Package.versionFromString lowerString
       (lowerOp, rest1) <- takeOp (eatSpace rest)
       rest2 <- eatV (eatSpace rest1)
       (upperOp, rest3) <- takeOp (eatSpace rest2)
-      upper <- V.fromString (eatSpace rest3)
+      upper <- Package.versionFromString (eatSpace rest3)
       return (Range lower lowerOp upperOp upper)
 
 

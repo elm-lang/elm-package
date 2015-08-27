@@ -18,9 +18,8 @@ import System.FilePath ((</>), dropFileName)
 
 import qualified Elm.Docs as Docs
 import qualified Elm.Package.Description as Desc
-import qualified Elm.Package.Name as N
+import qualified Elm.Package as Package
 import qualified Elm.Package.Paths as P
-import qualified Elm.Package.Version as V
 import qualified Manager
 import qualified Paths_elm_package as This
 import qualified Utils.Http as Http
@@ -38,9 +37,9 @@ catalog path vars =
     version = ("elm-package-version", showVersion This.version)
 
 
-versions :: N.Name -> Manager.Manager (Maybe [V.Version])
+versions :: Package.Name -> Manager.Manager (Maybe [Package.Version])
 versions name =
-  do  url <- catalog "versions" [("name", N.toString name)]
+  do  url <- catalog "versions" [("name", Package.toString name)]
       Http.send url $ \request manager -> do
           response <- Client.httpLbs request manager
           return $ Binary.decode $ Client.responseBody response
@@ -49,7 +48,7 @@ versions name =
 allPackages
     :: (MonadIO m, MonadReader Manager.Environment m, MonadError String m)
     => Maybe Time.UTCTime
-    -> m (Maybe [(N.Name, [V.Version])])
+    -> m (Maybe [(Package.Name, [Package.Version])])
 allPackages maybeTime =
   do  url <- catalog "all-packages" vars
       Http.send url $ \request manager -> do
@@ -67,7 +66,7 @@ allPackages maybeTime =
         Just time -> [("since", show time)]
 
 
-newtype PackageSummary = PackageSummary (N.Name, [V.Version])
+newtype PackageSummary = PackageSummary (Package.Name, [Package.Version])
 
 
 instance Json.FromJSON PackageSummary where
@@ -80,7 +79,7 @@ instance Json.FromJSON PackageSummary where
       fail "package summary must be an object"
 
 
-register :: N.Name -> V.Version -> Manager.Manager ()
+register :: Package.Name -> Package.Version -> Manager.Manager ()
 register name version =
   do  url <- catalog "register" vars
       Http.send url $ \request manager -> do
@@ -90,8 +89,8 @@ register name version =
           return ()
   where
     vars =
-        [ ("name", N.toString name)
-        , ("version", V.toString version)
+        [ ("name", Package.toString name)
+        , ("version", Package.versionToString version)
         ]
 
     files =
@@ -103,8 +102,8 @@ register name version =
 
 description
     :: (MonadIO m, MonadReader Manager.Environment m, MonadError String m)
-    => N.Name
-    -> V.Version
+    => Package.Name
+    -> Package.Version
     -> m Desc.Description
 description name version =
   getJson "description" P.description name version
@@ -112,8 +111,8 @@ description name version =
 
 documentation
     :: (MonadIO m, MonadReader Manager.Environment m, MonadError String m)
-    => N.Name
-    -> V.Version
+    => Package.Name
+    -> Package.Version
     -> m [Docs.Documentation]
 documentation name version =
   getJson "documentation" "documentation.json" name version
@@ -123,13 +122,13 @@ getJson
     :: (MonadIO m, MonadReader Manager.Environment m, MonadError String m, Json.FromJSON a)
     => String
     -> FilePath
-    -> N.Name
-    -> V.Version
+    -> Package.Name
+    -> Package.Version
     -> m a
 getJson metadata metadataPath name version =
   do  cacheDir <- asks Manager.cacheDirectory
       let fullMetadataPath =
-            cacheDir </> N.toFilePath name </> V.toString version </> metadataPath
+            cacheDir </> Package.toFilePath name </> Package.versionToString version </> metadataPath
 
       exists <- liftIO (doesFileExist fullMetadataPath)
 
@@ -137,7 +136,7 @@ getJson metadata metadataPath name version =
         case exists of
           True -> liftIO (LBS.readFile fullMetadataPath)
           False ->
-            do  url <- catalog metadata [("name", N.toString name), ("version", V.toString version)]
+            do  url <- catalog metadata [("name", Package.toString name), ("version", Package.versionToString version)]
                 Http.send url $ \request manager ->
                     do  response <- Client.httpLbs request manager
                         createDirectoryIfMissing True (dropFileName fullMetadataPath)
@@ -149,4 +148,4 @@ getJson metadata metadataPath name version =
         Left err ->
           throwError $
             "Unable to get " ++ metadataPath ++ " for "
-            ++ N.toString name ++ " " ++ V.toString version ++ "\n" ++ err
+            ++ Package.toString name ++ " " ++ Package.versionToString version ++ "\n" ++ err

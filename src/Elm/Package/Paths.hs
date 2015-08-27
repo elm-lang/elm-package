@@ -2,8 +2,7 @@
 module Elm.Package.Paths where
 
 import System.FilePath ((</>))
-import qualified Elm.Package.Name as N
-import qualified Elm.Package.Version as V
+import qualified Elm.Package as Package
 
 
 {-| Name of directory for all of a project's dependencies. -}
@@ -43,6 +42,6 @@ packagesDirectory =
 
 
 {-| Path to a particular package. -}
-package :: N.Name -> V.Version -> FilePath
+package :: Package.Name -> Package.Version -> FilePath
 package name version =
-    packagesDirectory </> N.toFilePath name </> V.toString version
+    packagesDirectory </> Package.toFilePath name </> Package.versionToString version

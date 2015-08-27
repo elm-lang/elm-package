@@ -10,8 +10,7 @@ import Data.Monoid ((<>))
 import qualified Data.Vector as Vector
 import Network.HTTP.Client
 
-import qualified Elm.Package.Name as Name
-import qualified Elm.Package.Version as Version
+import qualified Elm.Package as Package
 import qualified Utils.Http as Http
 
 
@@ -22,15 +21,15 @@ newtype Tags = Tags [String]
 
 getVersionTags
     :: (MonadIO m, MonadError String m)
-    => Name.Name -> m [Version.Version]
+    => Package.Name -> m [Package.Version]
 
-getVersionTags (Name.Name user project) =
+getVersionTags (Package.Name user project) =
   do  response <-
           Http.send url $ \request manager ->
               httpLbs (request {requestHeaders = headers}) manager
       case Json.eitherDecode (responseBody response) of
         Left err -> throwError err
-        Right (Tags tags) -> return (Maybe.mapMaybe Version.fromString tags)
+        Right (Tags tags) -> return (Maybe.mapMaybe Package.versionFromString tags)
 
   where
     url = "https://api.github.com/repos/" ++ user ++ "/" ++ project ++ "/tags"

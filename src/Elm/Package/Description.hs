@@ -20,33 +20,32 @@ import System.FilePath ((</>), (<.>))
 import System.Directory (doesFileExist)
 
 import qualified Elm.Compiler.Module as Module
-import qualified Elm.Package.Name as N
-import qualified Elm.Package.Version as V
+import qualified Elm.Package as Package
 import qualified Elm.Package.Constraint as C
 import qualified Elm.Package.Paths as Path
 import Elm.Utils ((|>))
 
 
 data Description = Description
-    { name :: N.Name
+    { name :: Package.Name
     , repo :: String
-    , version :: V.Version
+    , version :: Package.Version
     , elmVersion :: C.Constraint
     , summary :: String
     , license :: String
     , sourceDirs :: [FilePath]
     , exposed :: [Module.Name]
     , natives :: Bool
-    , dependencies :: [(N.Name, C.Constraint)]
+    , dependencies :: [(Package.Name, C.Constraint)]
     }
 
 
 defaultDescription :: Description
 defaultDescription =
     Description
-    { name = N.Name "USER" "PROJECT"
+    { name = Package.Name "USER" "PROJECT"
     , repo = "https://github.com/USER/PROJECT.git"
-    , version = V.initialVersion
+    , version = Package.initialVersion
     , elmVersion = C.defaultElmVersion
     , summary = "helpful summary of your project, less than 80 characters"
     , license = "BSD3"
@@ -144,7 +143,7 @@ prettyJSON description =
         dependencies description
           |> map fst
           |> List.sort
-          |> map (T.pack . N.toString)
+          |> map (T.pack . Package.toString)
 
 
 prettyAngles :: BS.ByteString -> BS.ByteString
@@ -176,7 +175,7 @@ instance ToJSON Description where
         ] ++ if natives d then ["native-modules" .= True] else []
     where
       jsonDeps deps =
-          Map.fromList $ map (first (T.pack . N.toString)) deps
+          Map.fromList $ map (first (T.pack . Package.toString)) deps
 
 
 instance FromJSON Description where
@@ -224,16 +223,16 @@ get obj field desc =
               "    <https://raw.githubusercontent.com/evancz/elm-html/master/elm-package.json>"
 
 
-getDependencies :: Object -> Parser [(N.Name, C.Constraint)]
+getDependencies :: Object -> Parser [(Package.Name, C.Constraint)]
 getDependencies obj =
   do  deps <- get obj "dependencies" "a listing of your project's dependencies"
       forM (Map.toList deps) $ \(rawName, rawConstraint) ->
-          case (N.fromString rawName, C.fromString rawConstraint) of
+          case (Package.fromString rawName, C.fromString rawConstraint) of
             (Just name, Just constraint) ->
                 return (name, constraint)
 
             (Nothing, _) ->
-                fail (N.errorMsg rawName)
+                fail (Package.errorMsg rawName)
 
             (_, Nothing) ->
                 fail (C.errorMessage rawConstraint)
@@ -255,14 +254,14 @@ elmVersionDescription =
   ++ C.toString C.defaultElmVersion ++ "\")"
 
 
-repoToName :: String -> Either String N.Name
+repoToName :: String -> Either String Package.Name
 repoToName repo =
     if not (end `List.isSuffixOf` repo)
         then Left msg
         else
             do  path <- getPath
                 let raw = take (length path - length end) path
-                case N.fromString raw of
+                case Package.fromString raw of
                   Nothing   -> Left msg
                   Just name -> Right name
     where

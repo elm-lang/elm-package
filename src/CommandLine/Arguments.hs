@@ -14,9 +14,8 @@ import qualified Manager
 import qualified Publish
 import qualified Paths_elm_package as This
 import qualified Elm.Compiler as Compiler
-import qualified Elm.Package.Name as N
+import qualified Elm.Package as Package
 import qualified Elm.Package.Paths as Path
-import qualified Elm.Package.Version as V
 
 
 parse :: IO (Manager.Manager ())
@@ -141,7 +140,7 @@ installInfo =
           (Nothing, Just version) ->
               throwError $
                 "You specified a version number, but not a package!\nVersion "
-                ++ V.toString version ++ " of what?"
+                ++ Package.versionToString version ++ " of what?"
 
     infoModifier =
         mconcat
@@ -161,18 +160,18 @@ installInfo =
 
 -- ARGUMENT PARSERS
 
-package :: Opt.Parser N.Name
+package :: Opt.Parser Package.Name
 package =
-    Opt.argument (argReader "PACKAGE" N.fromString) $
+    Opt.argument (argReader "PACKAGE" Package.fromString) $
         mconcat
         [ Opt.metavar "PACKAGE"
         , Opt.help "A specific package name (e.g. evancz/automaton)"
         ]
 
 
-version :: Opt.Parser V.Version
+version :: Opt.Parser Package.Version
 version =
-    Opt.argument (argReader "VERSION" V.fromString) $
+    Opt.argument (argReader "VERSION" Package.versionFromString) $
         mconcat
         [ Opt.metavar "VERSION"
         , Opt.help "Specific version of a package (e.g. 1.2.0)"

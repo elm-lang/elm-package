@@ -3,14 +3,13 @@ module Install.Plan where
 import qualified Data.Map as Map
 
 import qualified Elm.Package.Solution as S
-import qualified Elm.Package.Name as N
-import qualified Elm.Package.Version as V
+import qualified Elm.Package as Package
 
 
 data Plan = Plan
-    { installs :: Map.Map N.Name V.Version
-    , upgrades :: Map.Map N.Name (V.Version, V.Version)
-    , removals :: Map.Map N.Name V.Version
+    { installs :: Map.Map Package.Name Package.Version
+    , upgrades :: Map.Map Package.Name (Package.Version, Package.Version)
+    , removals :: Map.Map Package.Name Package.Version
     }
 
 
@@ -54,10 +53,11 @@ display (Plan installs upgrades removals) =
           ++ "\n"
 
     displayInstall (name, version) =
-        N.toString name ++ " " ++ V.toString version
+        Package.toString name ++ " " ++ Package.versionToString version
 
     displayUpgrade (name, (old, new)) =
-        N.toString name ++ " (" ++ V.toString old ++ " => " ++ V.toString new ++ ")"
+        Package.toString name ++ " ("
+        ++ Package.versionToString old ++ " => " ++ Package.versionToString new ++ ")"
 
     displayRemove (name, _version) =
-        N.toString name
+        Package.toString name
