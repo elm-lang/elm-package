@@ -5,7 +5,7 @@ import Control.Monad.State (StateT, evalStateT)
 import qualified Data.List as List
 import qualified Data.Map as Map
 
-import qualified Elm.Compiler.Version as Version
+import qualified Elm.Compiler as Compiler
 import qualified Elm.Package.Constraint as C
 import qualified Elm.Package as Package
 import qualified Elm.Package.Solution as S
@@ -68,7 +68,7 @@ exploreVersionList name versions solution remainingPackages =
 exploreVersion :: Package.Name -> Package.Version -> S.Solution -> Packages -> Explorer (Maybe S.Solution)
 exploreVersion name version solution remainingPackages =
   do  (elmVersion, constraints) <- Store.getConstraints name version
-      if C.isSatisfied elmVersion Version.elm
+      if C.isSatisfied elmVersion Compiler.version
         then explore constraints
         else return Nothing
 

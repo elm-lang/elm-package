@@ -14,7 +14,7 @@ import qualified Data.Aeson as Json
 import qualified Data.Text as Text
 
 import qualified Elm.Package as Package
-import qualified Elm.Compiler.Version as Version
+import qualified Elm.Compiler as Compiler
 
 
 -- CONSTRAINTS
@@ -54,9 +54,9 @@ expand constraint@(Range lower lowerOp upperOp upper) version
 
 defaultElmVersion :: Constraint
 defaultElmVersion =
-  if Package.major Version.elm > 0
-    then untilNextMajor Version.elm
-    else untilNextMinor Version.elm
+  if Package.major Compiler.version > 0
+    then untilNextMajor Compiler.version
+    else untilNextMinor Compiler.version
 
 
 -- CHECK IF SATISFIED

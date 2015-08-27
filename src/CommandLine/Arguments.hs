@@ -14,7 +14,6 @@ import qualified Manager
 import qualified Publish
 import qualified Paths_elm_package as This
 import qualified Elm.Compiler as Compiler
-import qualified Elm.Compiler.Version as CompilerVersion
 import qualified Elm.Package as Package
 import qualified Elm.Package.Paths as Path
 
@@ -47,7 +46,7 @@ infoModifier =
   where
     top =
         "Elm Package Manager " ++ showVersion This.version
-        ++ " (Elm Platform " ++ CompilerVersion.version ++ ")\n"
+        ++ " (Elm Platform " ++ (Package.versionToString Compiler.version) ++ ")\n"
 
     moreHelp =
         linesToDoc
