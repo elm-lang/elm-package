@@ -9,16 +9,15 @@ import qualified Diff.Display as Display
 import qualified Docs
 import qualified Elm.Docs as Docs
 import qualified Elm.Package.Description as Desc
-import qualified Elm.Package.Name as N
 import qualified Elm.Package.Paths as Path
-import qualified Elm.Package.Version as V
+import qualified Elm.Package as Package
 import qualified Manager
 
 
 data Range
     = LatestVsActual
-    | Since V.Version
-    | Between N.Name V.Version V.Version
+    | Since Package.Version
+    | Between Package.Name Package.Version Package.Version
 
 
 diff :: Range -> Manager.Manager ()
@@ -50,10 +49,10 @@ noVersions =
 
 
 computeDiff
-    :: N.Name
-    -> V.Version
+    :: Package.Name
+    -> Package.Version
     -> [Docs.Documentation]
-    -> Maybe V.Version
+    -> Maybe Package.Version
     -> Manager.Manager ()
 computeDiff name oldVersion newDocs maybeNewVersion =
     do  Cmd.out msg
@@ -61,9 +60,9 @@ computeDiff name oldVersion newDocs maybeNewVersion =
         Cmd.out (Display.packageChanges changes)
     where
         msg =
-            "Comparing " ++ N.toString name ++ " " ++ V.toString oldVersion ++ " to " ++ newStuff ++ "..."
+            "Comparing " ++ Package.toString name ++ " " ++ Package.versionToString oldVersion ++ " to " ++ newStuff ++ "..."
 
         newStuff =
             case maybeNewVersion of
                 Nothing -> "local changes"
-                Just version -> V.toString version
+                Just version -> Package.versionToString version

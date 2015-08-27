@@ -9,9 +9,8 @@ import qualified CommandLine.Helpers as Cmd
 import qualified Docs
 import qualified Elm.Docs as Docs
 import qualified Elm.Package.Description as Desc
-import qualified Elm.Package.Name as N
+import qualified Elm.Package as Package
 import qualified Elm.Package.Paths as P
-import qualified Elm.Package.Version as V
 import qualified GitHub
 import qualified Manager
 
@@ -23,7 +22,7 @@ publish =
       let name = Desc.name description
       let version = Desc.version description
 
-      Cmd.out $ unwords [ "Verifying", N.toString name, V.toString version, "..." ]
+      Cmd.out $ unwords [ "Verifying", Package.toString name, Package.versionToString version, "..." ]
       verifyMetadata description
 
       docs <- Docs.generate
@@ -80,7 +79,7 @@ verifyVersion docs description =
             Bump.validateInitialVersion description
 
 
-verifyTag :: N.Name -> V.Version -> Manager.Manager ()
+verifyTag :: Package.Name -> Package.Version -> Manager.Manager ()
 verifyTag name version =
     do  publicVersions <- GitHub.getVersionTags name
         if version `elem` publicVersions
@@ -88,9 +87,9 @@ verifyTag name version =
             else throwError (tagMessage version)
 
 
-tagMessage :: V.Version -> String
+tagMessage :: Package.Version -> String
 tagMessage version =
-    let v = V.toString version in
+    let v = Package.versionToString version in
     unlines
     [ "Libraries must be tagged in git, but tag " ++ v ++ " was not found."
     , "These tags make it possible to find this specific version on github."
