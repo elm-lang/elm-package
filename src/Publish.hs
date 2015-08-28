@@ -51,9 +51,9 @@ verifyMetadata deps =
           "\nFill these in and try to publish again!"
     where
       problems = Maybe.catMaybes
-          [ verify Desc.repo        "  repository - must refer to a valid repo on GitHub"
-          , verify Desc.summary     "  summary - a quick summary of your project, 80 characters or less"
-          , verify Desc.exposed     "  exposed-modules - list modules your project exposes to users"
+          [ verify Desc.repo "  repository - must refer to a valid repo on GitHub"
+          , verify Desc.summary "  summary - a quick summary of your project, 80 characters or less"
+          , verify Desc.exposed "  exposed-modules - list modules your project exposes to users"
           ]
 
       verify getField msg =

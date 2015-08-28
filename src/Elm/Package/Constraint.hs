@@ -54,7 +54,7 @@ expand constraint@(Range lower lowerOp upperOp upper) version
 
 defaultElmVersion :: Constraint
 defaultElmVersion =
-  if Package.major Compiler.version > 0
+  if Package._major Compiler.version > 0
     then untilNextMajor Compiler.version
     else untilNextMinor Compiler.version
 

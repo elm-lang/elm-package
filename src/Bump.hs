@@ -215,6 +215,6 @@ validBumps publishedVersions =
     ++ map (\v -> (v, Package.bumpPatch v, Compare.PATCH)) patchPoints
   where
     patchPoints = Package.filterLatest Package.majorAndMinor publishedVersions
-    minorPoints = Package.filterLatest Package.major publishedVersions
+    minorPoints = Package.filterLatest Package._major publishedVersions
     majorPoint = head publishedVersions
 
