@@ -181,7 +181,7 @@ instance ToJSON Description where
 
 instance FromJSON Description where
     parseJSON (Object obj) =
-        do  version <- get obj "version" "your projects version number"
+        do  version <- get obj "version" "your project's version number"
 
             elmVersion <- getElmVersion obj
 
