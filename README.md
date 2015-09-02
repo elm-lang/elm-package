@@ -109,7 +109,7 @@ before deciding to use your library or diving into your documentation.
 
 Finally, you should document all of the publicly exposed modules and functions
 based on [this format][docs]. Examples are one of the most powerful ways to
-learn new APIs so do not be lazy, make your users life easy!
+learn new APIs so do not be lazy, make your users' lives easy!
 
 [docs]: http://package.elm-lang.org/help/documentation-format
 
