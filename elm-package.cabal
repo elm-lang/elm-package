@@ -122,7 +122,6 @@ Executable elm-package
         containers >= 0.3 && < 0.6,
         directory >= 1.0 && < 2.0,
         elm-compiler >= 0.15 && < 0.16,
-        elm-package,
         filepath >= 1 && < 2.0,
         HTTP >= 4000.2.5 && < 4000.3,
         http-client >= 0.3 && < 0.5,
