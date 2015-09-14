@@ -13,7 +13,7 @@ import qualified Manager
 
 generate :: Manager.Manager [Docs.Documentation]
 generate =
-  do  Cmd.run "elm-make" ["--docs=" ++ Path.documentation]
+  do  Cmd.run "elm-make" ["--yes", "--docs=" ++ Path.documentation]
       json <- liftIO (BS.readFile Path.documentation)
 
       either badJson return (Json.eitherDecode json)
