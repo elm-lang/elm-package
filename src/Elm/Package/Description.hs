@@ -227,15 +227,17 @@ getDependencies :: Object -> Parser [(Package.Name, C.Constraint)]
 getDependencies obj =
   do  deps <- get obj "dependencies" "a listing of your project's dependencies"
       forM (Map.toList deps) $ \(rawName, rawConstraint) ->
-          case (Package.fromString rawName, C.fromString rawConstraint) of
-            (Just name, Just constraint) ->
-                return (name, constraint)
+          case Package.fromString rawName of
+            Left problem ->
+                fail ("Ran into invalid package name '" ++ rawName ++ "' in dependencies.\n\n" ++ problem)
 
-            (Nothing, _) ->
-                fail (Package.errorMsg rawName)
+            Right name ->
+                case C.fromString rawConstraint of
+                    Just constraint ->
+                        return (name, constraint)
 
-            (_, Nothing) ->
-                fail (C.errorMessage rawConstraint)
+                    Nothing ->
+                        fail (C.errorMessage (Just rawName) rawConstraint)
 
 
 getElmVersion :: Object -> Parser C.Constraint
@@ -244,8 +246,9 @@ getElmVersion obj =
       case C.fromString rawConstraint of
         Just constraint ->
             return constraint
+
         Nothing ->
-            fail (C.errorMessage rawConstraint)
+            fail (C.errorMessage (Just "the elm-version field") rawConstraint)
 
 
 elmVersionDescription :: String
@@ -255,25 +258,47 @@ elmVersionDescription =
 
 
 repoToName :: String -> Either String Package.Name
-repoToName repo =
-    if not (end `List.isSuffixOf` repo)
-        then Left msg
-        else
-            do  path <- getPath
-                let raw = take (length path - length end) path
-                case Package.fromString raw of
-                  Nothing   -> Left msg
-                  Just name -> Right name
-    where
-      getPath
-          | http  `List.isPrefixOf` repo = Right $ drop (length http ) repo
-          | https `List.isPrefixOf` repo = Right $ drop (length https) repo
-          | otherwise = Left msg
+repoToName rawRepo =
+  do  rawName <- dropDomain =<< dropExtension rawRepo
+      case Package.fromString rawName of
+        Left problem ->
+            Left (repoProblem problem)
 
-      http  = "http://github.com/"
-      https = "https://github.com/"
-      end = ".git"
-      msg =
-          "the 'repository' field must point to a GitHub project for now, something\n\
-          \like <https://github.com/USER/PROJECT.git> where USER is your GitHub name\n\
-          \and PROJECT is the repo you want to upload."
+        Right name ->
+            Right name
+
+
+dropExtension :: String -> Either String String
+dropExtension string =
+    if List.isSuffixOf ".git" string then
+        Right (take (length string - 4) string)
+
+    else
+        Left (repoProblem "The given URI does not end with .git")
+
+
+dropDomain :: String -> Either String String
+dropDomain string =
+  let
+    http = "http://github.com/"
+    https = "https://github.com/"
+  in
+    if List.isPrefixOf http string then
+        Right (drop (length http) string)
+
+    else if List.isPrefixOf https string then
+        Right (drop (length https) string)
+
+    else
+        Left (repoProblem "The given domain does not start with <https://github.com/>")
+
+
+repoProblem :: String -> String
+repoProblem problem =
+  unlines
+    [ "the 'repository' field must point to a GitHub project, something like"
+    , "<https://github.com/USER/PROJECT.git> where USER is your GitHub name and"
+    , "PROJECT is the repo you want to upload."
+    , ""
+    , problem
+    ]

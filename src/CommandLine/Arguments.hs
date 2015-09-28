@@ -5,14 +5,13 @@ import Control.Monad.Error.Class (throwError)
 import Data.Monoid ((<>), mconcat, mempty)
 import Data.Version (showVersion)
 import qualified Options.Applicative as Opt
-import qualified Text.PrettyPrint.ANSI.Leijen as PP
+import qualified Options.Applicative.Builder as B
 
 import qualified Bump
 import qualified Diff
 import qualified Install
 import qualified Manager
 import qualified Publish
-import qualified Paths_elm_package as This
 import qualified Elm.Compiler as Compiler
 import qualified Elm.Package as Package
 import qualified Elm.Package.Paths as Path
@@ -20,58 +19,25 @@ import qualified Elm.Package.Paths as Path
 
 parse :: IO (Manager.Manager ())
 parse =
-    Opt.customExecParser preferences parser
-
-
-preferences :: Opt.ParserPrefs
-preferences =
-    Opt.prefs (mempty <> Opt.showHelpOnError)
+    Opt.customExecParser (Opt.prefs Opt.showHelpOnError) parser
 
 
 parser :: Opt.ParserInfo (Manager.Manager ())
 parser =
-    Opt.info (Opt.helper <*> commands) infoModifier
-
-
--- GENERAL HELP
-
-infoModifier :: Opt.InfoMod (Manager.Manager ())
-infoModifier =
-    mconcat
-        [ Opt.fullDesc
-        , Opt.header top
-        , Opt.progDesc "install and publish elm libraries"
-        , Opt.footerDoc (Just moreHelp)
-        ]
-  where
-    top =
-        "Elm Package Manager " ++ showVersion This.version
-        ++ " (Elm Platform " ++ (Package.versionToString Compiler.version) ++ ")\n"
-
-    moreHelp =
-        linesToDoc
-        [ "To learn more about a particular command run:"
-        , "    elm-package COMMAND --help"
-        ]
-
-
-linesToDoc :: [String] -> PP.Doc
-linesToDoc lines =
-    PP.vcat (map PP.text lines)
+  B.info flagParser $ mconcat $
+    [ B.fullDesc
+    , B.progDesc "install and publish elm packages"
+    , B.header ("elm package - part of elm " ++ Package.versionToString Compiler.version)
+    , B.footer "To learn more about a particular command run:\n    elm-package COMMAND --help"
+    ]
 
 
 -- COMMANDS
 
-commands :: Opt.Parser (Manager.Manager ())
-commands =
-    Opt.hsubparser commandOptions
-  where
-    version =
-        Opt.flag' (error "temporarily out of order")
-            (Opt.long "version" <> Opt.short 'v' <> Opt.hidden)
-
-    commandOptions =
-        mconcat
+flagParser :: Opt.Parser (Manager.Manager ())
+flagParser =
+    Opt.hsubparser $
+      mconcat
         [ Opt.command "install" installInfo
         , Opt.command "publish" publishInfo
         , Opt.command "bump" bumpInfo
@@ -144,34 +110,34 @@ installInfo =
 
     infoModifier =
         mconcat
-        [ Opt.fullDesc
-        , Opt.progDesc "Install packages to use locally"
-        , Opt.footerDoc (Just examples)
-        ]
+          [ Opt.fullDesc
+          , Opt.progDesc "Install packages to use locally"
+          , Opt.footer examples
+          ]
 
     examples =
-        linesToDoc
-        [ "Examples:"
-        , "  elm-package install                        # everything needed by " ++ Path.description
-        , "  elm-package install evancz/elm-html        # any version"
-        , "  elm-package install evancz/elm-html 1.2.0  # specific version"
-        ]
+        unlines
+          [ "Examples:"
+          , "  elm package install                        # everything needed by " ++ Path.description
+          , "  elm package install evancz/elm-html        # any version"
+          , "  elm package install evancz/elm-html 1.2.0  # specific version"
+          ]
 
 
 -- ARGUMENT PARSERS
 
 package :: Opt.Parser Package.Name
 package =
-    Opt.argument (argReader "PACKAGE" Package.fromString) $
+    Opt.argument (customReader "PACKAGE" Package.fromString) $
         mconcat
         [ Opt.metavar "PACKAGE"
-        , Opt.help "A specific package name (e.g. evancz/automaton)"
+        , Opt.help "A specific package name (e.g. evancz/elm-html)"
         ]
 
 
 version :: Opt.Parser Package.Version
 version =
-    Opt.argument (argReader "VERSION" Package.versionFromString) $
+    Opt.argument (customReader "VERSION" Package.versionFromString) $
         mconcat
         [ Opt.metavar "VERSION"
         , Opt.help "Specific version of a package (e.g. 1.2.0)"
@@ -188,14 +154,14 @@ yes =
         ]
 
 
-argReader :: String -> (String -> Maybe a) -> Opt.ReadM a
-argReader argType fromString =
+customReader :: String -> (String -> Either String a) -> Opt.ReadM a
+customReader argType fromString =
   let reader arg =
           case fromString arg of
-            Just a ->
+            Right a ->
                 Right a
 
-            Nothing ->
-                Left ("Uh oh, argument \"" ++ arg ++ "\" is not a valid " ++ argType)
+            Left msg ->
+                Left ("Uh oh, argument \"" ++ arg ++ "\" is not a valid " ++ argType ++ "\n\n" ++ msg)
   in
       Opt.eitherReader reader

@@ -60,6 +60,11 @@ parseNameAndVersion (rawName, rawVersion) =
         return (name, vrsn)
 
 
-parse :: (MonadError String m) => String -> (String -> Maybe a) -> String -> m a
+parse :: (MonadError String m) => String -> (String -> Either String a) -> String -> m a
 parse string fromString msg =
-    maybe (throwError ("Could not parse " ++ msg)) return (fromString string)
+    case fromString string of
+      Right a ->
+          return a
+
+      Left problem ->
+        throwError ("Could not parse " ++ msg ++ "\n\n" ++ problem)

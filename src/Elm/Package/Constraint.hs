@@ -102,11 +102,11 @@ opToString op =
 fromString :: String -> Maybe Constraint
 fromString str =
   do  let (lowerString, rest) = break (==' ') str
-      lower <- Package.versionFromString lowerString
+      lower <- versionFromString lowerString
       (lowerOp, rest1) <- takeOp (eatSpace rest)
       rest2 <- eatV (eatSpace rest1)
       (upperOp, rest3) <- takeOp (eatSpace rest2)
-      upper <- Package.versionFromString (eatSpace rest3)
+      upper <- versionFromString (eatSpace rest3)
       return (Range lower lowerOp upperOp upper)
 
 
@@ -115,6 +115,11 @@ eatSpace str =
   case str of
     ' ' : rest -> rest
     _ -> str
+
+
+versionFromString :: String -> Maybe Package.Version
+versionFromString =
+    either (const Nothing) Just . Package.versionFromString
 
 
 takeOp :: String -> Maybe (Op, String)
@@ -148,17 +153,21 @@ instance Json.FromJSON Constraint where
               return constraint
 
           Nothing ->
-              fail $ errorMessage rawConstraint
+              fail $ errorMessage Nothing rawConstraint
 
     parseJSON _ =
         fail "constraint must be a string that looks something like \"1.2.1 <= v < 2.0.0\"."
 
 
-errorMessage :: String -> String
-errorMessage rawConstraint =
-    "Invalid constraint \"" ++ rawConstraint ++ "\"\n\n"
-    ++ "    It should look something like \"1.2.1 <= v < 2.0.0\", with no extra or\n"
-    ++ "    missing spaces. The middle letter needs to be a 'v' as well.\n\n"
-    ++ "    Upper and lower bounds are required so that bounds represent the maximum range\n"
-    ++ "    known to work. You do not want to promise users your library will work with\n"
-    ++ "    4.0.0 that version has not been tested!"
+errorMessage :: Maybe String -> String -> String
+errorMessage maybeContext rawConstraint =
+  unlines
+    [ "Ran into invalid constraint \"" ++ rawConstraint ++ "\"" ++ maybe "" (" for " ++) maybeContext
+    , ""
+    , "It should look something like \"1.2.1 <= v < 2.0.0\", with no extra or missing"
+    , "spaces. The middle letter needs to be a 'v' as well."
+    , ""
+    , "Upper and lower bounds are required so that bounds represent the maximum range"
+    , "known to work. You do not want to promise users your library will work with"
+    , "4.0.0 that version has not been tested!"
+    ]
