@@ -1,15 +1,5 @@
 dist
-cache
-elm-runtime.js
-docs.json
-elm_dependencies.json
-listing.bits
-libraries.json
-*.html
 log
-ghc_output
-public-library
-remove-library
 *~
 .cabal-sandbox/
 cabal.sandbox.config
