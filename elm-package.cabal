@@ -61,7 +61,7 @@ Library
         containers >= 0.3 && < 0.6,
         bytestring >= 0.9 && < 0.11,
         directory >= 1.0 && < 2.0,
-        elm-compiler >= 0.15.1 && < 0.16,
+        elm-compiler >= 0.16 && < 0.17,
         filepath >= 1 && < 2.0,
         HTTP >= 4000.2.5 && < 4000.3,
         http-client >= 0.4.15 && < 0.5,
