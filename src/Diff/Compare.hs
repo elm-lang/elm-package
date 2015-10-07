@@ -1,6 +1,5 @@
 module Diff.Compare where
 
-import Control.Applicative ((<$>), (<*>))
 import Control.Monad (zipWithM)
 import Data.Function (on)
 import qualified Data.List as List
