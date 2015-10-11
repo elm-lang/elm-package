@@ -42,8 +42,8 @@ data Description = Description
 defaultDescription :: Description
 defaultDescription =
     Description
-    { name = Package.Name "USER" "PROJECT"
-    , repo = "https://github.com/USER/PROJECT.git"
+    { name = Package.Name "user" "project"
+    , repo = "https://github.com/user/project.git"
     , version = Package.initialVersion
     , elmVersion = C.defaultElmVersion
     , summary = "helpful summary of your project, less than 80 characters"
@@ -294,10 +294,4 @@ dropDomain string =
 
 repoProblem :: String -> String
 repoProblem problem =
-  unlines
-    [ "the 'repository' field must point to a GitHub project, something like"
-    , "<https://github.com/USER/PROJECT.git> where USER is your GitHub name and"
-    , "PROJECT is the repo you want to upload."
-    , ""
-    , problem
-    ]
+  "Problem with the `repository` field.\n\n" ++ problem
