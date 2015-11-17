@@ -53,7 +53,7 @@ explorePackages solution availablePackages =
 
 exploreVersionList :: Package.Name -> [Package.Version] -> S.Solution -> Packages -> Explorer (Maybe S.Solution)
 exploreVersionList name versions solution remainingPackages =
-    go (reverse (Package.filterLatest Package.majorAndMinor versions))
+    go (reverse (List.sort versions))
   where
     go versions =
         case versions of
