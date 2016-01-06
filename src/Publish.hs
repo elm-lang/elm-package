@@ -92,8 +92,8 @@ tagMessage version =
     let v = Package.versionToString version in
     unlines
     [ "Libraries must be tagged in git, but tag " ++ v ++ " was not found."
-    , "These tags make it possible to find this specific version on github."
-    , "To tag the most recent commit and push it to github, run this:"
+    , "These tags make it possible to find this specific version on GitHub."
+    , "To tag the most recent commit and push it to GitHub, run this:"
     , ""
     , "    git tag -a " ++ v ++ " -m \"release version " ++ v ++ "\""
     , "    git push origin " ++ v
