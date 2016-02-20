@@ -33,7 +33,7 @@ data Description = Description
     , summary :: String
     , license :: String
     , sourceDirs :: [FilePath]
-    , exposed :: [Module.Name]
+    , exposed :: [Module.Raw]
     , natives :: Bool
     , dependencies :: [(Package.Name, C.Constraint)]
     }
@@ -79,13 +79,14 @@ write description =
 
 -- FIND MODULE FILE PATHS
 
-locateExposedModules :: (MonadIO m, MonadError String m) => Description -> m [(Module.Name, FilePath)]
+locateExposedModules :: (MonadIO m, MonadError String m) => Description -> m [(Module.Raw, FilePath)]
 locateExposedModules desc =
     mapM locate (exposed desc)
   where
     locate modul =
-      let path = Module.nameToPath modul <.> "elm"
-          dirs = sourceDirs desc
+      let
+        path = Module.nameToPath modul <.> "elm"
+        dirs = sourceDirs desc
       in
       do  possibleLocations <-
               forM dirs $ \dir -> do
@@ -168,7 +169,7 @@ instance ToJSON Description where
         , "summary" .= summary d
         , "license" .= license d
         , "source-directories" .= sourceDirs d
-        , "exposed-modules" .= exposed d
+        , "exposed-modules" .= map Module.RawForJson (exposed d)
         , "dependencies" .= jsonDeps (dependencies d)
         , "elm-version" .= elmVersion d
         ] ++ if natives d then ["native-modules" .= True] else []
@@ -194,7 +195,7 @@ instance FromJSON Description where
                       Left err -> fail err
                       Right nm -> return nm
 
-            exposed <- get obj "exposed-modules" "a list of modules exposed to users"
+            exposed <- map Module.fromJson <$> get obj "exposed-modules" "a list of modules exposed to users"
 
             sourceDirs <- get obj "source-directories" "the directories that hold source code"
 
@@ -205,7 +206,6 @@ instance FromJSON Description where
             return $ Description name repo version elmVersion summary license sourceDirs exposed natives deps
 
     parseJSON _ = mzero
-
 
 
 get :: FromJSON a => Object -> T.Text -> String -> Parser a
