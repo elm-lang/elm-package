@@ -3,6 +3,7 @@ module Main where
 import System.Directory (findExecutable)
 import System.Exit (exitFailure)
 import System.IO
+import GHC.IO.Encoding (setLocaleEncoding, utf8)
 
 import qualified CommandLine.Arguments as Arguments
 import qualified Manager
@@ -10,7 +11,9 @@ import qualified Manager
 
 main :: IO ()
 main =
-  do  requireGit
+  do  setLocaleEncoding utf8
+
+      requireGit
       manager <- Arguments.parse
       env <- Manager.defaultEnvironment
       result <- Manager.run env manager
