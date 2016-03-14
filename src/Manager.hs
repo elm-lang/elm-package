@@ -24,7 +24,7 @@ data Environment = Environment
 defaultEnvironment :: IO Environment
 defaultEnvironment =
     do  cacheDirectory <- getCacheDirectory
-        return (Environment "http://162.243.138.108:1234" cacheDirectory)
+        return (Environment "http://162.243.138.108" cacheDirectory)
 
 
 getCacheDirectory :: IO FilePath
