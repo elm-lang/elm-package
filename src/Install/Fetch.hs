@@ -26,7 +26,7 @@ package name@(Package.Name user _) version =
             liftIO $ renameDirectory dir (Package.versionToString version)
   where
     zipball =
-        "http://github.com/" ++ Package.toUrl name ++ "/zipball/" ++ Package.versionToString version ++ "/"
+        "https://github.com/" ++ Package.toUrl name ++ "/zipball/" ++ Package.versionToString version ++ "/"
 
 
 ifNotExists :: (MonadIO m, MonadError String m) => Package.Name -> Package.Version -> m () -> m ()
