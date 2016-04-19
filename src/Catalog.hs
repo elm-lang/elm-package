@@ -24,6 +24,10 @@ import qualified Paths_elm_package as This
 import qualified Utils.Http as Http
 
 
+
+-- MAKE URL
+
+
 catalog :: String -> [(String,String)] -> Manager.Manager String
 catalog path vars =
   do  domain <- asks Manager.catalog
@@ -32,12 +36,30 @@ catalog path vars =
     version = ("elm-package-version", showVersion This.version)
 
 
+
+-- EASY REQUESTS
+
+
 versions :: Package.Name -> Manager.Manager (Maybe [Package.Version])
 versions name =
-  do  url <- catalog "versions" [("name", Package.toString name)]
-      Http.send url $ \request manager -> do
-          response <- Client.httpLbs request manager
-          return $ Binary.decode $ Client.responseBody response
+  get "versions" [("name", Package.toString name)]
+
+
+permissions :: Package.Name -> Manager.Manager Bool
+permissions name =
+  get "permissions" [("name", Package.toString name)]
+
+
+get :: (Binary.Binary a) => String -> [(String,String)] -> Manager.Manager a
+get path vars =
+  do  url <- catalog path vars
+      Http.send url $ \request manager ->
+        do  response <- Client.httpLbs request manager
+            return $ Binary.decode $ Client.responseBody response
+
+
+
+-- FANCIER REQUESTS
 
 
 allPackages :: Maybe Time.UTCTime -> Manager.Manager (Maybe [(Package.Name, [Package.Version])])
@@ -90,6 +112,10 @@ register name version =
         , Multi.partFileSource "description" P.description
         , Multi.partFileSource "readme" "README.md"
         ]
+
+
+
+-- GET JSON
 
 
 description :: Package.Name -> Package.Version -> Manager.Manager Desc.Description

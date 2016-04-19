@@ -25,7 +25,7 @@ publish =
       Cmd.out $ unwords [ "Verifying", Package.toString name, Package.versionToString version, "..." ]
       verifyMetadata description
 
-      docs <- Docs.generate
+      docs <- Docs.generate name
 
       validity <- verifyVersion docs description
       newVersion <-

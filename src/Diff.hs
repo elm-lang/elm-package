@@ -25,7 +25,7 @@ diff range =
     case range of
         LatestVsActual ->
             do  name <- Desc.name `fmap` Desc.read Path.description
-                newDocs <- Docs.generate
+                newDocs <- Docs.generate name
 
                 maybeVersions <- Catalog.versions name
                 latestVersion <-
@@ -35,7 +35,7 @@ diff range =
 
         Since version ->
             do  name <- Desc.name `fmap` Desc.read Path.description
-                newDocs <- Docs.generate
+                newDocs <- Docs.generate name
                 computeDiff name version newDocs Nothing
 
         Between name old new ->
