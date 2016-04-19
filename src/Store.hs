@@ -1,8 +1,8 @@
-{-# LANGUAGE FlexibleContexts #-}
 module Store (Store, getConstraints, getVersions, initialStore, readVersionCache) where
 
-import Control.Monad.Error.Class (MonadError, throwError)
-import Control.Monad.RWS (MonadIO, liftIO, MonadReader, asks, MonadState, gets, modify)
+import Control.Monad.Except (throwError)
+import Control.Monad.State (StateT)
+import Control.Monad.RWS (lift, liftIO, asks, gets, modify)
 import qualified Data.Binary as Binary
 import qualified Data.ByteString.Lazy as BS
 import qualified Data.Map as Map
@@ -17,7 +17,9 @@ import qualified Elm.Package as Package
 import qualified Manager
 
 
+
 -- STORE
+
 
 data Store = Store
     { constraintCache :: ConstraintCache
@@ -33,19 +35,13 @@ type VersionCache =
     Map.Map Package.Name [Package.Version]
 
 
-initialStore
-    :: (MonadIO m, MonadReader Manager.Environment m, MonadError String m)
-    => m Store
-
+initialStore :: Manager.Manager Store
 initialStore =
   do  versionCache <- readVersionCache
       return (Store Map.empty versionCache)
 
 
-readVersionCache
-    :: (MonadIO m, MonadReader Manager.Environment m, MonadError String m)
-    => m VersionCache
-
+readVersionCache :: Manager.Manager VersionCache
 readVersionCache =
   do  cacheDirectory <- asks Manager.cacheDirectory
       let versionsFile = cacheDirectory </> "versions.dat"
@@ -81,20 +77,23 @@ readVersionCache =
                   return cache
 
 
+
 -- CONSTRAINTS
 
-getConstraints
-    :: (MonadIO m, MonadReader Manager.Environment m, MonadState Store m, MonadError String m)
-    => Package.Name
-    -> Package.Version
-    -> m (C.Constraint, [(Package.Name, C.Constraint)])
 
+type Explorer =
+  StateT Store.Store Manager.Manager
+
+
+getConstraints :: Package.Name -> Package.Version -> Explorer (C.Constraint, [(Package.Name, C.Constraint)])
 getConstraints name version =
   do  cache <- gets constraintCache
       case Map.lookup (name, version) cache of
-        Just constraints -> return constraints
+        Just constraints ->
+          return constraints
+
         Nothing ->
-          do  desc <- Catalog.description name version
+          do  desc <- lift $ Catalog.description name version
               let constraints = (Desc.elmVersion desc, Desc.dependencies desc)
               modify $ \store ->
                   store {
@@ -104,15 +103,19 @@ getConstraints name version =
               return constraints
 
 
+
 -- VERSIONS
 
-getVersions :: (MonadIO m, MonadError String m, MonadState Store m) => Package.Name -> m [Package.Version]
+
+getVersions :: Package.Name -> Explorer [Package.Version]
 getVersions name =
   do  cache <- gets versionCache
       case Map.lookup name cache of
-        Just versions -> return versions
+        Just versions ->
+          return versions
+
         Nothing ->
-            throwError noLocalVersions
+          throwError noLocalVersions
   where
     noLocalVersions =
         "There are no versions of package '" ++ Package.toString name ++ "' on your computer."

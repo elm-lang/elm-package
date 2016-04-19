@@ -1,9 +1,8 @@
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Catalog where
 
-import Control.Monad.Error.Class (MonadError, throwError)
-import Control.Monad.RWS (MonadIO, liftIO, MonadReader, asks)
+import Control.Monad.Except (throwError)
+import Control.Monad.RWS (liftIO, asks)
 import Data.Aeson ((.:))
 import qualified Data.Aeson as Json
 import qualified Data.Binary as Binary
@@ -25,11 +24,7 @@ import qualified Paths_elm_package as This
 import qualified Utils.Http as Http
 
 
-catalog
-    :: (MonadIO m, MonadReader Manager.Environment m, MonadError String m)
-    => String
-    -> [(String,String)]
-    -> m String
+catalog :: String -> [(String,String)] -> Manager.Manager String
 catalog path vars =
   do  domain <- asks Manager.catalog
       return $ domain ++ "/" ++ path ++ "?" ++ urlEncodeVars (version : vars)
@@ -45,10 +40,7 @@ versions name =
           return $ Binary.decode $ Client.responseBody response
 
 
-allPackages
-    :: (MonadIO m, MonadReader Manager.Environment m, MonadError String m)
-    => Maybe Time.UTCTime
-    -> m (Maybe [(Package.Name, [Package.Version])])
+allPackages :: Maybe Time.UTCTime -> Manager.Manager (Maybe [(Package.Name, [Package.Version])])
 allPackages maybeTime =
   do  url <- catalog "all-packages" vars
       Http.send url $ \request manager -> do
@@ -100,31 +92,17 @@ register name version =
         ]
 
 
-description
-    :: (MonadIO m, MonadReader Manager.Environment m, MonadError String m)
-    => Package.Name
-    -> Package.Version
-    -> m Desc.Description
+description :: Package.Name -> Package.Version -> Manager.Manager Desc.Description
 description name version =
   getJson "description" P.description name version
 
 
-documentation
-    :: (MonadIO m, MonadReader Manager.Environment m, MonadError String m)
-    => Package.Name
-    -> Package.Version
-    -> m [Docs.Documentation]
+documentation :: Package.Name -> Package.Version -> Manager.Manager [Docs.Documentation]
 documentation name version =
   getJson "documentation" "documentation.json" name version
 
 
-getJson
-    :: (MonadIO m, MonadReader Manager.Environment m, MonadError String m, Json.FromJSON a)
-    => String
-    -> FilePath
-    -> Package.Name
-    -> Package.Version
-    -> m a
+getJson :: (Json.FromJSON a) => String -> FilePath -> Package.Name -> Package.Version -> Manager.Manager a
 getJson metadata metadataPath name version =
   do  cacheDir <- asks Manager.cacheDirectory
       let fullMetadataPath =
