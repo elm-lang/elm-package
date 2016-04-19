@@ -22,7 +22,7 @@ generate name =
   do  permissions <- Catalog.permissions name
 
       let prepublishFlag =
-            if permissions then "--prepublish-whitelisted" else "--prepublish"
+            if permissions then "--prepublish-core" else "--prepublish"
 
       Cmd.run "elm-make" [ "--yes", "--docs=" ++ Path.documentation, prepublishFlag ]
       json <- liftIO (BS.readFile Path.documentation)
