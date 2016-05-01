@@ -117,8 +117,8 @@ installInfo =
         unlines
           [ "Examples:"
           , "  elm package install                        # everything needed by " ++ Path.description
-          , "  elm package install evancz/elm-html        # any version"
-          , "  elm package install evancz/elm-html 1.2.0  # specific version"
+          , "  elm package install elm-lang/html        # any version"
+          , "  elm package install elm-lang/html 1.0.0  # specific version"
           ]
 
 
@@ -129,7 +129,7 @@ package =
     Opt.argument (customReader "PACKAGE" Package.fromString) $
         mconcat
         [ Opt.metavar "PACKAGE"
-        , Opt.help "A specific package name (e.g. evancz/elm-html)"
+        , Opt.help "A specific package name (e.g. elm-lang/html)"
         ]
 
 
