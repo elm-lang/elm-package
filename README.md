@@ -8,8 +8,8 @@ is located at [package.elm-lang.org](http://package.elm-lang.org/).
 To install a library run:
 
 ```bash
-elm-package install evancz/elm-html         # Install latest version
-elm-package install evancz/elm-html 1.0.0   # Install version 1.0.0
+elm-package install elm-lang/html         # Install latest version
+elm-package install elm-lang/html 1.0.0   # Install version 1.0.0
 ```
 
 `elm-package` is sandboxed by default, so the downloaded package will be placed
@@ -49,16 +49,16 @@ added value causes a name collision, but that is not extremely likely.
 
 ## Updating Dependencies
 
-Say you know a new version of `evancz/elm-html` has come out, but you are not
+Say you know a new version of `elm-lang/core` has come out, but you are not
 sure if you want to update. You can see how big of a change it is by running
 the following command:
 
 ```bash
-elm-package diff evancz/elm-html 1.2.1 2.0.0
+elm-package diff elm-lang/core 3.0.0 4.0.0
 ```
 
-This will show you all of the changes from version `1.2.1` which you have and
-version `2.0.0` which you would like to have. This gives you some real basis
+This will show you all of the changes from version `3.0.0` which you have and
+version `4.0.0` which you would like to have. This gives you some real basis
 for deciding if you should update right now.
 
 If you like what you see, take the following steps.
@@ -69,7 +69,7 @@ If you like what you see, take the following steps.
   * Change your version bounds in `elm-package.json` to include the newest
     stuff.
 
-  * Run `elm-package install evancz/elm-html 2.0.0` and see how things go!
+  * Run `elm-package install elm-lang/core 4.0.0` and see how things go!
 
 
 ## Publishing Packages
