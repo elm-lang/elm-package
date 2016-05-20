@@ -4,6 +4,7 @@ import Control.Applicative ((<|>), optional)
 import Control.Monad.Error.Class (throwError)
 import qualified Options.Applicative as Opt
 import qualified Options.Applicative.Builder as B
+import qualified Text.PrettyPrint.ANSI.Leijen as P
 
 import qualified Bump
 import qualified Diff
@@ -25,8 +26,11 @@ parser =
   B.info flagParser $ mconcat $
     [ B.fullDesc
     , B.progDesc "install and publish elm packages"
-    , B.header ("elm package " ++ Package.versionToString Compiler.version)
-    , B.footer "To learn more about a particular command run:\n    elm-package COMMAND --help"
+    , B.header ("elm-package " ++ Package.versionToString Compiler.version)
+    , B.footerDoc $ Just $ P.nest 2 $ P.vcat $ map P.text $
+        [ "To learn more about a particular command run:"
+        , "elm-package COMMAND --help"
+        ]
     ]
 
 
@@ -110,15 +114,15 @@ installInfo =
         mconcat
           [ Opt.fullDesc
           , Opt.progDesc "Install packages to use locally"
-          , Opt.footer examples
+          , Opt.footerDoc (Just examples)
           ]
 
     examples =
-        unlines
+        P.nest 2 $ P.vcat $ map P.text $
           [ "Examples:"
-          , "  elm package install                        # everything needed by " ++ Path.description
-          , "  elm package install elm-lang/html        # any version"
-          , "  elm package install elm-lang/html 1.0.0  # specific version"
+          , "elm-package install                      # everything needed by " ++ Path.description
+          , "elm-package install elm-lang/html        # any version"
+          , "elm-package install elm-lang/html 1.0.0  # specific version"
           ]
 
 

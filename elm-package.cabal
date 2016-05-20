@@ -56,6 +56,7 @@ Library
     Build-depends:
         aeson >= 0.7 && < 0.9,
         aeson-pretty >= 0.7 && < 0.8,
+        ansi-wl-pprint >= 0.6.7.3,
         base >=4.2 && <5,
         binary >= 0.7 && < 0.8,
         containers >= 0.3 && < 0.6,
