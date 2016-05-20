@@ -97,7 +97,9 @@ runPlan solution plan =
       -- fetch new dependencies
       Cmd.inDir Path.packagesDirectory $
           forM_ installs $ \(name, version) ->
-              do  liftIO (putStrLn ("Downloading " ++ Package.toString name ++ "@" ++ Package.versionToString version))
+              do  liftIO $ putStrLn $
+                    "Downloading " ++ Package.toString name
+                    ++ " " ++ Package.versionToString version
                   Fetch.package name version
 
       -- try to build new dependencies
