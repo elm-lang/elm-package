@@ -2,6 +2,8 @@ module Manager where
 
 import Control.Monad.Except
 import Control.Monad.Reader
+import qualified Elm.Compiler as Elm
+import qualified Elm.Package as Pkg
 import qualified System.Directory as Dir
 import System.FilePath ((</>))
 
@@ -31,6 +33,6 @@ defaultEnvironment =
 getCacheDirectory :: IO FilePath
 getCacheDirectory =
   do  root <- Dir.getAppUserDataDirectory "elm"
-      let dir = root </> "package"
+      let dir = root </> Pkg.versionToString Elm.version </> "package"
       Dir.createDirectoryIfMissing True dir
       return dir
