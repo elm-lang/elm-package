@@ -7,15 +7,16 @@ import System.FilePath ((</>))
 
 
 type Manager =
-    ExceptT String (ReaderT Environment IO)
+  ExceptT String (ReaderT Environment IO)
 
 
 run :: Environment -> Manager a -> IO (Either String a)
 run environment manager =
-    runReaderT (runExceptT manager) environment
+  runReaderT (runExceptT manager) environment
 
 
-data Environment = Environment
+data Environment =
+  Environment
     { catalog :: String
     , cacheDirectory :: FilePath
     }
@@ -23,13 +24,13 @@ data Environment = Environment
 
 defaultEnvironment :: IO Environment
 defaultEnvironment =
-    do  cacheDirectory <- getCacheDirectory
-        return (Environment "http://package.elm-lang.org" cacheDirectory)
+  do  cacheDirectory <- getCacheDirectory
+      return (Environment "http://package.elm-lang.org" cacheDirectory)
 
 
 getCacheDirectory :: IO FilePath
 getCacheDirectory =
-    do  root <- Dir.getAppUserDataDirectory "elm"
-        let dir = root </> "package"
-        Dir.createDirectoryIfMissing True dir
-        return dir
+  do  root <- Dir.getAppUserDataDirectory "elm"
+      let dir = root </> "package"
+      Dir.createDirectoryIfMissing True dir
+      return dir
