@@ -3,6 +3,7 @@
 The package manager for Elm. The full catalog of community libraries
 is located at [package.elm-lang.org](http://package.elm-lang.org/).
 
+
 ## Basic Usage
 
 To install a library run:
@@ -77,6 +78,7 @@ If you like what you see, take the following steps.
 This is a step by step discussion of how to make a nice package that will be
 useful, easy to learn, and pleasant to use.
 
+
 ### Designing APIs
 
 Before publishing, look through the [design guidelines][guidelines].
@@ -87,6 +89,7 @@ Some key takeaways are:
   * Design for a concrete use case
   * Always give functions human readable names
   * Avoid gratuitous abstraction
+
 
 ### Preparing for Publication
 
@@ -112,6 +115,7 @@ based on [this format][docs]. Examples are one of the most powerful ways to
 learn new APIs so do not be lazy, make your users' lives easy!
 
 [docs]: http://package.elm-lang.org/help/documentation-format
+
 
 ### Publishing for the First Time
 
@@ -142,6 +146,7 @@ elm-package publish
 
 This will send all the relevant information to the package catalog and verify
 that everything is in order. You just published a package!
+
 
 ### Publishing Updates
 
