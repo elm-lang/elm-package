@@ -14,12 +14,13 @@ yesOrNo =
   do  hFlush stdout
       input <- getLine
       case input of
-        "y" -> return True
-        "Y" -> return True
-        "n" -> return False
         ""  -> return True
-        _   -> do putStr "Must type 'y' for yes or 'n' for no: "
-                  yesOrNo
+        "Y" -> return True
+        "y" -> return True
+        "n" -> return False
+        _   ->
+          do  putStr "Must type 'y' for yes or 'n' for no: "
+              yesOrNo
 
 
 inDir :: (MonadError String m, MonadIO m) => FilePath -> m a -> m a
