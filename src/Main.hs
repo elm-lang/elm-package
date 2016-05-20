@@ -3,7 +3,7 @@ module Main where
 import System.Directory (findExecutable)
 import System.Exit (exitFailure)
 import System.IO
-import GHC.IO.Encoding (setLocaleEncoding, utf8)
+import GHC.IO.Encoding (setLocaleEncoding)
 
 import qualified CommandLine.Arguments as Arguments
 import qualified Manager
