@@ -91,7 +91,7 @@ validateInitialVersion description =
         badMsg =
             concat
             [ "It looks like the version in " ++ Path.description ++ " has been changed though!\n"
-            , "Would you like me to change it back to " ++ Package.versionToString Package.initialVersion ++ "? (y/n) "
+            , "Would you like me to change it back to " ++ Package.versionToString Package.initialVersion ++ "? [Y/n] "
             ]
 
 
@@ -131,7 +131,7 @@ suggestVersion newDocs name version description =
             [ "Based on your new API, this should be a ", magnitude, " change (", old, " => ", new, ")\n"
             , "Bail out of this command and run 'elm-package diff' for a full explanation.\n"
             , "\n"
-            , "Should I perform the update (", old, " => ", new, ") in ", Path.description, "? (y/n) "
+            , "Should I perform the update (", old, " => ", new, ") in ", Path.description, "? [Y/n] "
             ]
 
 
