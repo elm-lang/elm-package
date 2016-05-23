@@ -15,16 +15,20 @@ import qualified Store
 
 solve :: [(Package.Name, C.Constraint)] -> Manager.Manager S.Solution
 solve constraints =
-    do  store <- Store.initialStore
-        maybeSolution <- evalStateT (exploreConstraints constraints) store
-        case maybeSolution of
-          Just solution -> return solution
-          Nothing ->
-              throwError $
-              "Unable to find a set of packages that will work with your constraints."
+  do  store <- Store.initialStore
+      maybeSolution <- evalStateT (exploreConstraints constraints) store
+      case maybeSolution of
+        Just solution ->
+          return solution
+
+        Nothing ->
+          throwError $
+            "Unable to find a set of packages that will work with your constraints."
+
 
 
 -- EXPLORE CONSTRAINTS
+
 
 type Explorer a =
     StateT Store.Store Manager.Manager a
@@ -43,12 +47,12 @@ exploreConstraints constraints =
 
 explorePackages :: S.Solution -> Packages -> Explorer (Maybe S.Solution)
 explorePackages solution availablePackages =
-    case Map.minViewWithKey availablePackages of
-      Nothing ->
-          return (Just solution)
+  case Map.minViewWithKey availablePackages of
+    Nothing ->
+      return (Just solution)
 
-      Just ((name, versions), remainingPackages) ->
-          exploreVersionList name versions solution remainingPackages
+    Just ((name, versions), remainingPackages) ->
+      exploreVersionList name versions solution remainingPackages
 
 
 exploreVersionList :: Package.Name -> [Package.Version] -> S.Solution -> Packages -> Explorer (Maybe S.Solution)
@@ -56,13 +60,15 @@ exploreVersionList name versions solution remainingPackages =
     go (reverse (List.sort versions))
   where
     go versions =
-        case versions of
-          [] -> return Nothing
-          version : rest ->
-              do  maybeSolution <- exploreVersion name version solution remainingPackages
-                  case maybeSolution of
-                    Nothing -> go rest
-                    answer -> return answer
+      case versions of
+        [] ->
+          return Nothing
+
+        version : rest ->
+          do  maybeSolution <- exploreVersion name version solution remainingPackages
+              case maybeSolution of
+                Nothing -> go rest
+                answer -> return answer
 
 
 exploreVersion :: Package.Name -> Package.Version -> S.Solution -> Packages -> Explorer (Maybe S.Solution)
@@ -78,7 +84,9 @@ exploreVersion name version solution remainingPackages =
                   List.partition (\(name, _) -> Map.member name solution) constraints
 
           case all (satisfiedBy solution) overlappingConstraints of
-            False -> return Nothing
+            False ->
+              return Nothing
+
             True ->
               do  maybePackages <- addConstraints remainingPackages newConstraints
                   case maybePackages of
@@ -89,18 +97,25 @@ exploreVersion name version solution remainingPackages =
 
 satisfiedBy :: S.Solution -> (Package.Name, C.Constraint) -> Bool
 satisfiedBy solution (name, constraint) =
-    case Map.lookup name solution of
-      Nothing -> False
-      Just version ->
-          C.isSatisfied constraint version
+  case Map.lookup name solution of
+    Nothing ->
+      False
+
+    Just version ->
+      C.isSatisfied constraint version
 
 
 addConstraints :: Packages -> [(Package.Name, C.Constraint)] -> Explorer (Maybe Packages)
 addConstraints packages constraints =
-    case constraints of
-      [] -> return (Just packages)
-      (name, constraint) : rest ->
-          do  versions <- Store.getVersions name
-              case filter (C.isSatisfied constraint) versions of
-                [] -> return Nothing
-                vs -> addConstraints (Map.insert name vs packages) rest
+  case constraints of
+    [] ->
+      return (Just packages)
+
+    (name, constraint) : rest ->
+      do  versions <- Store.getVersions name
+          case filter (C.isSatisfied constraint) versions of
+            [] ->
+              return Nothing
+
+            vs ->
+              addConstraints (Map.insert name vs packages) rest
