@@ -25,7 +25,9 @@ computeChanges newDocs name version =
       return (diffPackages oldDocs newDocs)
 
 
+
 -- CHANGE MAGNITUDE
+
 
 data Magnitude
     = PATCH
@@ -84,7 +86,9 @@ changeMagnitude (Changes added changed removed)
     | otherwise            = PATCH
 
 
+
 -- DETECT CHANGES
+
 
 data PackageChanges = PackageChanges
     { modulesAdded :: [String]
@@ -223,7 +227,9 @@ isEquivalentType ignoreOrigin (oldVars, oldType) (newVars, newType) =
         && isEquivalentRenaming (zip oldVars newVars ++ renamings)
 
 
+
 -- TYPES
+
 
 diffType :: Bool -> Type.Type -> Type.Type -> Maybe [(String,String)]
 diffType ignoreOrigin oldType newType =
@@ -296,7 +302,9 @@ dropOrigin name =
     Text.unpack (snd (Text.breakOnEnd (Text.pack ".") (Text.pack name)))
 
 
+
 -- TYPE VARIABLES
+
 
 isEquivalentRenaming :: [(String,String)] -> Bool
 isEquivalentRenaming varPairs =
