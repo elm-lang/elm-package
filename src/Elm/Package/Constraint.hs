@@ -17,7 +17,9 @@ import qualified Elm.Package as Package
 import qualified Elm.Compiler as Compiler
 
 
+
 -- CONSTRAINTS
+
 
 data Constraint
     = Range Package.Version Op Op Package.Version
@@ -26,7 +28,9 @@ data Constraint
 data Op = Less | LessOrEqual
 
 
+
 -- CREATE CONSTRAINTS
+
 
 untilNextMajor :: Package.Version -> Constraint
 untilNextMajor version =
@@ -50,7 +54,9 @@ expand constraint@(Range lower lowerOp upperOp upper) version
       constraint
 
 
+
 -- ELM CONSTRAINT
+
 
 defaultElmVersion :: Constraint
 defaultElmVersion =
@@ -59,7 +65,9 @@ defaultElmVersion =
     else untilNextMinor Compiler.version
 
 
+
 -- CHECK IF SATISFIED
+
 
 isSatisfied :: Constraint -> Package.Version -> Bool
 isSatisfied constraint version =
@@ -77,7 +85,9 @@ isLess op =
     LessOrEqual -> (<=)
 
 
+
 -- STRING CONVERSION
+
 
 toString :: Constraint -> String
 toString constraint =
@@ -138,7 +148,9 @@ eatV str =
 
 
 
+
 -- JSON CONVERSION
+
 
 instance Json.ToJSON Constraint where
     toJSON constraint =
