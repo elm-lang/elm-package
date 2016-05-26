@@ -308,41 +308,48 @@ dropOrigin name =
 
 isEquivalentRenaming :: [(String,String)] -> Bool
 isEquivalentRenaming varPairs =
-  case mapM verify renamings of
-    Nothing ->
-        False
-
-    Just verifiedRenamings ->
-        allUnique (map snd verifiedRenamings)
-
-  where
+  let
     renamings =
-        Map.toList (foldr insert Map.empty varPairs)
+      Map.toList (foldr insert Map.empty varPairs)
 
     insert (old,new) dict =
-        Map.insertWith (++) old [new] dict
+      Map.insertWith (++) old [new] dict
 
     verify (old, news) =
-        case news of
-          [] -> Nothing
-          new : rest ->
-              if all (new ==) rest then
-                Just (old, new)
-              else
-                Nothing
+      case news of
+        [] ->
+          Nothing
+
+        new : rest ->
+          if all (new ==) rest then
+            Just (old, new)
+          else
+            Nothing
 
     allUnique list =
-        length list == Set.size (Set.fromList list)
+      length list == Set.size (Set.fromList list)
+  in
+    case mapM verify renamings of
+      Nothing ->
+        False
+
+      Just verifiedRenamings ->
+        all compatableVars verifiedRenamings
+        &&
+        allUnique (map snd verifiedRenamings)
 
 
-compatableVars :: String -> String -> Bool
-compatableVars old new =
+compatableVars :: (String, String) -> Bool
+compatableVars (old, new) =
   case (categorizeVar old, categorizeVar new) of
+    (CompAppend, CompAppend) -> True
     (Comparable, Comparable) -> True
     (Appendable, Appendable) -> True
     (Number    , Number    ) -> True
 
-    (Comparable, Appendable) -> True
+    (Comparable, CompAppend) -> True
+    (Appendable, CompAppend) -> True
+    (Number    , CompAppend) -> True
     (Number    , Comparable) -> True
 
     (_, Var) -> True
@@ -351,7 +358,8 @@ compatableVars old new =
 
 
 data TypeVarCategory
-    = Comparable
+    = CompAppend
+    | Comparable
     | Appendable
     | Number
     | Var
@@ -360,6 +368,7 @@ data TypeVarCategory
 categorizeVar :: String -> TypeVarCategory
 categorizeVar varName
     | any (/= '\'') primes = Var
+    | name == "compappend" = CompAppend
     | name == "comparable" = Comparable
     | name == "appendable" = Appendable
     | name == "number"     = Number
