@@ -140,7 +140,7 @@ generalTypeDoc parens tipe =
             [ Type.Type name, tipe ]
               | name == "_List" ->
                   P.lbrack <> typeDoc tipe <> P.rbrack
-                  
+
             Type.Type name : types
               | take 6 name == "_Tuple" && all isDigit (drop 6 name) ->
                   P.parens (P.hsep (P.punctuate P.comma (map typeDoc types)))
