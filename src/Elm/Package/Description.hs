@@ -1,28 +1,34 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
-module Elm.Package.Description where
+{-# LANGUAGE OverloadedStrings #-}
+module Elm.Package.Description
+  ( Description(..)
+  , defaultDescription
+  , read, write
+  )
+  where
 
 import Prelude hiding (read)
 import Control.Arrow (first)
-import Control.Monad.Trans (MonadIO, liftIO)
-import Control.Monad.Error.Class (MonadError, throwError)
 import Control.Monad (when, mzero, forM)
+import Control.Monad.Error.Class (MonadError, throwError)
+import Control.Monad.Trans (MonadIO, liftIO)
 import Data.Aeson
 import Data.Aeson.Types (Parser)
 import Data.Aeson.Encode.Pretty (encodePretty', defConfig, confCompare, keyOrder)
 import qualified Data.ByteString.Lazy.Char8 as BS
 import qualified Data.HashMap.Strict as Map
 import qualified Data.List as List
-import qualified Data.Maybe as Maybe
 import qualified Data.Text as T
-import System.FilePath ((</>), (<.>))
-import System.Directory (doesFileExist)
 
 import qualified Elm.Compiler.Module as Module
 import qualified Elm.Package as Package
 import qualified Elm.Package.Constraint as C
 import qualified Elm.Package.Paths as Path
 import Elm.Utils ((|>))
+
+
+
+-- DESCRIPTION
 
 
 data Description = Description
@@ -55,70 +61,28 @@ defaultDescription =
     }
 
 
+
 -- READ
 
-read :: (MonadIO m, MonadError String m) => FilePath -> m Description
-read path =
-  do  json <- liftIO (BS.readFile path)
-      case eitherDecode json of
-        Left err ->
-            throwError $ "Error reading file " ++ path ++ ":\n    " ++ err
 
-        Right ds ->
-            return ds
+read :: (MonadIO m, MonadError e m) => (String -> e) -> FilePath -> m Description
+read toError path =
+  do  json <- liftIO (BS.readFile path)
+      either (throwError . toError) return (eitherDecode json)
+
 
 
 -- WRITE
 
+
 write :: Description -> IO ()
 write description =
-    BS.writeFile Path.description json
-  where
-    json = prettyJSON description
+  BS.writeFile Path.description (prettyJSON description)
 
-
--- FIND MODULE FILE PATHS
-
-locateExposedModules :: (MonadIO m, MonadError String m) => Description -> m [(Module.Raw, FilePath)]
-locateExposedModules desc =
-    mapM locate (exposed desc)
-  where
-    locate modul =
-      let
-        path = Module.nameToPath modul <.> "elm"
-        dirs = sourceDirs desc
-      in
-      do  possibleLocations <-
-              forM dirs $ \dir -> do
-                  exists <- liftIO $ doesFileExist (dir </> path)
-                  return (if exists then Just (dir </> path) else Nothing)
-
-          case Maybe.catMaybes possibleLocations of
-            [] ->
-                throwError $
-                unlines
-                [ "Could not find exposed module '" ++ Module.nameToString modul ++ "' when looking through"
-                , "the following source directories:"
-                , concatMap ("\n    " ++) dirs
-                , ""
-                , "You may need to add a source directory to your " ++ Path.description ++ " file."
-                ]
-
-            [location] ->
-                return (modul, location)
-
-            locations ->
-                throwError $
-                unlines
-                [ "I found more than one module named '" ++ Module.nameToString modul ++ "' in the"
-                , "following locations:"
-                , concatMap ("\n    " ++) locations
-                , ""
-                , "Module names must be unique within your package."
-                ]
 
 
 -- JSON
+
 
 prettyJSON :: Description -> BS.ByteString
 prettyJSON description =

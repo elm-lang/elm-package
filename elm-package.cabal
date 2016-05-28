@@ -44,12 +44,14 @@ Library
     other-modules:
         Catalog,
         CommandLine.Helpers,
+        Diff.Magnitude,
         Install,
         Install.Fetch,
         Install.Plan,
         Install.Solver,
         Manager,
         Paths_elm_package,
+        Reporting.Error,
         Store,
         Utils.Http
 
@@ -62,6 +64,7 @@ Library
         containers >= 0.3 && < 0.6,
         bytestring >= 0.9 && < 0.11,
         directory >= 1.0 && < 2.0,
+        edit-distance,
         elm-compiler == 0.17,
         filepath >= 1 && < 2.0,
         HTTP >= 4000.2.5 && < 4000.3,
@@ -95,6 +98,7 @@ Executable elm-package
         Diff,
         Diff.Compare,
         Diff.Display,
+        Diff.Magnitude,
         Docs,
         Elm.Package.Constraint,
         Elm.Package.Description,
@@ -108,6 +112,7 @@ Executable elm-package
         Install.Solver,
         Manager,
         Publish,
+        Reporting.Error,
         Store,
         Utils.Http,
         Utils.Paths,
@@ -122,6 +127,7 @@ Executable elm-package
         bytestring >= 0.9 && < 0.11,
         containers >= 0.3 && < 0.6,
         directory >= 1.0 && < 2.0,
+        edit-distance,
         elm-compiler == 0.17,
         filepath >= 1 && < 2.0,
         HTTP >= 4000.2.5 && < 4000.3,
@@ -137,45 +143,3 @@ Executable elm-package
         unordered-containers,
         vector >= 0.10 && < 0.12,
         zip-archive
-
--- Test-suite unit-test
---     Type:
---         exitcode-stdio-1.0
-
---     Hs-Source-Dirs:
---         tests, src
-
---     Main-is:
---         Tests.hs
-
---     Other-modules:
---         ComparisonTests
---         SolverTests
-
---     Build-depends:
---         aeson,
---         aeson-pretty,
---         ansi-wl-pprint,
---         base >=4.2 && <5,
---         binary,
---         bytestring,
---         containers,
---         directory,
---         elm-compiler == 0.17,
---         filepath,
---         HTTP,
---         HUnit,
---         http-client >= 0.3,
---         http-client-tls,
---         http-types,
---         json,
---         mtl,
---         network,
---         optparse-applicative,
---         pretty,
---         test-framework,
---         test-framework-hunit,
---         text,
---         time,
---         unordered-containers,
---         vector

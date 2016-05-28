@@ -1,33 +1,42 @@
-module Manager where
+module Manager
+  ( Manager
+  , run
+  , Environment(..)
+  )
+  where
 
-import Control.Monad.Except
-import Control.Monad.Reader
+import Control.Monad.Except (ExceptT, runExceptT)
+import Control.Monad.Reader (ReaderT, runReaderT)
 import qualified Elm.Compiler as Elm
 import qualified Elm.Package as Pkg
+import qualified Network
+import qualified Network.HTTP.Client as Http
+import qualified Network.HTTP.Client.TLS as Http
 import qualified System.Directory as Dir
 import System.FilePath ((</>))
 
+import qualified Reporting.Error as Error
+
 
 type Manager =
-  ExceptT String (ReaderT Environment IO)
+  ExceptT Error.Error (ReaderT Environment IO)
 
 
-run :: Environment -> Manager a -> IO (Either String a)
-run environment manager =
-  runReaderT (runExceptT manager) environment
+run :: Manager a -> IO (Either Error.Error a)
+run manager =
+  Network.withSocketsDo $
+    do  cacheDirectory <- getCacheDirectory
+        httpManager <- Http.newManager Http.tlsManagerSettings
+        let env = Environment "http://package.elm-lang.org" cacheDirectory httpManager
+        runReaderT (runExceptT manager) env
 
 
 data Environment =
   Environment
     { catalog :: String
     , cacheDirectory :: FilePath
+    , httpManager :: Http.Manager
     }
-
-
-defaultEnvironment :: IO Environment
-defaultEnvironment =
-  do  cacheDirectory <- getCacheDirectory
-      return (Environment "http://package.elm-lang.org" cacheDirectory)
 
 
 getCacheDirectory :: IO FilePath

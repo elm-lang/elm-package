@@ -1,8 +1,6 @@
-{-# LANGUAGE FlexibleContexts #-}
-module Install.Fetch where
+module Install.Fetch (package) where
 
-import Control.Monad.Error.Class (MonadError, throwError)
-import Control.Monad.Trans (MonadIO, liftIO)
+import Control.Monad.Except (liftIO, throwError)
 import qualified Codec.Archive.Zip as Zip
 import qualified Data.List as List
 import qualified Network.HTTP.Client as Client
@@ -11,25 +9,33 @@ import System.FilePath ((</>))
 
 import qualified Elm.Package as Package
 import qualified CommandLine.Helpers as Cmd
+import qualified Manager
+import qualified Reporting.Error as Error
 import qualified Utils.Http as Http
 
 
-package :: (MonadIO m, MonadError String m) => Package.Name -> Package.Version -> m ()
+
+package :: Package.Name -> Package.Version -> Manager.Manager ()
 package name@(Package.Name user _) version =
-  ifNotExists name version $ do
-      Http.send zipball extract
-      files <- liftIO $ getDirectoryContents "."
-      case List.find (List.isPrefixOf user) files of
-        Nothing ->
-            throwError "Could not download source code successfully."
-        Just dir ->
+  ifNotExists name version $
+    do  Http.send (toZipballUrl name version) extract
+        files <- liftIO $ getDirectoryContents "."
+        case List.find (List.isPrefixOf user) files of
+          Nothing ->
+            throwError $ Error.ZipDownloadFailed name version
+
+          Just dir ->
             liftIO $ renameDirectory dir (Package.versionToString version)
-  where
-    zipball =
-        "https://github.com/" ++ Package.toUrl name ++ "/zipball/" ++ Package.versionToString version ++ "/"
 
 
-ifNotExists :: (MonadIO m, MonadError String m) => Package.Name -> Package.Version -> m () -> m ()
+toZipballUrl :: Package.Name -> Package.Version -> String
+toZipballUrl name version =
+  "https://github.com/" ++ Package.toUrl name
+  ++ "/zipball/" ++ Package.versionToString version ++ "/"
+
+
+
+ifNotExists :: Package.Name -> Package.Version -> Manager.Manager () -> Manager.Manager ()
 ifNotExists name version command =
   do  let directory = Package.toFilePath name
       exists <- liftIO $ doesDirectoryExist (directory </> Package.versionToString version)
@@ -40,6 +46,6 @@ ifNotExists name version command =
 
 extract :: Client.Request -> Client.Manager -> IO ()
 extract request manager =
-    do  response <- Client.httpLbs request manager
-        let archive = Zip.toArchive (Client.responseBody response)
-        Zip.extractFilesFromArchive [] archive
+  do  response <- Client.httpLbs request manager
+      let archive = Zip.toArchive (Client.responseBody response)
+      Zip.extractFilesFromArchive [] archive

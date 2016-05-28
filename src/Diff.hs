@@ -1,6 +1,6 @@
 module Diff where
 
-import Control.Monad.Error.Class (throwError)
+import Control.Monad.Except (throwError)
 
 import qualified Catalog
 import qualified CommandLine.Helpers as Cmd
@@ -12,6 +12,7 @@ import qualified Elm.Package.Description as Desc
 import qualified Elm.Package.Paths as Path
 import qualified Elm.Package as Package
 import qualified Manager
+import qualified Reporting.Error as Error
 
 
 data Range
@@ -24,28 +25,23 @@ diff :: Range -> Manager.Manager ()
 diff range =
     case range of
         LatestVsActual ->
-            do  name <- Desc.name `fmap` Desc.read Path.description
+            do  name <- Desc.name `fmap` Desc.read Error.CorruptDescription Path.description
                 newDocs <- Docs.generate name
 
                 maybeVersions <- Catalog.versions name
                 latestVersion <-
-                    maybe (throwError noVersions) (return . maximum) maybeVersions
+                    maybe (throwError Error.Undiffable) (return . maximum) maybeVersions
 
                 computeDiff name latestVersion newDocs Nothing
 
         Since version ->
-            do  name <- Desc.name `fmap` Desc.read Path.description
+            do  name <- Desc.name `fmap` Desc.read Error.CorruptDescription Path.description
                 newDocs <- Docs.generate name
                 computeDiff name version newDocs Nothing
 
         Between name old new ->
             do  newDocs <- Catalog.documentation name new
                 computeDiff name old newDocs (Just new)
-
-
-noVersions :: String
-noVersions =
-    "This package has not been published, there is nothing to diff against!"
 
 
 computeDiff

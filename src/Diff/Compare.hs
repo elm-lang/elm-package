@@ -1,4 +1,11 @@
-module Diff.Compare where
+module Diff.Compare
+  ( bumpBy
+  , computeChanges
+  , Changes(..)
+  , PackageChanges(..), packageChangeMagnitude
+  , ModuleChanges(..), moduleChangeMagnitude
+  )
+  where
 
 import Control.Monad (zipWithM)
 import Data.Function (on)
@@ -8,11 +15,13 @@ import qualified Data.Set as Set
 import qualified Data.Text as Text
 
 import qualified Catalog
+import Diff.Magnitude (Magnitude(..))
 import qualified Elm.Compiler.Module as Module
 import qualified Elm.Compiler.Type as Type
 import qualified Elm.Docs as Docs
 import qualified Elm.Package as Package
 import qualified Manager
+
 
 
 computeChanges
@@ -27,13 +36,6 @@ computeChanges newDocs name version =
 
 
 -- CHANGE MAGNITUDE
-
-
-data Magnitude
-    = PATCH
-    | MINOR
-    | MAJOR
-    deriving (Eq, Ord, Show)
 
 
 bumpBy :: PackageChanges -> Package.Version -> Package.Version
@@ -90,21 +92,24 @@ changeMagnitude (Changes added changed removed)
 -- DETECT CHANGES
 
 
-data PackageChanges = PackageChanges
+data PackageChanges =
+  PackageChanges
     { modulesAdded :: [String]
     , modulesChanged :: Map.Map String ModuleChanges
     , modulesRemoved :: [String]
     }
 
 
-data ModuleChanges = ModuleChanges
+data ModuleChanges =
+  ModuleChanges
     { adtChanges :: Changes String ([String], Map.Map String [Type.Type])
     , aliasChanges :: Changes String ([String], Type.Type)
     , valueChanges :: Changes String Type.Type
     }
 
 
-data Changes k v = Changes
+data Changes k v =
+  Changes
     { added :: Map.Map k v
     , changed :: Map.Map k (v,v)
     , removed :: Map.Map k v

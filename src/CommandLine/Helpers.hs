@@ -1,12 +1,12 @@
-{-# LANGUAGE FlexibleContexts #-}
 module CommandLine.Helpers where
 
-import Control.Monad.Error.Class (MonadError)
-import Control.Monad.Trans (MonadIO, liftIO)
+import Control.Monad.Except (liftIO, runExceptT, throwError)
 import System.Directory
 import System.IO
 
 import qualified Elm.Utils as Utils
+import qualified Manager
+import qualified Reporting.Error as Error
 
 
 yesOrNo :: IO Bool
@@ -23,28 +23,30 @@ yesOrNo =
               yesOrNo
 
 
-inDir :: (MonadError String m, MonadIO m) => FilePath -> m a -> m a
-inDir dir doStuff =
+inDir :: FilePath -> Manager.Manager a -> Manager.Manager a
+inDir dir task =
   do  here <- liftIO $ getCurrentDirectory
       liftIO $ createDirectoryIfMissing True dir
       liftIO $ setCurrentDirectory dir
-      result <- doStuff
+      result <- task
       liftIO $ setCurrentDirectory here
       return result
 
 
-git :: (MonadError String m, MonadIO m) => [String] -> m String
-git = run "git"
+run :: String -> [String] -> Manager.Manager String
+run name args =
+  do  result <- liftIO $ runExceptT $ Utils.run name args
+      either (throwError . Error.SystemCallFailed) return result
 
 
-run :: (MonadError String m, MonadIO m) => String -> [String] -> m String
-run = Utils.run
-
-
-out :: (MonadIO m) => String -> m ()
+out :: String -> Manager.Manager ()
 out string =
-    liftIO $ hPutStrLn stdout string'
-  where
-    string' =
-        if not (null string) && last string == '\n' then init string else string
+  let
+    formattedString =
+      if not (null string) && last string == '\n' then
+        init string
+      else
+        string
+  in
+    liftIO $ hPutStrLn stdout formattedString
 

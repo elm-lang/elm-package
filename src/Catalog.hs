@@ -21,6 +21,7 @@ import qualified Elm.Package as Package
 import qualified Elm.Package.Paths as P
 import qualified Manager
 import qualified Paths_elm_package as This
+import qualified Reporting.Error as Error
 import qualified Utils.Http as Http
 
 
@@ -138,7 +139,9 @@ getJson metadata metadataPath name version =
 
       content <-
         case exists of
-          True -> liftIO (LBS.readFile fullMetadataPath)
+          True ->
+            liftIO (LBS.readFile fullMetadataPath)
+
           False ->
             do  url <- catalog metadata [("name", Package.toString name), ("version", Package.versionToString version)]
                 Http.send url $ \request manager ->
@@ -148,8 +151,8 @@ getJson metadata metadataPath name version =
                         return (Client.responseBody response)
 
       case Json.eitherDecode content of
-        Right value -> return value
-        Left err ->
-          throwError $
-            "Unable to get " ++ metadataPath ++ " for "
-            ++ Package.toString name ++ " " ++ Package.versionToString version ++ "\n" ++ err
+        Right value ->
+          return value
+
+        Left _ ->
+          throwError $ Error.CorruptJson metadataPath name version

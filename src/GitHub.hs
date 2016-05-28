@@ -1,50 +1,65 @@
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 module GitHub (getVersionTags) where
 
-import Control.Monad.Error.Class (MonadError, throwError)
-import Control.Monad.Trans (MonadIO)
-import Data.Aeson as Json
+import Control.Monad.Except (throwError)
+import Data.Aeson ((.:))
+import qualified Data.Aeson as Json
+import qualified Data.Aeson.Types as Json
 import qualified Data.Either as Either
-import Data.Monoid ((<>))
 import qualified Data.Vector as Vector
 import Network.HTTP.Client
 
 import qualified Elm.Package as Package
+import qualified Reporting.Error as Error
+import qualified Manager
 import qualified Utils.Http as Http
+
 
 
 -- TAGS from GITHUB
 
+
 newtype Tags = Tags [String]
 
 
-getVersionTags :: (MonadIO m, MonadError String m) => Package.Name -> m [Package.Version]
+getVersionTags :: Package.Name -> Manager.Manager [Package.Version]
 getVersionTags (Package.Name user project) =
-  do  response <-
-          Http.send url $ \request manager ->
-              httpLbs (request {requestHeaders = headers}) manager
-      case Json.eitherDecode (responseBody response) of
-        Left err ->
-            throwError err
-
-        Right (Tags tags) ->
-            return (Either.rights (map Package.versionFromString tags))
-
-  where
-    url = "https://api.github.com/repos/" ++ user ++ "/" ++ project ++ "/tags"
+  let
+    url =
+      "https://api.github.com/repos/" ++ user ++ "/" ++ project ++ "/tags"
 
     headers =
-        [("User-Agent", "elm-package")]
-        <> [("Accept", "application/json")]
+      [ ("User-Agent", "elm-package")
+      , ("Accept", "application/json")
+      ]
+  in
+    do  response <-
+          Http.send url $ \request manager ->
+              httpLbs (request {requestHeaders = headers}) manager
+
+        case Json.eitherDecode (responseBody response) of
+          Left err ->
+            throwError $ Error.HttpRequestFailed url err
+
+          Right (Tags tags) ->
+            return (Either.rights (map Package.versionFromString tags))
 
 
-instance FromJSON Tags where
-    parseJSON (Array arr) =
-        Tags `fmap` mapM toTag (Vector.toList arr)
-      where
-        toTag (Object obj) = obj .: "name"
-        toTag _ = fail "expecting an object"
+instance Json.FromJSON Tags where
+  parseJSON json =
+    case json of
+      Json.Array arr ->
+        Tags <$> mapM toTag (Vector.toList arr)
 
-    parseJSON _ = fail "expecting an array"
+      _ ->
+        fail "response is not a JSON array"
 
+
+toTag :: Json.Value -> Json.Parser String
+toTag json =
+  case json of
+    Json.Object object ->
+      object .: "name"
+
+    _ ->
+      fail "response is not a JSON array full of objects"

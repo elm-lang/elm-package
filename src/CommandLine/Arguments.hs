@@ -1,7 +1,7 @@
 module CommandLine.Arguments (parse) where
 
 import Control.Applicative ((<|>), optional)
-import Control.Monad.Error.Class (throwError)
+import Control.Monad.Except (throwError)
 import qualified Options.Applicative as Opt
 import qualified Options.Applicative.Builder as B
 import qualified Text.PrettyPrint.ANSI.Leijen as P
@@ -14,6 +14,7 @@ import qualified Publish
 import qualified Elm.Compiler as Compiler
 import qualified Elm.Package as Package
 import qualified Elm.Package.Paths as Path
+import qualified Reporting.Error as Error
 
 
 parse :: IO (Manager.Manager ())
@@ -106,9 +107,7 @@ installInfo =
               Install.install autoYes (Install.Exactly name version)
 
           (Nothing, Just version) ->
-              throwError $
-                "You specified a version number, but not a package!\nVersion "
-                ++ Package.versionToString version ++ " of what?"
+              throwError $ Error.BadInstall version
 
     infoModifier =
         mconcat

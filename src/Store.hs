@@ -15,6 +15,7 @@ import qualified Elm.Package.Constraint as C
 import qualified Elm.Package.Description as Desc
 import qualified Elm.Package as Package
 import qualified Manager
+import qualified Reporting.Error as Error
 
 
 
@@ -22,17 +23,17 @@ import qualified Manager
 
 
 data Store = Store
-    { constraintCache :: ConstraintCache
-    , versionCache :: VersionCache
-    }
+  { constraintCache :: ConstraintCache
+  , versionCache :: VersionCache
+  }
 
 
 type ConstraintCache =
-    Map.Map (Package.Name, Package.Version) (C.Constraint, [(Package.Name, C.Constraint)])
+  Map.Map (Package.Name, Package.Version) (C.Constraint, [(Package.Name, C.Constraint)])
 
 
 type VersionCache =
-    Map.Map Package.Name [Package.Version]
+  Map.Map Package.Name [Package.Version]
 
 
 initialStore :: Manager.Manager Store
@@ -115,7 +116,4 @@ getVersions name =
           return versions
 
         Nothing ->
-          throwError noLocalVersions
-  where
-    noLocalVersions =
-        "There are no versions of package '" ++ Package.toString name ++ "' on your computer."
+          throwError $ Error.CorruptVersionCache name

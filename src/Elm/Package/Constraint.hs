@@ -7,6 +7,7 @@ module Elm.Package.Constraint
     , expand
     , defaultElmVersion
     , isSatisfied
+    , check
     , errorMessage
     ) where
 
@@ -81,8 +82,25 @@ isSatisfied constraint version =
 isLess :: (Ord a) => Op -> (a -> a -> Bool)
 isLess op =
   case op of
-    Less -> (<)
-    LessOrEqual -> (<=)
+    Less ->
+      (<)
+
+    LessOrEqual ->
+      (<=)
+
+
+check :: Constraint -> Package.Version -> Ordering
+check constraint version =
+  case constraint of
+    Range lower lowerOp upperOp upper ->
+      if not (isLess lowerOp lower version) then
+        LT
+
+      else if not (isLess upperOp version upper) then
+        GT
+
+      else
+        EQ
 
 
 

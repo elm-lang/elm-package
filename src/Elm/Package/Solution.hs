@@ -1,9 +1,8 @@
 {-# OPTIONS_GHC -Wall #-}
-{-# LANGUAGE FlexibleContexts #-}
 module Elm.Package.Solution (Solution, write, read) where
 
 import Prelude hiding (read)
-import Control.Monad.Error.Class (MonadError, throwError)
+import Control.Monad.Except (ExceptT, throwError, withExceptT)
 import Control.Monad.Trans (MonadIO, liftIO)
 import Data.Aeson
 import Data.Aeson.Encode.Pretty (encodePretty)
@@ -12,59 +11,72 @@ import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 
-import qualified Elm.Package as Package
+import qualified Elm.Package as Pkg
+
+
+
+-- SOLUTION
 
 
 type Solution =
-    Map.Map Package.Name Package.Version
+    Map.Map Pkg.Name Pkg.Version
+
 
 
 -- READING AND WRITING SOLUTIONS
 
+
 write :: FilePath -> Solution -> IO ()
 write filePath solution =
-    BS.writeFile filePath (encodePretty (toJson solution))
+  BS.writeFile filePath (encodePretty (toJson solution))
 
 
-read :: (MonadIO m, MonadError String m) => FilePath -> m Solution
-read path =
+read :: (MonadIO m) => (String -> e) -> FilePath -> ExceptT e m Solution
+read toError path =
   do  rawJson <- liftIO (BS.readFile path)
-      either throwCorrupted fromJson (eitherDecode rawJson)
-  where
-    throwCorrupted _msg =
-        throwError $
-            "Unable to extract package information from the " ++ path ++
-            " file.\nIt may be corrupted."
+      case eitherDecode rawJson of
+        Left err ->
+          throwError $ toError err
+
+        Right hashMap ->
+          withExceptT toError $ fromJson hashMap
 
 
--- CONVERSION TO JSON
+
+-- TO JSON
+
 
 toJson :: Solution -> Value
 toJson solution =
-    object (map toField (Map.toList solution))
-  where
+  let
     toField (name, version) =
-        Text.pack (Package.toString name) .= Text.pack (Package.versionToString version)
+      Text.pack (Pkg.toString name) .= Text.pack (Pkg.versionToString version)
+  in
+    object (map toField (Map.toList solution))
 
 
-fromJson :: (MonadError String m) => HashMap.HashMap String String -> m Solution
+
+-- FROM JSON
+
+
+fromJson :: (Monad m) => HashMap.HashMap String String -> ExceptT String m Solution
 fromJson hashMap =
-    do  pairs <- mapM parseNameAndVersion (HashMap.toList hashMap)
-        return (Map.fromList pairs)
+  do  pairs <- mapM parseNameAndVersion (HashMap.toList hashMap)
+      return (Map.fromList pairs)
 
 
-parseNameAndVersion :: (MonadError String m) => (String,String) -> m (Package.Name, Package.Version)
+parseNameAndVersion :: (Monad m) => (String,String) -> ExceptT String m (Pkg.Name, Pkg.Version)
 parseNameAndVersion (rawName, rawVersion) =
-    do  name <- parse rawName Package.fromString ("package name " ++ rawName)
-        vrsn <- parse rawVersion Package.versionFromString ("version number for package " ++ rawName)
-        return (name, vrsn)
+  (,)
+    <$> parse rawName Pkg.fromString ("package name " ++ rawName)
+    <*> parse rawVersion Pkg.versionFromString ("version number for package " ++ rawName)
 
 
-parse :: (MonadError String m) => String -> (String -> Either String a) -> String -> m a
+parse :: (Monad m) => String -> (String -> Either String a) -> String -> ExceptT String m a
 parse string fromString msg =
-    case fromString string of
-      Right a ->
-          return a
+  case fromString string of
+    Right a ->
+      return a
 
-      Left problem ->
-        throwError ("Could not parse " ++ msg ++ "\n\n" ++ problem)
+    Left problem ->
+      throwError $ "Could not parse " ++ msg ++ ". " ++ problem

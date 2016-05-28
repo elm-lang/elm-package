@@ -11,6 +11,7 @@ import qualified Elm.Docs as Docs
 import qualified Elm.Package as Pkg
 import qualified Elm.Package.Paths as Path
 import qualified Manager
+import qualified Reporting.Error as Error
 
 
 
@@ -27,9 +28,4 @@ generate name =
       Cmd.run "elm-make" [ "--yes", "--docs=" ++ Path.documentation, prepublishFlag ]
       json <- liftIO (BS.readFile Path.documentation)
 
-      either badJson return (Json.eitherDecode json)
-
-
-badJson :: String -> Manager.Manager [Docs.Documentation]
-badJson msg =
-  throwError $ "Problem with generated documentation:\n" ++ msg
+      either (throwError . Error.CorruptDocumentation) return (Json.eitherDecode json)

@@ -1,7 +1,6 @@
 module Install where
 
-import Control.Monad.Error.Class (throwError)
-import Control.Monad.Trans (liftIO)
+import Control.Monad.Except (liftIO, throwError)
 import Control.Monad
 import qualified Data.List as List
 import qualified Data.Map as Map
@@ -18,7 +17,9 @@ import qualified Install.Fetch as Fetch
 import qualified Install.Plan as Plan
 import qualified Install.Solver as Solver
 import qualified Manager
+import qualified Reporting.Error as Error
 import qualified Store
+
 
 
 data Args
@@ -32,9 +33,10 @@ install autoYes args =
   do  exists <- liftIO (doesFileExist Path.description)
 
       description <-
-          case exists of
-            True -> Desc.read Path.description
-            False -> initialDescription
+        if exists then
+          Desc.read Error.CorruptDescription Path.description
+        else
+          initialDescription
 
       case args of
         Everything ->
@@ -50,25 +52,29 @@ install autoYes args =
                 upgrade autoYes newDescription
 
 
+
 -- INSTALL EVERYTHING
 
+
 upgrade :: Bool -> Desc.Description -> Manager.Manager ()
-upgrade autoYes description =
-  do  newSolution <- Solver.solve (Desc.dependencies description)
+upgrade autoYes desc =
+  do  newSolution <- Solver.solve (Desc.elmVersion desc) (Desc.dependencies desc)
 
       exists <- liftIO (doesFileExist Path.solvedDependencies)
+
       oldSolution <-
-          if exists
-              then Solution.read Path.solvedDependencies
-              else return Map.empty
+        if exists then
+          Solution.read Error.CorruptSolution Path.solvedDependencies
+        else
+          return Map.empty
 
       let plan = Plan.create oldSolution newSolution
 
       approve <- liftIO (getApproval autoYes plan)
 
       if approve
-          then runPlan newSolution plan
-          else liftIO $ putStrLn "Okay, I did not change anything!"
+        then runPlan newSolution plan
+        else liftIO $ putStrLn "Okay, I did not change anything!"
 
 
 getApproval :: Bool -> Plan.Plan -> IO Bool
@@ -114,21 +120,20 @@ runPlan solution plan =
       liftIO $ putStrLn "Packages configured successfully!"
 
 
+
 -- MODIFY DESCRIPTION
+
 
 latestVersion :: Package.Name -> Manager.Manager Package.Version
 latestVersion name =
   do  versionCache <- Store.readVersionCache
       case Map.lookup name versionCache of
         Just versions ->
-            return $ maximum versions
+          return $ maximum versions
 
         Nothing ->
-            throwError $
-            unlines
-            [ "No versions of package '" ++ Package.toString name ++ "' were found!"
-            , "Is it spelled correctly?"
-            ]
+          throwError $ Error.PackageNotFound name $
+            Error.nearbyNames name (Map.keys versionCache)
 
 
 addConstraint :: Bool -> Package.Name -> Package.Version -> Desc.Description -> Manager.Manager Desc.Description
@@ -137,18 +142,12 @@ addConstraint autoYes name version description =
     Nothing ->
       addNewDependency autoYes name version description
 
-    Just constraint
-      | Constraint.isSatisfied constraint version ->
+    Just constraint ->
+      if Constraint.isSatisfied constraint version then
           return description
 
-      | otherwise ->
-          throwError $
-            "This is a tricky update, you should modify " ++ Path.description ++ " yourself.\n"
-            ++ "Package " ++ Package.toString name ++ " is already listed as a dependency:\n\n    "
-            ++ showDependency name constraint ++ "\n\n"
-            ++ "You probably want one of the following constraints instead:\n\n    "
-            ++ Constraint.toString (Constraint.expand constraint version) ++ "\n    "
-            ++ Constraint.toString (Constraint.untilNextMajor version) ++ "\n"
+      else
+        throwError $ Error.AddTrickyConstraint name version constraint
 
 
 addNewDependency :: Bool -> Package.Name -> Package.Version -> Desc.Description -> Manager.Manager Desc.Description

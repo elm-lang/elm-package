@@ -1,23 +1,24 @@
 module Bump where
 
-import Control.Monad.Error.Class (throwError)
-import Control.Monad.Trans (liftIO)
+import Control.Monad.Except (liftIO, throwError)
 import qualified Data.List as List
 
 import qualified Catalog
 import qualified CommandLine.Helpers as Cmd
-import qualified Diff.Compare as Compare
+import qualified Diff.Compare as Diff
+import qualified Diff.Magnitude as Diff
 import qualified Docs
 import qualified Elm.Docs as Docs
 import qualified Elm.Package.Description as Desc
 import qualified Elm.Package as Package
 import qualified Elm.Package.Paths as Path
 import qualified Manager
+import qualified Reporting.Error as Error
 
 
 bump :: Manager.Manager ()
 bump =
-    do  description <- Desc.read Path.description
+    do  description <- Desc.read Error.CorruptDescription Path.description
         let name = Desc.name description
         let statedVersion = Desc.version description
 
@@ -29,29 +30,17 @@ bump =
                 validateInitialVersion description
 
             Just publishedVersions ->
-                let baseVersions = map (\(old, _, _) -> old) (validBumps publishedVersions) in
-                if statedVersion `elem` baseVersions
-                    then suggestVersion newDocs name statedVersion description
-                    else throwError (unbumpable baseVersions)
+              let
+                baseVersions =
+                  map (\(old, _, _) -> old) (validBumps publishedVersions)
+              in
+                if statedVersion `elem` baseVersions then
+                  suggestVersion newDocs name statedVersion description
+                else
+                  throwError $ Error.Unbumpable statedVersion $
+                    map head (List.group (List.sort baseVersions))
 
         return ()
-
-
-unbumpable :: [Package.Version] -> String
-unbumpable baseVersions =
-  let versions = map head (List.group (List.sort baseVersions))
-  in
-    unlines
-    [ "To bump you must start with an already published version number in"
-    , Path.description ++ ", giving us a starting point to bump from."
-    , ""
-    , "The version numbers that can be bumped include the following subset of"
-    , "published versions:"
-    , "  " ++ List.intercalate ", " (map Package.versionToString versions)
-    , ""
-    , "Switch back to one of these versions before running 'elm-package bump'"
-    , "again."
-    ]
 
 
 data Validity
@@ -117,15 +106,15 @@ suggestVersion
     -> Desc.Description
     -> Manager.Manager Validity
 suggestVersion newDocs name version description =
-    do  changes <- Compare.computeChanges newDocs name version
-        let newVersion = Compare.bumpBy changes version
+    do  changes <- Diff.computeChanges newDocs name version
+        let newVersion = Diff.bumpBy changes version
         changeVersion (infoMsg changes newVersion) description newVersion
 
     where
         infoMsg changes newVersion =
             let old = Package.versionToString version
                 new = Package.versionToString newVersion
-                magnitude = show (Compare.packageChangeMagnitude changes)
+                magnitude = show (Diff.packageChangeMagnitude changes)
             in
             concat
             [ "Based on your new API, this should be a ", magnitude, " change (", old, " => ", new, ")\n"
@@ -144,75 +133,42 @@ validateVersion
 validateVersion newDocs name statedVersion publishedVersions =
     case List.find (\(_ ,new, _) -> statedVersion == new) bumps of
         Nothing ->
-          let isPublished = statedVersion `elem` publishedVersions
-          in
-              throwError (if isPublished then alreadyPublished else invalidBump)
+          if elem statedVersion publishedVersions then
+            throwError $ Error.AlreadyPublished statedVersion
+
+          else
+            throwError $ Error.InvalidBump statedVersion (last publishedVersions)
 
         Just (old, new, magnitude) ->
-            do  changes <- Compare.computeChanges newDocs name old
-                let realNew = Compare.bumpBy changes old
+            do  changes <- Diff.computeChanges newDocs name old
+                let realNew = Diff.bumpBy changes old
                 case new == realNew of
                     False ->
-                        throwError (badBump old new realNew magnitude changes)
-                    True -> do
-                        Cmd.out (looksGood old new magnitude)
-                        return Valid
+                      throwError $ Error.BadBump old new magnitude realNew $
+                        Diff.packageChangeMagnitude changes
+
+                    True ->
+                      do  Cmd.out (looksGood old new magnitude)
+                          return Valid
 
     where
-        bumps = validBumps publishedVersions
+        bumps =
+            validBumps publishedVersions
 
         looksGood old new magnitude =
             "Version number " ++ Package.versionToString new ++ " verified (" ++ show magnitude
             ++ " change, " ++ Package.versionToString old ++ " => " ++ Package.versionToString new ++ ")"
 
-        alreadyPublished =
-            "Version " ++ Package.versionToString statedVersion
-            ++ " has already been published, but you are trying to publish\n"
-            ++ "it again! Run the following command to see what the new version should be.\n"
-            ++ "\n    elm-package bump\n"
-
-        invalidBump =
-            unlines
-            [ "The version listed in " ++ Path.description ++ " is neither a previously"
-            , "published version, nor a valid version bump."
-            , ""
-            , "Set the version number in " ++ Path.description ++ " to the released version"
-            , "that you are improving upon. If you are working on the latest API, that means"
-            , "you are modifying version " ++ Package.versionToString (last publishedVersions) ++ "."
-            , ""
-            , "From there, we can compute which version comes next based on the API changes"
-            , "when you run the following command."
-            , ""
-            , "    elm-package bump"
-            ]
-
-        badBump old new realNew magnitude changes =
-            unlines
-            [ "It looks like you are trying to bump from version " ++ Package.versionToString old ++ " to " ++ Package.versionToString new ++ "."
-            , "This implies you are making a " ++ show magnitude ++ " change, but when we compare"
-            , "the " ++ Package.versionToString old ++ " API to the API you have now it seems that it should"
-            , "really be a " ++ show (Compare.packageChangeMagnitude changes) ++ " change (" ++ Package.versionToString realNew ++ ")."
-            , ""
-            , "Run the following command to see the API diff we are working from:"
-            , ""
-            , "    elm-package diff " ++ Package.versionToString old
-            , ""
-            , "The easiest way to bump versions is to let us do it automatically. If you set"
-            , "the version number in " ++ Path.description ++ " to the released version"
-            , "that you are improving upon, we will compute which version should come next"
-            , "when you run:"
-            , ""
-            , "    elm-package bump"
-            ]
 
 
 -- VALID BUMPS
 
-validBumps :: [Package.Version] -> [(Package.Version, Package.Version, Compare.Magnitude)]
+
+validBumps :: [Package.Version] -> [(Package.Version, Package.Version, Diff.Magnitude)]
 validBumps publishedVersions =
-    [ (majorPoint, Package.bumpMajor majorPoint, Compare.MAJOR) ]
-    ++ map (\v -> (v, Package.bumpMinor v, Compare.MINOR)) minorPoints
-    ++ map (\v -> (v, Package.bumpPatch v, Compare.PATCH)) patchPoints
+    [ (majorPoint, Package.bumpMajor majorPoint, Diff.MAJOR) ]
+    ++ map (\v -> (v, Package.bumpMinor v, Diff.MINOR)) minorPoints
+    ++ map (\v -> (v, Package.bumpPatch v, Diff.PATCH)) patchPoints
   where
     patchPoints = Package.filterLatest Package.majorAndMinor publishedVersions
     minorPoints = Package.filterLatest Package._major publishedVersions

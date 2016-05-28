@@ -10,20 +10,28 @@ import qualified Elm.Package.Constraint as C
 import qualified Elm.Package as Package
 import qualified Elm.Package.Solution as S
 import qualified Manager
+import qualified Reporting.Error as Error
 import qualified Store
 
 
-solve :: [(Package.Name, C.Constraint)] -> Manager.Manager S.Solution
-solve constraints =
-  do  store <- Store.initialStore
-      maybeSolution <- evalStateT (exploreConstraints constraints) store
-      case maybeSolution of
-        Just solution ->
-          return solution
+solve :: C.Constraint -> [(Package.Name, C.Constraint)] -> Manager.Manager S.Solution
+solve elmConstraint constraints =
+  case C.check elmConstraint Compiler.version of
+    LT ->
+      throwError $ Error.BadElmVersion Compiler.version False elmConstraint
 
-        Nothing ->
-          throwError $
-            "Unable to find a set of packages that will work with your constraints."
+    GT ->
+      throwError $ Error.BadElmVersion Compiler.version True elmConstraint
+
+    EQ ->
+      do  store <- Store.initialStore
+          maybeSolution <- evalStateT (exploreConstraints constraints) store
+          case maybeSolution of
+            Just solution ->
+              return solution
+
+            Nothing ->
+              throwError Error.ConstraintsHaveNoSolution
 
 
 
@@ -73,8 +81,8 @@ exploreVersionList name versions solution remainingPackages =
 
 exploreVersion :: Package.Name -> Package.Version -> S.Solution -> Packages -> Explorer (Maybe S.Solution)
 exploreVersion name version solution remainingPackages =
-  do  (elmVersion, constraints) <- Store.getConstraints name version
-      if C.isSatisfied elmVersion Compiler.version
+  do  (elmConstraint, constraints) <- Store.getConstraints name version
+      if C.isSatisfied elmConstraint Compiler.version
         then explore constraints
         else return Nothing
 
