@@ -101,12 +101,7 @@ runPlan solution plan =
             ++ Map.toList (Map.map fst (Plan.upgrades plan))
 
       -- fetch new dependencies
-      Cmd.inDir Path.packagesDirectory $
-          forM_ installs $ \(name, version) ->
-              do  liftIO $ putStrLn $
-                    "Downloading " ++ Package.toString name
-                    ++ " " ++ Package.versionToString version
-                  Fetch.package name version
+      Fetch.everything installs
 
       -- try to build new dependencies
       liftIO (Solution.write Path.solvedDependencies solution)

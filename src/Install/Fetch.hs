@@ -1,30 +1,97 @@
-module Install.Fetch (package) where
+module Install.Fetch (everything) where
 
+import Control.Concurrent (forkIO)
+import Control.Concurrent.Chan (Chan, newChan, writeChan, readChan)
 import Control.Monad.Except (liftIO, throwError)
 import qualified Codec.Archive.Zip as Zip
 import qualified Data.List as List
+import GHC.IO.Handle (hIsTerminalDevice)
 import qualified Network.HTTP.Client as Client
-import System.Directory (doesDirectoryExist, getDirectoryContents, renameDirectory)
+import System.Directory
+  ( createDirectoryIfMissing, doesDirectoryExist
+  , getDirectoryContents, renameDirectory
+  )
 import System.FilePath ((</>))
+import System.IO (stdout)
+import Text.PrettyPrint.ANSI.Leijen
+  ( Doc, (<>), (<+>), displayIO, green, plain, red, renderPretty, text )
 
 import qualified Elm.Package as Pkg
+import qualified Elm.Package.Paths as Path
 import qualified CommandLine.Helpers as Cmd
 import qualified Manager
 import qualified Reporting.Error as Error
 import qualified Utils.Http as Http
 
 
-package :: Pkg.Name -> Pkg.Version -> Manager.Manager ()
-package name@(Pkg.Name user _) version =
+
+everything :: [(Pkg.Name, Pkg.Version)] -> Manager.Manager ()
+everything packages =
+  Cmd.inDir Path.packagesDirectory $
+    do  eithers <- liftIO $ do
+          putStrLn $ "Beginning " ++ show (length packages) ++ " downloads:\n"
+          isTerminal <- hIsTerminalDevice stdout
+          channels <- mapM (forkFetch isTerminal) packages
+          mapM readChan channels
+
+        case sequence eithers of
+          Right _ ->
+            liftIO $ putStrLn ""
+
+          Left err ->
+            throwError err
+
+
+forkFetch :: Bool -> (Pkg.Name, Pkg.Version) -> IO (Chan (Either Error.Error ()))
+forkFetch isTerminal (name, version) =
+  do  chan <- newChan
+      forkIO $ do
+        result <- Manager.run $ fetch name version
+        let doc = toDoc result name version
+        displayIO stdout $ renderPretty 1 80 $
+          if isTerminal then doc else plain doc
+        writeChan chan result
+      return chan
+
+
+toDoc :: Either a b -> Pkg.Name -> Pkg.Version -> Doc
+toDoc result name version =
+  let
+    nameDoc =
+      text $ Pkg.toString name
+
+    versionDoc =
+      text $ Pkg.versionToString version
+
+    bullet =
+      case result of
+        Right _ ->
+          green (text "●")
+
+        Left _ ->
+          red (text "✗")
+  in
+    text "  " <> bullet <+> nameDoc <+> versionDoc <> text "\n"
+
+
+
+-- FETCH A PACKAGE
+
+
+fetch :: Pkg.Name -> Pkg.Version -> Manager.Manager ()
+fetch name@(Pkg.Name user project) version =
   ifNotExists name version $
     do  Http.send (toZipballUrl name version) extract
         files <- liftIO $ getDirectoryContents "."
-        case List.find (List.isPrefixOf user) files of
+        case List.find (List.isPrefixOf (user ++ "-" ++ project)) files of
           Nothing ->
             throwError $ Error.ZipDownloadFailed name version
 
           Just dir ->
-            liftIO $ renameDirectory dir (Pkg.versionToString version)
+            liftIO $ do
+              let home = Pkg.toFilePath name
+              createDirectoryIfMissing True home
+              renameDirectory dir (home </> Pkg.versionToString version)
 
 
 toZipballUrl :: Pkg.Name -> Pkg.Version -> String
@@ -33,14 +100,11 @@ toZipballUrl name version =
   ++ "/zipball/" ++ Pkg.versionToString version ++ "/"
 
 
-
 ifNotExists :: Pkg.Name -> Pkg.Version -> Manager.Manager () -> Manager.Manager ()
-ifNotExists name version command =
-  do  let directory = Pkg.toFilePath name
-      exists <- liftIO $ doesDirectoryExist (directory </> Pkg.versionToString version)
-      if exists
-        then return ()
-        else Cmd.inDir directory command
+ifNotExists name version task =
+  do  let dir = Pkg.toFilePath name </> Pkg.versionToString version
+      exists <- liftIO $ doesDirectoryExist dir
+      if exists then return () else task
 
 
 extract :: Client.Request -> Client.Manager -> IO ()
