@@ -8,12 +8,13 @@ module Elm.Package.Description
   where
 
 import Prelude hiding (read)
+import Control.Applicative ((<|>))
 import Control.Arrow (first)
-import Control.Monad (when, mzero, forM)
+import Control.Monad (forM, when)
 import Control.Monad.Error.Class (MonadError, throwError)
 import Control.Monad.Trans (MonadIO, liftIO)
 import Data.Aeson
-import Data.Aeson.Types (Parser)
+import Data.Aeson.Types (Parser, parseEither)
 import Data.Aeson.Encode.Pretty (encodePretty', defConfig, confCompare, keyOrder)
 import qualified Data.ByteString.Lazy.Char8 as BS
 import qualified Data.HashMap.Strict as Map
@@ -68,7 +69,7 @@ defaultDescription =
 read :: (MonadIO m, MonadError e m) => (String -> e) -> FilePath -> m Description
 read toError path =
   do  json <- liftIO (BS.readFile path)
-      either (throwError . toError) return (eitherDecode json)
+      either (throwError . toError) return (decodeDescription json)
 
 
 
@@ -81,7 +82,7 @@ write description =
 
 
 
--- JSON
+-- TO JSON
 
 
 prettyJSON :: Description -> BS.ByteString
@@ -142,65 +143,95 @@ instance ToJSON Description where
           Map.fromList $ map (first (T.pack . Package.toString)) deps
 
 
+
+-- FROM JSON
+
+
+decodeDescription :: BS.ByteString -> Either String Description
+decodeDescription bytestring =
+  do  value <- eitherDecode bytestring <|> badJson
+      parseEither getDescription value
+
+
+badJson :: Either String a
+badJson =
+  Left $
+    "I cannot parse the JSON. Maybe a comma is missing? Or there is an extra one?\n\
+    \It could also be because of mismatched brackets or quotes.\n\
+    \\n\
+    \You can also check out the following example to see what it should look like:\n\
+    \<https://raw.githubusercontent.com/elm-lang/html/master/elm-package.json>"
+
+
 instance FromJSON Description where
-    parseJSON (Object obj) =
-        do  version <- get obj "version" "your project's version number"
+  parseJSON = getDescription
 
-            elmVersion <- getElmVersion obj
 
-            summary <- get obj "summary" "a short summary of your project"
-            when (length summary >= 80) $
-                fail "'summary' must be less than 80 characters"
+getDescription :: Value -> Parser Description
+getDescription value =
+  case value of
+    Object obj ->
+      do  version <- get obj "version" "your project's version number"
 
-            license <- get obj "license" "license information (BSD3 is recommended)"
+          elmVersion <- getElmVersion obj
 
-            repo <- get obj "repository" "a link to the project's GitHub repo"
-            name <- case repoToName repo of
-                      Left err -> fail err
-                      Right nm -> return nm
+          summary <- get obj "summary" "a short summary of your project"
+          when (length summary >= 80) $
+              fail "The \"summary\" must be less than 80 characters"
 
-            exposed <- map Module.fromJson <$> get obj "exposed-modules" "a list of modules exposed to users"
+          license <- get obj "license" "license information (BSD3 is recommended)"
 
-            sourceDirs <- get obj "source-directories" "the directories that hold source code"
+          repo <- get obj "repository" "a link to the project's GitHub repo"
+          name <- case repoToName repo of
+                    Left err -> fail err
+                    Right nm -> return nm
 
-            deps <- getDependencies obj
+          exposed <- map Module.fromJson <$> get obj "exposed-modules" "a list of modules exposed to users"
 
-            natives <- maybe False id <$> obj .:? "native-modules"
+          sourceDirs <- get obj "source-directories" "a list of directories containing source code"
 
-            return $ Description name repo version elmVersion summary license sourceDirs exposed natives deps
+          deps <- getDependencies obj
 
-    parseJSON _ = mzero
+          natives <- maybe False id <$> obj .:? "native-modules"
+
+          return $ Description name repo version elmVersion summary license sourceDirs exposed natives deps
+
+    _ ->
+      fail $
+        "I was expecting a JSON object, like the one here:\n\
+        \<https://raw.githubusercontent.com/elm-lang/html/master/elm-package.json>"
 
 
 get :: FromJSON a => Object -> T.Text -> String -> Parser a
 get obj field desc =
-    do maybe <- obj .:? field
-       case maybe of
-         Just value ->
-            return value
+  do  maybe <- obj .:? field
+      case maybe of
+        Just value ->
+          return value
 
-         Nothing ->
-            fail $
-              "Missing field " ++ show field ++ ", " ++ desc ++ ".\n" ++
-              "    Check out an example " ++ Path.description ++ " file here:\n" ++
-              "    <https://raw.githubusercontent.com/elm-lang/html/master/elm-package.json>"
+        Nothing ->
+          fail $
+            "Missing field " ++ show field ++ " which should hold " ++ desc ++ ".\n\
+            \\n\
+            \Check out an example " ++ Path.description ++ " file here:\n\
+            \<https://raw.githubusercontent.com/elm-lang/html/master/elm-package.json>"
 
 
 getDependencies :: Object -> Parser [(Package.Name, C.Constraint)]
 getDependencies obj =
-  do  deps <- get obj "dependencies" "a listing of your project's dependencies"
+  do  deps <- get obj "dependencies" "a list of the dependencies you need"
       forM (Map.toList deps) $ \(rawName, rawConstraint) ->
-          case Package.fromString rawName of
-            Left problem ->
-                fail ("Ran into invalid package name '" ++ rawName ++ "' in dependencies.\n\n" ++ problem)
+        case Package.fromString rawName of
+          Left problem ->
+            fail ("Ran into invalid package name \"" ++ rawName ++ "\" in dependencies.\n\n" ++ problem)
 
-            Right name ->
-                case C.fromString rawConstraint of
-                    Just constraint ->
-                        return (name, constraint)
+          Right name ->
+            case C.fromString rawConstraint of
+              Just constraint ->
+                return (name, constraint)
 
-                    Nothing ->
-                        fail (C.errorMessage (Just rawName) rawConstraint)
+              Nothing ->
+                fail (C.errorMessage (Just rawName) rawConstraint)
 
 
 getElmVersion :: Object -> Parser C.Constraint
@@ -258,4 +289,4 @@ dropDomain string =
 
 repoProblem :: String -> String
 repoProblem problem =
-  "Problem with the `repository` field.\n\n" ++ problem
+  "Problem with the \"repository\" field.\n\n" ++ problem

@@ -56,8 +56,8 @@ Library
         Utils.Http
 
     Build-depends:
-        aeson >= 0.7 && < 0.9,
-        aeson-pretty >= 0.7 && < 0.8,
+        aeson >= 0.11,
+        aeson-pretty,
         ansi-wl-pprint >= 0.6.7.3,
         base >=4.2 && <5,
         binary >= 0.7 && < 0.8,
@@ -119,8 +119,8 @@ Executable elm-package
         Paths_elm_package
 
     Build-depends:
-        aeson >= 0.7 && < 0.9,
-        aeson-pretty >= 0.7 && < 0.8,
+        aeson >= 0.11,
+        aeson-pretty,
         ansi-wl-pprint >= 0.6 && < 0.7,
         base >=4.2 && <5,
         binary >= 0.7 && < 0.8,

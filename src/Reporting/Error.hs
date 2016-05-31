@@ -141,8 +141,12 @@ toMessage err =
             \ hijack your HTTP requests to put you on some log in page?"
         ]
 
-    CorruptDescription _ ->
-      error "TODO - CorruptDescription"
+    CorruptDescription problem ->
+      Message
+        ( "The description in " ++ Path.description ++ " is not valid."
+        )
+        [ text problem
+        ]
 
     CorruptDocumentation _ ->
       error "TODO - CorruptDocumentation"
