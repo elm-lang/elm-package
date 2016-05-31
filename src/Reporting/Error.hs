@@ -130,8 +130,16 @@ toMessage err =
         )
         []
 
-    CorruptJson _ _ _ ->
-      error "TODO - CorruptJson"
+    CorruptJson path name version ->
+      Message
+        ( "I just fetched " ++ path ++ " for " ++ Pkg.toString name
+          ++ " " ++ Pkg.versionToString version
+          ++ ", but the contents were corrupted."
+        )
+        [ reflow $
+            "Maybe you are at one of those hotels or airports where they\
+            \ hijack your HTTP requests to put you on some log in page?"
+        ]
 
     CorruptDescription _ ->
       error "TODO - CorruptDescription"

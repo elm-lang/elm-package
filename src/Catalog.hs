@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Catalog where
 
+import Control.Exception (catch, throwIO)
 import Control.Monad.Except (throwError)
 import Control.Monad.RWS (liftIO, asks)
 import Data.Aeson ((.:))
@@ -12,8 +13,9 @@ import Data.Version (showVersion)
 import Network.HTTP
 import qualified Network.HTTP.Client as Client
 import qualified Network.HTTP.Client.MultipartFormData as Multi
-import System.Directory (createDirectoryIfMissing, doesFileExist)
+import System.Directory (createDirectoryIfMissing, doesFileExist, removeFile)
 import System.FilePath ((</>), dropFileName)
+import System.IO.Error (isDoesNotExistError)
 
 import qualified Elm.Docs as Docs
 import qualified Elm.Package.Description as Desc
@@ -155,4 +157,14 @@ getJson metadata metadataPath name version =
           return value
 
         Left _ ->
-          throwError $ Error.CorruptJson metadataPath name version
+          do  liftIO $ removeIfExists fullMetadataPath
+              throwError $ Error.CorruptJson metadataPath name version
+
+
+removeIfExists :: FilePath -> IO ()
+removeIfExists path =
+  let
+    handleExists e =
+      if isDoesNotExistError e then return () else throwIO e
+  in
+    removeFile path `catch` handleExists
