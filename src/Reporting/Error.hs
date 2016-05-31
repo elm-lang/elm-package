@@ -116,11 +116,19 @@ toMessage err =
     SystemCallFailed problem ->
       Message "A system call failed." [ text problem ]
 
-    HttpRequestFailed _ _ ->
-      error "TODO - HttpRequestFailed"
+    HttpRequestFailed url message ->
+      Message
+        ( "The following HTTP request failed. <" ++ url ++ ">"
+        )
+        [ text message
+        ]
 
-    ZipDownloadFailed _ _ ->
-      error "TODO - ZipDownloadFailed"
+    ZipDownloadFailed name version ->
+      Message
+        ( "Problem when downloading the " ++ Pkg.toString name
+          ++ " " ++ Pkg.versionToString version ++ " code."
+        )
+        []
 
     CorruptJson _ _ _ ->
       error "TODO - CorruptJson"
