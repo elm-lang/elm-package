@@ -4,7 +4,7 @@ module Elm.Package.Solution (Solution, write, read) where
 import Prelude hiding (read)
 import Control.Monad.Except (ExceptT, throwError, withExceptT)
 import Control.Monad.Trans (MonadIO, liftIO)
-import Data.Aeson
+import Data.Aeson (Value, (.=), eitherDecode, object)
 import Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy as BS
 import qualified Data.HashMap.Strict as HashMap
