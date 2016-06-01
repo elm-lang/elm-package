@@ -29,7 +29,7 @@ everything :: [(Pkg.Name, Pkg.Version)] -> Manager.Manager ()
 everything packages =
   Cmd.inDir Path.packagesDirectory $
     do  eithers <- liftIO $ do
-          putStrLn $ "Beginning " ++ show (length packages) ++ " downloads:\n"
+          startMessage (length packages)
           isTerminal <- hIsTerminalDevice stdout
           channels <- mapM (forkFetch isTerminal) packages
           mapM readChan channels
@@ -52,6 +52,15 @@ forkFetch isTerminal (name, version) =
           if isTerminal then doc else plain doc
         writeChan chan result
       return chan
+
+
+startMessage :: Int -> IO ()
+startMessage n =
+  if n > 0 then
+    putStrLn "Starting downloads...\n"
+
+  else
+    return ()
 
 
 toDoc :: Either a b -> Pkg.Name -> Pkg.Version -> Doc
