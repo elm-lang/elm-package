@@ -187,13 +187,22 @@ toMessage err =
         ]
 
     AddTrickyConstraint name version constraint ->
-      error "TODO" $
-      "This is a tricky update, you should modify " ++ Path.description ++ " yourself.\n"
-      ++ "Package " ++ Pkg.toString name ++ " is already listed as a dependency:\n\n    "
-      ++ showDependency name constraint ++ "\n\n"
-      ++ "You probably want one of the following constraints instead:\n\n    "
-      ++ C.toString (C.expand constraint version) ++ "\n    "
-      ++ C.toString (C.untilNextMajor version) ++ "\n"
+      Message
+        ( "This change is too tricky for me. Your " ++ Path.description
+          ++ " already lists the following dependency:"
+        )
+        [ indent 4 $ text $ showDependency name constraint
+        , reflow $
+            "So I am not sure how to make that include version "
+            ++ Pkg.versionToString version
+            ++ " as well. Maybe you want one of the following constraints?"
+        , indent 4 $ vcat $ map text $
+            [ C.toString (C.expand constraint version)
+            , C.toString (C.untilNextMajor version)
+            ]
+        , reflow $
+            "Modify " ++ Path.description ++ " by hand to be exactly what you want."
+        ]
 
     BadInstall version ->
       Message
