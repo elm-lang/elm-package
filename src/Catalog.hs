@@ -156,9 +156,9 @@ getJson metadata metadataPath name version =
         Right value ->
           return value
 
-        Left _ ->
+        Left problem ->
           do  liftIO $ removeIfExists fullMetadataPath
-              throwError $ Error.CorruptJson metadataPath name version
+              throwError $ Error.CorruptJson metadataPath name version problem
 
 
 removeIfExists :: FilePath -> IO ()

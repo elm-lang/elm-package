@@ -34,7 +34,7 @@ data Error
   | SystemCallFailed String
   | HttpRequestFailed String String
   | ZipDownloadFailed Pkg.Name Pkg.Version
-  | CorruptJson String Pkg.Name Pkg.Version
+  | CorruptJson String Pkg.Name Pkg.Version String
   | CorruptDescription String
   | CorruptDocumentation String
   | CorruptSolution String
@@ -144,7 +144,7 @@ toMessage err =
         )
         []
 
-    CorruptJson path name version ->
+    CorruptJson path name version problem ->
       Message
         ( "I just fetched " ++ path ++ " for " ++ Pkg.toString name
           ++ " " ++ Pkg.versionToString version
@@ -153,7 +153,9 @@ toMessage err =
         [ reflow $
             "Maybe it is a very old file, and the file format changed since then?\
             \ Or maybe you are at a hotel or airport where they hijack your HTTP\
-            \ requests and redirect you to some log in page?"
+            \ requests and redirect you to some log in page? The particular problem\
+            \ I am seeing is:"
+        , text problem
         ]
 
     CorruptDescription problem ->
