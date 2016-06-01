@@ -1,6 +1,7 @@
 {-# OPTIONS_GHC -Wall #-}
 module Reporting.Error
   ( Error(..)
+  , Hint(..)
   , toString
   , toStderr
   , nearbyNames
@@ -9,6 +10,7 @@ module Reporting.Error
 
 import Data.Function (on)
 import qualified Data.List as List
+import qualified Elm.Compiler as Compiler
 import qualified Elm.Package as Pkg
 import qualified Elm.Package.Constraint as C
 import qualified Elm.Package.Paths as Path
@@ -16,8 +18,8 @@ import GHC.IO.Handle (hIsTerminalDevice)
 import System.IO (hPutStr, stderr)
 import qualified Text.EditDistance as Dist
 import Text.PrettyPrint.ANSI.Leijen
-  ( Doc, (<>), displayS, displayIO, fillSep, hardline, indent, plain
-  , red, renderPretty, text, underline, vcat
+  ( Doc, (<+>), (<>), align, displayS, displayIO, dullred, dullyellow, fillSep
+  , hardline, indent, plain, red, renderPretty, text, underline, vcat
   )
 
 import qualified Diff.Magnitude as Diff
@@ -37,9 +39,10 @@ data Error
   | CorruptDocumentation String
   | CorruptSolution String
   | CorruptVersionCache Pkg.Name
-  | ConstraintsHaveNoSolution
   | PackageNotFound Pkg.Name [Pkg.Name]
   | AddTrickyConstraint Pkg.Name Pkg.Version C.Constraint
+
+  | ConstraintsHaveNoSolution [Hint]
 
   | BadInstall Pkg.Version
 
@@ -53,6 +56,16 @@ data Error
   | Unbumpable Pkg.Version [Pkg.Version]
   | InvalidBump Pkg.Version Pkg.Version
   | BadBump Pkg.Version Pkg.Version Diff.Magnitude Pkg.Version Diff.Magnitude
+
+
+
+-- BAD CONSTRAINT HINTS
+
+
+data Hint
+  = EmptyConstraint Pkg.Name C.Constraint
+  | IncompatibleConstraint Pkg.Name C.Constraint Pkg.Version
+  | IncompatiblePackage Pkg.Name
 
 
 
@@ -135,11 +148,12 @@ toMessage err =
       Message
         ( "I just fetched " ++ path ++ " for " ++ Pkg.toString name
           ++ " " ++ Pkg.versionToString version
-          ++ ", but the contents were corrupted."
+          ++ ", but I cannot read the contents."
         )
         [ reflow $
-            "Maybe you are at one of those hotels or airports where they\
-            \ hijack your HTTP requests to put you on some log in page?"
+            "Maybe it is a very old file, and the file format changed since then?\
+            \ Or maybe you are at a hotels or airports where they hijack your HTTP\
+            \ requests and redirect you to some log in page?"
         ]
 
     CorruptDescription problem ->
@@ -169,13 +183,26 @@ toMessage err =
     CorruptVersionCache name ->
       Message
         ( "Your .elm/packages/ directory may be corrupted. I was led to beleive\
-          \ that " ++ Pkg.toString name ++ " existed, but when I went to look up\
-          \ the published versions of this package, I could not find anything."
+          \ that " ++ Pkg.toString name ++ " existed, but I could not find anything\
+          \ when I went to look up the published versions of this package."
         )
         []
 
-    ConstraintsHaveNoSolution ->
-      error "TODO - ConstraintsHaveNoSolution"
+    ConstraintsHaveNoSolution hints ->
+      Message "I cannot find a set of packages that will work with your constraints." $
+        case hints of
+          [] ->
+            [ reflow $
+                "One way to rebuild your constraints is to clear everything out of\
+                \ the \"dependencies\" field of " ++ Path.description ++ " and add\
+                \ them back one at a time with `elm-package install`."
+            , reflow $
+                "I hope to automate this in the future, but at least there is\
+                \ a way to make progress for now!"
+            ]
+
+          _ ->
+            [ stack (map hintToBullet hints) ]
 
     PackageNotFound package suggestions ->
       Message
@@ -322,6 +349,67 @@ showDependency name constraint =
     show (Pkg.toString name) ++ ": " ++ show (C.toString constraint)
 
 
+hintToDoc :: Hint -> Doc
+hintToDoc hint =
+  case hint of
+    EmptyConstraint name constraint ->
+      stack
+        [ reflow $ "Your " ++ Path.description ++ " has the following dependency:"
+        , indent 4 $ text $ showDependency name constraint
+        , reflow $
+            "But there are no released versions in that range! I recommend\
+            \ removing that constraint by hand and adding it back with:"
+        , indent 4 $ text $ "elm-package install " ++ Pkg.toString name
+        ]
+
+    IncompatibleConstraint name constraint viableVersion ->
+      stack
+        [ reflow $ "Your " ++ Path.description ++ " has the following dependency:"
+        , indent 4 $ text $ showDependency name constraint
+        , reflow $
+            "But none of the versions in that range work with Elm "
+            ++ Pkg.versionToString Compiler.version ++ ". I recommend removing\
+            \ that dependency by hand and adding it back with:"
+        , indent 4 $
+            text ("elm-package install " ++ Pkg.toString name)
+            <+> dullyellow (text (Pkg.versionToString viableVersion))
+        ]
+
+    IncompatiblePackage name ->
+      let
+        intro =
+          map text $ words $
+            "There are no versions of " ++ Pkg.toString name ++ " that work with Elm "
+            ++ Pkg.versionToString Compiler.version ++ "."
+
+        outro =
+          case name of
+            Pkg.Name "evancz" "elm-svg" ->
+              instead "elm-lang/svg"
+
+            Pkg.Name "evancz" "elm-html" ->
+              instead "elm-lang/html"
+
+            Pkg.Name "evancz" "virtual-dom" ->
+              instead "elm-lang/virtual-dom"
+
+            _ ->
+              map text (words "Maybe the maintainer has not updated it yet.")
+      in
+        fillSep $ intro ++ outro
+
+
+instead :: String -> [Doc]
+instead newName =
+  map text (words "Remove that constraint and use")
+  ++ [ dullyellow (text newName), text "instead!" ]
+
+
+hintToBullet :: Hint -> Doc
+hintToBullet hint =
+  dullred (text "-->") <+> align (hintToDoc hint)
+
+
 
 -- RENDERERS
 
@@ -347,13 +435,25 @@ toDoc err =
 
     summaryDoc =
       fillSep (errorStart : map text (words summary))
-
-    verticalAppend a b =
-      a <> hardline <> hardline <> b
   in
-    List.foldl' verticalAppend summaryDoc details
+    stack (summaryDoc : details)
     <> hardline
     <> hardline
+
+
+stack :: [Doc] -> Doc
+stack allDocs =
+  case allDocs of
+    [] ->
+      error "Do not use `stack` on empty lists."
+
+    doc : docs ->
+      List.foldl' verticalAppend doc docs
+
+
+verticalAppend :: Doc -> Doc -> Doc
+verticalAppend a b =
+  a <> hardline <> hardline <> b
 
 
 errorStart :: Doc

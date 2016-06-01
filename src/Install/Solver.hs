@@ -1,9 +1,11 @@
-module Install.Solver where
+module Install.Solver (solve) where
 
-import Control.Monad.Error.Class (throwError)
-import Control.Monad.State (StateT, evalStateT)
+import Control.Monad (forM)
+import Control.Monad.Except (throwError)
+import Control.Monad.State (StateT, evalStateT, runStateT)
 import qualified Data.List as List
 import qualified Data.Map as Map
+import qualified Data.Maybe as Maybe
 
 import qualified Elm.Compiler as Compiler
 import qualified Elm.Package.Constraint as C
@@ -12,6 +14,10 @@ import qualified Elm.Package.Solution as S
 import qualified Manager
 import qualified Reporting.Error as Error
 import qualified Store
+
+
+
+-- ACTUALLY TRY TO SOLVE
 
 
 solve :: C.Constraint -> [(Package.Name, C.Constraint)] -> Manager.Manager S.Solution
@@ -25,13 +31,14 @@ solve elmConstraint constraints =
 
     EQ ->
       do  store <- Store.initialStore
-          maybeSolution <- evalStateT (exploreConstraints constraints) store
+          (maybeSolution, newStore) <- runStateT (exploreConstraints constraints) store
           case maybeSolution of
             Just solution ->
               return solution
 
             Nothing ->
-              throwError Error.ConstraintsHaveNoSolution
+              do  hints <- evalStateT (mapM incompatibleWithCompiler constraints) newStore
+                  throwError (Error.ConstraintsHaveNoSolution (Maybe.catMaybes hints))
 
 
 
@@ -127,3 +134,42 @@ addConstraints packages constraints =
 
             vs ->
               addConstraints (Map.insert name vs packages) rest
+
+
+
+-- FAILURE HINTS
+
+
+incompatibleWithCompiler :: (Package.Name, C.Constraint) -> Explorer (Maybe Error.Hint)
+incompatibleWithCompiler (name, constraint) =
+  do  allVersions <- Store.getVersions name
+      let presentAndFutureVersions =
+            filter (\vsn -> C.check constraint vsn /= LT) allVersions
+
+      compilerConstraints <-
+        forM presentAndFutureVersions $ \vsn ->
+          do  elmConstraint <- fst <$> Store.getConstraints name vsn
+              return (vsn, elmConstraint)
+
+      case filter (isCompatible . snd) compilerConstraints of
+        [] ->
+          return $ Just $ Error.IncompatiblePackage name
+
+        compatibleVersions ->
+          case filter (C.isSatisfied constraint . fst) compilerConstraints of
+            [] ->
+              return $ Just $ Error.EmptyConstraint name constraint
+
+            pairs ->
+              if any (isCompatible . snd) pairs then
+                return Nothing
+
+              else
+                return $ Just $
+                  Error.IncompatibleConstraint name constraint $
+                    maximum (map fst compatibleVersions)
+
+
+isCompatible :: C.Constraint -> Bool
+isCompatible constraint =
+  C.isSatisfied constraint Compiler.version
