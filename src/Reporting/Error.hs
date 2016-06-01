@@ -152,7 +152,7 @@ toMessage err =
         )
         [ reflow $
             "Maybe it is a very old file, and the file format changed since then?\
-            \ Or maybe you are at a hotels or airports where they hijack your HTTP\
+            \ Or maybe you are at a hotel or airport where they hijack your HTTP\
             \ requests and redirect you to some log in page?"
         ]
 
