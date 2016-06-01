@@ -189,7 +189,7 @@ toMessage err =
         []
 
     ConstraintsHaveNoSolution hints ->
-      Message "I cannot find a set of packages that will work with your constraints." $
+      Message "I cannot find a set of packages that works with your constraints." $
         case hints of
           [] ->
             [ reflow $
