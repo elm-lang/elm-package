@@ -1,7 +1,6 @@
 module Install.Fetch (everything) where
 
-import Control.Concurrent (forkIO)
-import Control.Concurrent.Chan (Chan, newChan, writeChan, readChan)
+import Control.Concurrent.ParallelIO.Local (withPool, parallel)
 import Control.Monad.Except (liftIO, throwError)
 import qualified Codec.Archive.Zip as Zip
 import qualified Data.List as List
@@ -31,8 +30,8 @@ everything packages =
     do  eithers <- liftIO $ do
           startMessage (length packages)
           isTerminal <- hIsTerminalDevice stdout
-          channels <- mapM (forkFetch isTerminal) packages
-          mapM readChan channels
+          withPool 4 $ \pool ->
+            parallel pool (map (prettyFetch isTerminal) packages)
 
         case sequence eithers of
           Right _ ->
@@ -42,16 +41,14 @@ everything packages =
             throwError err
 
 
-forkFetch :: Bool -> (Pkg.Name, Pkg.Version) -> IO (Chan (Either Error.Error ()))
-forkFetch isTerminal (name, version) =
-  do  chan <- newChan
-      forkIO $ do
-        result <- Manager.run $ fetch name version
-        let doc = toDoc result name version
-        displayIO stdout $ renderPretty 1 80 $
-          if isTerminal then doc else plain doc
-        writeChan chan result
-      return chan
+prettyFetch :: Bool -> (Pkg.Name, Pkg.Version) -> IO (Either Error.Error ())
+prettyFetch isTerminal (name, version) =
+  do  result <- Manager.run $ fetch name version
+      let doc = toDoc result name version
+      displayIO stdout $ renderPretty 1 80 $
+        if isTerminal then doc else plain doc
+      return result
+
 
 
 startMessage :: Int -> IO ()
