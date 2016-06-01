@@ -44,7 +44,8 @@ data Error
   | BadInstall Pkg.Version
 
   | Undiffable
-  | InvalidVersion
+  | VersionInvalid
+  | VersionJustChanged
   | BadMetadata [String]
   | MissingTag Pkg.Version
 
@@ -148,14 +149,30 @@ toMessage err =
         [ text problem
         ]
 
-    CorruptDocumentation _ ->
-      error "TODO - CorruptDocumentation"
+    CorruptDocumentation problem ->
+      Message
+        ( "I was able to produce documentation for your package, but it is not valid.\
+          \ My guess is that the elm-package and elm-make on your PATH are not from the\
+          \ same version of Elm, but it could be some other similarly crazy thing."
+        )
+        [ text problem
+        ]
 
-    CorruptSolution _ ->
-      error "TODO - CorruptSolution"
+    CorruptSolution problem ->
+      Message
+        ( "Your " ++ Path.solvedDependencies ++ " file is corrupted. Do not modify it\
+          \ by hand! You can just delete it and I will recreate a valid one."
+        )
+        [ text problem
+        ]
 
-    CorruptVersionCache _ ->
-      error "TODO - CorruptVersionCache"
+    CorruptVersionCache name ->
+      Message
+        ( "Your .elm/packages/ directory may be corrupted. I was led to beleive\
+          \ that " ++ Pkg.toString name ++ " existed, but when I went to look up\
+          \ the published versions of this package, I could not find anything."
+        )
+        []
 
     ConstraintsHaveNoSolution ->
       error "TODO - ConstraintsHaveNoSolution"
@@ -186,10 +203,20 @@ toMessage err =
         []
 
     Undiffable ->
-      error "TODO" "This package has not been published, there is nothing to diff against!"
+      Message "This package has not been published, there is nothing to diff against!" []
 
-    InvalidVersion ->
-      error "TODO" "Cannot publish with an invalid version!"
+    VersionInvalid ->
+      Message
+        "Cannot publish a package with an invalid version. Use `elm-package bump` to\
+        \ figure out what the next version should be, and be sure you commit any\
+        \ changes and tag them appropriately."
+        []
+
+    VersionJustChanged ->
+      Message
+        "Cannot publish a package with an invalid version. Be sure you commit any\
+        \ necessary changes and tag them appropriately."
+        []
 
     BadMetadata problems ->
       Message

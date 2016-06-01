@@ -89,10 +89,10 @@ verifyVersion docs description =
             return version
 
           Bump.Invalid ->
-            throwError $ Error.InvalidVersion
+            throwError $ Error.VersionInvalid
 
-          Bump.Changed newVersion ->
-            return newVersion
+          Bump.Changed _ ->
+            throwError $ Error.VersionJustChanged
 
 
 verifyTag :: Package.Name -> Package.Version -> Manager.Manager ()
