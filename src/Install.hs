@@ -195,9 +195,14 @@ showDependency name constraint =
 initialDescription :: Manager.Manager Desc.Description
 initialDescription =
   do  let core = Package.Name "elm-lang" "core"
-      version <- latestVersion core
+      let html = Package.Name "elm-lang" "html"
+      coreVersion <- latestVersion core
+      htmlVersion <- latestVersion html
       let desc = Desc.defaultDescription {
-          Desc.dependencies = [ (core, Constraint.untilNextMajor version) ]
+          Desc.dependencies =
+            [ (core, Constraint.untilNextMajor coreVersion)
+            , (html, Constraint.untilNextMajor htmlVersion)
+            ]
       }
       liftIO (Desc.write desc)
       return desc
