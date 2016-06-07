@@ -1,5 +1,5 @@
 Name: elm-package
-Version: 0.17
+Version: 0.17.1
 
 Synopsis:
     Package manager for Elm libraries
@@ -65,7 +65,7 @@ Library
         bytestring >= 0.9 && < 0.11,
         directory >= 1.0 && < 2.0,
         edit-distance,
-        elm-compiler == 0.17,
+        elm-compiler == 0.17.1,
         filepath >= 1 && < 2.0,
         HTTP >= 4000.2.5 && < 4000.3,
         http-client >= 0.4.15 && < 0.5,
@@ -129,7 +129,7 @@ Executable elm-package
         containers >= 0.3 && < 0.6,
         directory >= 1.0 && < 2.0,
         edit-distance,
-        elm-compiler == 0.17,
+        elm-compiler == 0.17.1,
         filepath >= 1 && < 2.0,
         HTTP >= 4000.2.5 && < 4000.3,
         http-client >= 0.3 && < 0.5,
