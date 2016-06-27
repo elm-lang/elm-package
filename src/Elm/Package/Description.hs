@@ -87,7 +87,7 @@ write description =
 
 prettyJSON :: Description -> BS.ByteString
 prettyJSON description =
-    prettyAngles (encodePretty' config description)
+    BS.snoc (prettyAngles (encodePretty' config description)) '\n'
   where
     config =
         defConfig { confCompare = keyOrder (normalKeys ++ dependencyKeys) }
@@ -113,17 +113,27 @@ prettyJSON description =
 
 prettyAngles :: BS.ByteString -> BS.ByteString
 prettyAngles string =
-    BS.concat $ replaceChunks string
-  where
-    replaceChunks str =
-        let (before, after) = BS.break (=='\\') str
-        in
-            case BS.take 6 after of
-              "\\u003e" -> before : ">" : replaceChunks (BS.drop 6 after)
-              "\\u003c" -> before : "<" : replaceChunks (BS.drop 6 after)
-              "" -> [before]
-              _ ->
-                  before : "\\" : replaceChunks (BS.tail after)
+    BS.concat $ replaceAngles string
+
+
+replaceAngles :: BS.ByteString -> [BS.ByteString]
+replaceAngles str =
+  let
+    (before, after) =
+      BS.break (=='\\') str
+  in
+    case BS.take 6 after of
+      "\\u003e" ->
+        before : ">" : replaceAngles (BS.drop 6 after)
+
+      "\\u003c" ->
+        before : "<" : replaceAngles (BS.drop 6 after)
+
+      "" ->
+        [before]
+
+      _ ->
+        before : "\\" : replaceAngles (BS.tail after)
 
 
 instance ToJSON Description where
