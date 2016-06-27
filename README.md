@@ -41,7 +41,7 @@ determined based on API changes. The rules are:
 
   * `elm-package` will bump versions for you, automatically enforcing these rules
 
-This means that if your package works with `evancz/elm-html 1.2.1` it is very
+This means that if your package works with `elm-lang/html 1.0.0` it is very
 likely to work with everything up until `2.0.0`. At that point, some breaking
 change has occurred that might break your code. It is conceivable that things
 break on a minor change if you are importing things unqualified and a newly
