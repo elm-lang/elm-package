@@ -75,7 +75,7 @@ prettyFetch printChan (name, version) =
 startMessage :: Int -> IO ()
 startMessage n =
   if n > 0 then
-    putStrLn "Starting downloads..."
+    putStrLn "Starting downloads...\n"
 
   else
     return ()
