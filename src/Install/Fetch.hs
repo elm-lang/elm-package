@@ -13,7 +13,7 @@ import System.Directory
 import System.FilePath ((</>))
 import System.IO (stdout)
 import Text.PrettyPrint.ANSI.Leijen
-  ( Doc, (<>), (<+>), bold, displayIO, green, plain, red, renderPretty, text )
+  ( Doc, (<>), (<+>), displayIO, green, plain, red, renderPretty, text )
 
 import qualified Elm.Package as Pkg
 import qualified Elm.Package.Paths as Path
@@ -72,12 +72,12 @@ toDoc result name version =
     bullet =
       case result of
         Right _ ->
-          green (text "»")
+          green (text "●")
 
         Left _ ->
-          red (text "×")
+          red (text "✗")
   in
-    text "  " <> bold bullet <+> nameDoc <+> versionDoc <> text "\n"
+    text "  " <> bullet <+> nameDoc <+> versionDoc <> text "\n"
 
 
 
