@@ -1,5 +1,7 @@
 module Install.Fetch (everything) where
 
+import Control.Concurrent (forkIO)
+import qualified Control.Concurrent.Chan as Chan
 import Control.Concurrent.ParallelIO.Local (withPool, parallel)
 import Control.Monad.Except (liftIO, throwError)
 import qualified Codec.Archive.Zip as Zip
@@ -24,14 +26,19 @@ import qualified Utils.Http as Http
 
 
 
+-- PARALLEL FETCHING
+
+
 everything :: [(Pkg.Name, Pkg.Version)] -> Manager.Manager ()
 everything packages =
   Cmd.inDir Path.packagesDirectory $
     do  eithers <- liftIO $ do
           startMessage (length packages)
           isTerminal <- hIsTerminalDevice stdout
+          resultChan <- Chan.newChan
+          forkIO (printLoop isTerminal resultChan)
           withPool 4 $ \pool ->
-            parallel pool (map (prettyFetch isTerminal) packages)
+            parallel pool (map (prettyFetch resultChan) packages)
 
         case sequence eithers of
           Right _ ->
@@ -41,27 +48,41 @@ everything packages =
             throwError err
 
 
-prettyFetch :: Bool -> (Pkg.Name, Pkg.Version) -> IO (Either Error.Error ())
-prettyFetch isTerminal (name, version) =
-  do  result <- Manager.run $ fetch name version
-      let doc = toDoc result name version
+data Result =
+  Result
+    { _name :: Pkg.Name
+    , _vsn :: Pkg.Version
+    , _either :: Either Error.Error ()
+    }
+
+
+printLoop :: Bool -> Chan.Chan Result -> IO ()
+printLoop isTerminal resultChan =
+  do  result <- Chan.readChan resultChan
+      let doc = toDoc result
       displayIO stdout $ renderPretty 1 80 $
         if isTerminal then doc else plain doc
-      return result
+      printLoop isTerminal resultChan
 
+
+prettyFetch :: Chan.Chan Result -> (Pkg.Name, Pkg.Version) -> IO (Either Error.Error ())
+prettyFetch printChan (name, version) =
+  do  either <- Manager.run $ fetch name version
+      Chan.writeChan printChan (Result name version either)
+      return either
 
 
 startMessage :: Int -> IO ()
 startMessage n =
   if n > 0 then
-    putStrLn "Starting downloads...\n"
+    putStrLn "Starting downloads..."
 
   else
     return ()
 
 
-toDoc :: Either a b -> Pkg.Name -> Pkg.Version -> Doc
-toDoc result name version =
+toDoc :: Result -> Doc
+toDoc (Result name version either) =
   let
     nameDoc =
       text $ Pkg.toString name
@@ -70,7 +91,7 @@ toDoc result name version =
       text $ Pkg.versionToString version
 
     bullet =
-      case result of
+      case either of
         Right _ ->
           green (text "●")
 
