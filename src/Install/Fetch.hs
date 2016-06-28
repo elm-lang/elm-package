@@ -31,6 +31,11 @@ import qualified Utils.Http as Http
 
 everything :: [(Pkg.Name, Pkg.Version)] -> Manager.Manager ()
 everything packages =
+  if null packages then return () else everythingHelp packages
+
+
+everythingHelp :: [(Pkg.Name, Pkg.Version)] -> Manager.Manager ()
+everythingHelp packages =
   Cmd.inDir Path.packagesDirectory $
     do  eithers <- liftIO $ do
           startMessage (length packages)
