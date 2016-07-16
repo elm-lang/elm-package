@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module GitHub (getVersionTags) where
+module GitHub (getVersionTags, publicGetVersionTags) where
 
 import Control.Monad.Except (throwError)
 import Data.Aeson ((.:))
@@ -63,3 +63,13 @@ toTag json =
 
     _ ->
       fail "response is not a JSON array full of objects"
+
+
+
+-- PUBLIC VERSION
+
+
+publicGetVersionTags :: Package.Name -> IO (Either String [Package.Version])
+publicGetVersionTags pkg =
+  either (Left . Error.toString) Right
+    <$> Manager.run (getVersionTags pkg)
