@@ -184,7 +184,7 @@ toMessage err =
 
     CorruptVersionCache name ->
       Message
-        ( "Your .elm/packages/ directory may be corrupted. I was led to beleive\
+        ( "Your .elm/packages/ directory may be corrupted. I was led to believe\
           \ that " ++ Pkg.toString name ++ " existed, but I could not find anything\
           \ when I went to look up the published versions of this package."
         )
