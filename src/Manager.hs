@@ -27,7 +27,7 @@ run manager =
   Network.withSocketsDo $
     do  cacheDirectory <- getCacheDirectory
         httpManager <- Http.newManager Http.tlsManagerSettings
-        let env = Environment "http://package.elm-lang.org" cacheDirectory httpManager
+        let env = Environment "http://package.elm-lang.org:8018" cacheDirectory httpManager
         runReaderT (runExceptT manager) env
 
 
