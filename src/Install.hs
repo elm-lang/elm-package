@@ -4,7 +4,7 @@ import Control.Monad.Except (liftIO, throwError)
 import Control.Monad
 import qualified Data.List as List
 import qualified Data.Map as Map
-import System.Directory (doesFileExist, removeDirectoryRecursive)
+import System.Directory (createDirectoryIfMissing, doesFileExist, removeDirectoryRecursive)
 import System.FilePath ((</>))
 
 import qualified CommandLine.Helpers as Cmd
@@ -99,6 +99,9 @@ runPlan solution plan =
       let removals =
             Map.toList (Plan.removals plan)
             ++ Map.toList (Map.map fst (Plan.upgrades plan))
+
+      -- ensure we have the stuff directory before doing anything else
+      liftIO (createDirectoryIfMissing True Path.stuffDirectory)
 
       -- fetch new dependencies
       Fetch.everything installs
