@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Diff.Compare
   ( bumpBy
   , computeChanges
@@ -13,6 +14,7 @@ import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
+import Data.Text (Text)
 
 import qualified Catalog
 import Diff.Magnitude (Magnitude(..))
@@ -94,17 +96,17 @@ changeMagnitude (Changes added changed removed)
 
 data PackageChanges =
   PackageChanges
-    { modulesAdded :: [String]
-    , modulesChanged :: Map.Map String ModuleChanges
-    , modulesRemoved :: [String]
+    { modulesAdded :: [Text]
+    , modulesChanged :: Map.Map Text ModuleChanges
+    , modulesRemoved :: [Text]
     }
 
 
 data ModuleChanges =
   ModuleChanges
-    { adtChanges :: Changes String ([String], Map.Map String [Type.Type])
-    , aliasChanges :: Changes String ([String], Type.Type)
-    , valueChanges :: Changes String Type.Type
+    { adtChanges :: Changes Text ([Text], Map.Map Text [Type.Type])
+    , aliasChanges :: Changes Text ([Text], Type.Type)
+    , valueChanges :: Changes Text Type.Type
     }
 
 
@@ -136,21 +138,21 @@ diffPackages oldDocs newDocs =
 
 
 data Module = Module
-    { adts :: Map.Map String ([String], Map.Map String [Type.Type])
-    , aliases :: Map.Map String ([String], Type.Type)
-    , values :: Map.Map String Type.Type
+    { adts :: Map.Map Text ([Text], Map.Map Text [Type.Type])
+    , aliases :: Map.Map Text ([Text], Type.Type)
+    , values :: Map.Map Text Type.Type
     , version :: Docs.Version
     }
 
 
-docsToModules :: [Docs.Documentation] -> Map.Map String Module
+docsToModules :: [Docs.Documentation] -> Map.Map Text Module
 docsToModules docs =
   Map.fromList (map docToModule docs)
 
 
-docToModule :: Docs.Documentation -> (String, Module)
+docToModule :: Docs.Documentation -> (Text, Module)
 docToModule (Docs.Documentation name _ aliases' unions' values' generatedByVersion) =
-  (,) (Module.nameToString name) $ Module
+  (,) (Text.pack (Module.nameToString name)) $ Module
     { adts =
         Map.fromList $ flip map unions' $ \union ->
             ( Docs.unionName union
@@ -200,8 +202,8 @@ getChanges isEquivalent old new =
 
 isEquivalentAdt
     :: Bool
-    -> ([String], Map.Map String [Type.Type])
-    -> ([String], Map.Map String [Type.Type])
+    -> ([Text], Map.Map Text [Type.Type])
+    -> ([Text], Map.Map Text [Type.Type])
     -> Bool
 isEquivalentAdt ignoreOrigin (oldVars, oldCtors) (newVars, newCtors) =
     Map.size oldCtors == Map.size newCtors
@@ -221,7 +223,7 @@ isEquivalentAdt ignoreOrigin (oldVars, oldCtors) (newVars, newCtors) =
           && and allEquivalent
 
 
-isEquivalentType :: Bool -> ([String], Type.Type) -> ([String], Type.Type) -> Bool
+isEquivalentType :: Bool -> ([Text], Type.Type) -> ([Text], Type.Type) -> Bool
 isEquivalentType ignoreOrigin (oldVars, oldType) (newVars, newType) =
   case diffType ignoreOrigin oldType newType of
     Nothing ->
@@ -236,7 +238,7 @@ isEquivalentType ignoreOrigin (oldVars, oldType) (newVars, newType) =
 -- TYPES
 
 
-diffType :: Bool -> Type.Type -> Type.Type -> Maybe [(String,String)]
+diffType :: Bool -> Type.Type -> Type.Type -> Maybe [(Text,Text)]
 diffType ignoreOrigin oldType newType =
   let
     go = diffType ignoreOrigin
@@ -288,7 +290,7 @@ diffType ignoreOrigin oldType newType =
         Nothing
 
 
-diffFields :: Bool -> [(String, Type.Type)] -> [(String, Type.Type)] -> Maybe [(String,String)]
+diffFields :: Bool -> [(Text, Type.Type)] -> [(Text, Type.Type)] -> Maybe [(Text,Text)]
 diffFields ignoreOrigin rawFields rawFields'
     | length rawFields /= length rawFields' = Nothing
     | or (zipWith ((/=) `on` fst) fields fields') = Nothing
@@ -302,16 +304,16 @@ diffFields ignoreOrigin rawFields rawFields'
           List.sortBy (compare `on` fst)
 
 
-dropOrigin :: String -> String
+dropOrigin :: Text -> Text
 dropOrigin name =
-    Text.unpack (snd (Text.breakOnEnd (Text.pack ".") (Text.pack name)))
+    snd (Text.breakOnEnd "." name)
 
 
 
 -- TYPE VARIABLES
 
 
-isEquivalentRenaming :: [(String,String)] -> Bool
+isEquivalentRenaming :: [(Text,Text)] -> Bool
 isEquivalentRenaming varPairs =
   let
     renamings =
@@ -344,7 +346,7 @@ isEquivalentRenaming varPairs =
         allUnique (map snd verifiedRenamings)
 
 
-compatableVars :: (String, String) -> Bool
+compatableVars :: (Text, Text) -> Bool
 compatableVars (old, new) =
   case (categorizeVar old, categorizeVar new) of
     (CompAppend, CompAppend) -> True
@@ -370,14 +372,10 @@ data TypeVarCategory
     | Var
 
 
-categorizeVar :: String -> TypeVarCategory
-categorizeVar varName
-    | any (/= '\'') primes = Var
-    | name == "compappend" = CompAppend
-    | name == "comparable" = Comparable
-    | name == "appendable" = Appendable
-    | name == "number"     = Number
-    | otherwise            = Var
-    where
-      (name, primes) =
-          break (=='\'') varName
+categorizeVar :: Text -> TypeVarCategory
+categorizeVar name
+    | Text.isPrefixOf "compappend" name = CompAppend
+    | Text.isPrefixOf "comparable" name = Comparable
+    | Text.isPrefixOf "appendable" name = Appendable
+    | Text.isPrefixOf "number"     name = Number
+    | otherwise                         = Var

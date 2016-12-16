@@ -1,12 +1,19 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Diff.Display (packageChanges) where
 
 import Data.Char (isDigit)
 import qualified Data.Map as Map
+import qualified Data.Text as Text
+import Data.Text (Text)
 import Text.PrettyPrint ((<+>), (<>))
 import qualified Text.PrettyPrint as P
 
 import qualified Elm.Compiler.Type as Type
 import qualified Diff.Compare as D
+
+
+
+-- DISPLAY DIFF
 
 
 packageChanges :: D.PackageChanges -> String
@@ -16,29 +23,32 @@ packageChanges pkgChanges@(D.PackageChanges added changed removed) =
     ++ showRemoved
     ++ showChanged
   where
-    showRemoved
-        | null removed = ""
-        | otherwise =
-            "------ Removed modules - MAJOR ------\n"
-            ++ concatMap ("\n    " ++) removed
-            ++ "\n\n\n"
+    showRemoved =
+      if null removed then
+        ""
+      else
+        "------ Removed modules - MAJOR ------\n"
+        ++ concatMap ((++) "\n    " . Text.unpack) removed
+        ++ "\n\n\n"
 
-    showAdded
-        | null added = ""
-        | otherwise =
-            "------ Added modules - MINOR ------\n"
-            ++ concatMap ("\n    " ++) added
-            ++ "\n\n\n"
+    showAdded =
+      if null added then
+        ""
+      else
+        "------ Added modules - MINOR ------\n"
+        ++ concatMap ((++) "\n    " . Text.unpack) added
+        ++ "\n\n\n"
 
-    showChanged
-        | Map.null changed = ""
-        | otherwise =
-            concatMap moduleChanges (Map.toList changed)
+    showChanged =
+      if Map.null changed then
+        ""
+      else
+        concatMap moduleChanges (Map.toList changed)
 
 
-moduleChanges :: (String, D.ModuleChanges) -> String
+moduleChanges :: (Text, D.ModuleChanges) -> String
 moduleChanges (name, changes) =
-    "------ Changes to module " ++ name ++ " - " ++ show magnitude ++ " ------"
+    "------ Changes to module " ++ Text.unpack name ++ " - " ++ show magnitude ++ " ------"
     ++ display "Added" adtAdd aliasAdd valueAdd
     ++ display "Removed" adtRemove aliasRemove valueRemove
     ++ display "Changed" adtChange aliasChange valueChange
@@ -48,7 +58,7 @@ moduleChanges (name, changes) =
         D.moduleChangeMagnitude changes
 
     (adtAdd, adtChange, adtRemove) =
-        changesToDocs adtDoc (D.adtChanges changes)
+        changesToDocs unionDoc (D.adtChanges changes)
 
     (aliasAdd, aliasChange, aliasRemove) =
         changesToDocs aliasDoc (D.aliasChanges changes)
@@ -87,14 +97,25 @@ display categoryName adts aliases values
           "\n    " ++ categoryName ++ ":"
 
 
+
+-- HELPER
+
+
+chunk :: Text -> P.Doc
+chunk txt =
+  P.text (Text.unpack txt)
+
+
+
 -- PRETTY PRINTING
 
-adtDoc :: String -> ([String], Map.Map String [Type.Type]) -> P.Doc
-adtDoc name (tvars, ctors) =
+
+unionDoc :: Text -> ([Text], Map.Map Text [Type.Type]) -> P.Doc
+unionDoc name (tvars, ctors) =
     P.hang setup 4 (P.sep (zipWith (<+>) separators ctorDocs))
   where
     setup =
-        P.text "type" <+> P.text name <+> P.hsep (map P.text tvars)
+        P.text "type" <+> chunk name <+> P.hsep (map chunk tvars)
 
     separators =
         map P.text ("=" : repeat "|")
@@ -103,20 +124,20 @@ adtDoc name (tvars, ctors) =
         map ctorDoc (Map.toList ctors)
 
     ctorDoc (ctor, tipes) =
-        P.hsep (P.text ctor : map parenDoc tipes)
+        P.hsep (chunk ctor : map parenDoc tipes)
 
 
-aliasDoc :: String -> ([String], Type.Type) -> P.Doc
+aliasDoc :: Text -> ([Text], Type.Type) -> P.Doc
 aliasDoc name (tvars, tipe) =
     P.hang (setup <+> P.equals) 4 (typeDoc tipe)
   where
     setup =
-        P.text "type" <+> P.text "alias" <+> P.text name <+> P.hsep (map P.text tvars)
+        P.text "type" <+> P.text "alias" <+> chunk name <+> P.hsep (map chunk tvars)
 
 
-valueDoc :: String -> Type.Type -> P.Doc
+valueDoc :: Text -> Type.Type -> P.Doc
 valueDoc name tipe =
-    P.text name <+> P.colon <+> typeDoc tipe
+    chunk name <+> P.colon <+> typeDoc tipe
 
 
 parenDoc = generalTypeDoc True
@@ -125,9 +146,11 @@ typeDoc = generalTypeDoc False
 generalTypeDoc :: Bool -> Type.Type -> P.Doc
 generalTypeDoc parens tipe =
     case tipe of
-      Type.Var x -> P.text x
+      Type.Var x ->
+        chunk x
 
-      Type.Type name -> P.text name
+      Type.Type name ->
+        chunk name
 
       Type.Lambda t t' ->
           let (args, result) = collectLambdas [t] t'
@@ -142,7 +165,7 @@ generalTypeDoc parens tipe =
                   P.lbrack <> typeDoc tipe <> P.rbrack
 
             Type.Type name : types
-              | take 6 name == "_Tuple" && all isDigit (drop 6 name) ->
+              | Text.isPrefixOf "_Tuple" name && Text.all isDigit (Text.drop 6 name) ->
                   P.parens (P.hsep (P.punctuate P.comma (map typeDoc types)))
 
             types ->
@@ -161,7 +184,7 @@ generalTypeDoc parens tipe =
               P.sep (P.punctuate P.comma (map fieldDoc fields))
 
           fieldDoc (name, tipe) =
-              P.text name <+> P.colon <+> typeDoc tipe
+              chunk name <+> P.colon <+> typeDoc tipe
 
 
 arrow :: Type.Type -> P.Doc -> P.Doc

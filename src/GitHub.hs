@@ -6,6 +6,8 @@ import Data.Aeson ((.:))
 import qualified Data.Aeson as Json
 import qualified Data.Aeson.Types as Json
 import qualified Data.Either as Either
+import Data.Monoid ((<>))
+import qualified Data.Text as Text
 import qualified Data.Vector as Vector
 import Network.HTTP.Client
 
@@ -26,7 +28,7 @@ getVersionTags :: Package.Name -> Manager.Manager [Package.Version]
 getVersionTags (Package.Name user project) =
   let
     url =
-      "https://api.github.com/repos/" ++ user ++ "/" ++ project ++ "/tags"
+      Text.unpack ("https://api.github.com/repos/" <> user <> "/" <> project <> "/tags")
 
     headers =
       [ ("User-Agent", "elm-package")

@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Install.Fetch (everything) where
 
 import Control.Concurrent (forkIO)
@@ -6,6 +7,8 @@ import Control.Concurrent.ParallelIO.Local (withPool, parallel)
 import Control.Monad.Except (liftIO, throwError)
 import qualified Codec.Archive.Zip as Zip
 import qualified Data.List as List
+import Data.Monoid ((<>))
+import qualified Data.Text as Text
 import GHC.IO.Handle (hIsTerminalDevice)
 import qualified Network.HTTP.Client as Client
 import System.Directory
@@ -15,7 +18,7 @@ import System.Directory
 import System.FilePath ((</>))
 import System.IO (stdout)
 import Text.PrettyPrint.ANSI.Leijen
-  ( Doc, (<>), (<+>), displayIO, green, plain, red, renderPretty, text )
+  ( Doc, (<+>), displayIO, green, plain, red, renderPretty, text )
 
 import qualified Elm.Package as Pkg
 import qualified Elm.Package.Paths as Path
@@ -115,7 +118,7 @@ fetch name@(Pkg.Name user project) version =
   ifNotExists name version $
     do  Http.send (toZipballUrl name version) extract
         files <- liftIO $ getDirectoryContents "."
-        case List.find (List.isPrefixOf (user ++ "-" ++ project)) files of
+        case List.find (List.isPrefixOf (Text.unpack (user <> "-" <> project))) files of
           Nothing ->
             throwError $ Error.ZipDownloadFailed name version
 

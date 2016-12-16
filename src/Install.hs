@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Install where
 
 import Control.Monad.Except (liftIO, throwError)
