@@ -14,7 +14,7 @@ elm-package install elm-lang/html 1.0.0   # Install version 1.0.0
 ```
 
 `elm-package` is sandboxed by default, so the downloaded package will be placed
-in your projects `elm-stuff/` directory. Sandboxing means it is easy for
+in your project's `elm-stuff/` directory. Sandboxing means it is easy for
 different projects to have different dependencies.
 
 Installing a package will also create a file called `elm-package.json` which
